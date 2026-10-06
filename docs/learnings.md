@@ -274,3 +274,20 @@ this warning inline), (b) `exclude()` belongs at Copy-task level anyway —
 never nested inside `from(...) { }`. When a config error contradicts the
 file in front of you, suspect comment corruption before logic, and bisect
 with byte-exact variants (assert every test edit actually applied).
+
+## 17. Verify APK contents, not just task execution + skeleton states
+
+- `assets.srcDir(taskProvider)` does NOT pull the task into AGP's asset
+  merge: the green build ran zero sync tasks and shipped zero curriculum
+  files. Fix is an explicit
+  `tasks.matching { merge.*Assets }.configureEach { dependsOn(sync) }`.
+  Proof pattern that caught it: `gh run download` the APK and
+  `unzip -l | grep assets/` — count the files, do not trust the task log.
+- Related: a `Sync` from `content/` into `generated/curriculum/` merges at
+  the APK ROOT (`assets/rust/...`, not `assets/curriculum/rust/...`).
+  Code reading bundled assets must use the merged path; assert with the
+  same unzip listing.
+- UI lesson from the same incident: an empty feed rendered a zero-page
+  pager (blank) while a stuck load rendered skeletons forever, and the user
+  could not tell them apart. `FeedScreen` now has a dedicated empty state
+  with retry, and `FeedViewModel.retryLoad()` re-attempts the wait.
