@@ -116,11 +116,10 @@ dependencies {
     implementation(libs.hilt.work)
 
     implementation(libs.coil.compose)
-    implementation(libs.coil.network.okhttp)
 
     implementation(libs.kotlinx.serialization.json)
 
-    implementation(libs.baselineprofile.consumer)
+    implementation(libs.profileinstaller)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
