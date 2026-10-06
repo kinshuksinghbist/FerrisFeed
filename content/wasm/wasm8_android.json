@@ -1,0 +1,442 @@
+[
+  {
+    "id": "wasm-08-001",
+    "track": "wasm",
+    "level": 2,
+    "hook": "WebView runs wasm like a small browser.",
+    "body_md": "Enable JavaScript in WebSettings, target a recent WebView version, and load your page over HTTPS or asset loader. Test on a real low-end phone since emulator performance lies. Ship a fallback page when WebAssembly is missing.",
+    "code": "settings.javaScriptEnabled = true\n// load https page or asset bundle\n// require WebView 90+",
+    "language": "rust",
+    "takeaway": "Modern WebView versions execute standard wasm pages without native plugins.",
+    "trap": "Assuming desktop Chrome speed matches a budget phone WebView.",
+    "quiz": {
+      "q": "What does WebView need to run wasm?",
+      "options": [
+        "JS enabled plus a recent version",
+        "A rooted phone",
+        "An SD card",
+        "A stylus"
+      ],
+      "answer": 0,
+      "explain": "Wasm rides the same engine as JS, so version and flags decide support."
+    }
+  },
+  {
+    "id": "wasm-08-002",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Two settings switches wake up the engine.",
+    "body_md": "Set javaScriptEnabled true and allow media plus DOM storage for typical wasm apps. Keep setAllowFileAccess tight and prefer WebViewAssetLoader paths. Verify with chrome inspect that the page reports WebAssembly as an object.",
+    "code": "web.settings.javaScriptEnabled = true\nweb.settings.domStorageEnabled = true\n// serve via asset loader, not file://",
+    "language": "rust",
+    "takeaway": "Correct settings flags expose the script and storage features wasm pages expect.",
+    "trap": "Loading over file scheme where module fetch and workers break.",
+    "quiz": {
+      "q": "Why prefer asset loader over file URLs?",
+      "options": [
+        "Secure origin behavior for modules and workers",
+        "Faster typing",
+        "Bigger icons",
+        "Louder sound"
+      ],
+      "answer": 0,
+      "explain": "File URLs lack origins, so fetch and threading rules fail there."
+    }
+  },
+  {
+    "id": "wasm-08-003",
+    "track": "wasm",
+    "level": 2,
+    "hook": "A bridge class connects Kotlin and JS.",
+    "body_md": "Annotate methods with JavascriptInterface, add the object via addJavascriptInterface, and call it from JS as the named global. Keep methods small and typed. Never expose raw exec or file deletion through the bridge.",
+    "code": "@JavascriptInterface\nfun submitScore(score: Int) {\n    store.save(score)\n}\n// web.addJavascriptInterface(Bridge(), \"Native\")",
+    "language": "rust",
+    "takeaway": "Annotated bridge methods project native storage into page scripts safely.",
+    "trap": "Exposing powerful native calls that any injected script could abuse.",
+    "quiz": {
+      "q": "How does JS reach native code?",
+      "options": [
+        "Named bridge methods on a global object",
+        "Telepathy",
+        "USB cable",
+        "QR codes"
+      ],
+      "answer": 0,
+      "explain": "The global name routes page calls into annotated native functions."
+    }
+  },
+  {
+    "id": "wasm-08-004",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Validate every value crossing the bridge.",
+    "body_md": "Treat bridge inputs as hostile: range-check scores, sanitize strings, and reject unexpected shapes before saving. Require the annotation on each method so nothing is exposed by accident. Log rejections for abuse analysis.",
+    "code": "if (score < 0 || score > 100) return\nstore.saveResult(user, score)",
+    "language": "rust",
+    "takeaway": "Strict input checks stop injected scripts from corrupting native state.",
+    "trap": "Trusting bridge strings and concatenating them into queries or HTML.",
+    "quiz": {
+      "q": "What belongs at the bridge boundary?",
+      "options": [
+        "Range checks and sanitization",
+        "Blind trust",
+        "Raw SQL concat",
+        "Eval of strings"
+      ],
+      "answer": 0,
+      "explain": "Validation converts hostile input into safe values before storage."
+    }
+  },
+  {
+    "id": "wasm-08-005",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Lazy-load wasm only when the demo opens.",
+    "body_md": "Split the bundle so the article page loads fast and dynamic import fetches the wasm on demand. Show a spinner during init and cache the instance for later visits. Users who never open demos skip the download entirely.",
+    "code": "button.onclick = async () => {\n  const { grade } = await import('./quiz.js');\n  await grade(answers);\n};",
+    "language": "javascript",
+    "takeaway": "On-demand imports keep cold pages light while warming demos only when needed.",
+    "trap": "Bundling wasm on the landing page so every reader pays the cost.",
+    "quiz": {
+      "q": "When should the wasm chunk download?",
+      "options": [
+        "Only after the user opens the demo",
+        "On every boot",
+        "At midnight",
+        "Never"
+      ],
+      "answer": 0,
+      "explain": "Dynamic import defers bytes until the feature is actually requested."
+    }
+  },
+  {
+    "id": "wasm-08-006",
+    "track": "wasm",
+    "level": 2,
+    "hook": "AssetLoader serves local files as secure HTTPS.",
+    "body_md": "Map assets path with WebViewAssetLoader so https appassets androidplatform net resolves to app assets. Serve HTML, JS, and wasm through it for consistent origins. This fixes fetch, workers, and COOP rules that file URLs break.",
+    "code": "val loader = WebViewAssetLoader.Builder()\n    .addPathHandler(\"/assets/\", AssetsPathHandler(this))\n    .build()",
+    "language": "rust",
+    "takeaway": "Local HTTPS origins restore standard web fetching rules inside WebView.",
+    "trap": "Serving from file scheme then debugging mysterious CORS failures.",
+    "quiz": {
+      "q": "What origin should local WebView pages use?",
+      "options": [
+        "The asset loader HTTPS origin",
+        "file scheme everywhere",
+        "data URLs only",
+        "No origin"
+      ],
+      "answer": 0,
+      "explain": "A real origin lets modules, workers, and caches behave like production."
+    }
+  },
+  {
+    "id": "wasm-08-007",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Budget wasm under one megabyte for phones.",
+    "body_md": "Strip symbols, enable -Oz, trim features, and pick a tiny allocator to stay near 1MB. Measure the compressed transfer size, not just raw bytes, since that is what slow networks feel. Gate releases on the budget in CI.",
+    "code": "# check compressed size\nls -lh app_bg.wasm\ngzip -c app_bg.wasm | wc -c",
+    "language": "rust",
+    "takeaway": "Strict transfer budgets protect low-end devices on slow networks from stalls.",
+    "trap": "Measuring raw bytes while carriers charge for compressed transfer plus latency.",
+    "quiz": {
+      "q": "Why track compressed size?",
+      "options": [
+        "Networks charge for shipped bytes plus latency",
+        "It looks cool",
+        "Raw size is illegal",
+        "Gzip pays bounties"
+      ],
+      "answer": 0,
+      "explain": "Compressed bytes approximate what phones actually download and parse."
+    }
+  },
+  {
+    "id": "wasm-08-008",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Cache API makes second opens instant.",
+    "body_md": "After first init, store the wasm Response plus glue JS in CacheStorage under versioned keys. On launch, serve from cache then revalidate in background. Version keys to avoid stale quiz logic after updates.",
+    "code": "const cache = await caches.open('wasm-v3');\nawait cache.addAll(['./quiz.js', './quiz_bg.wasm']);\nconst hit = await cache.match('./quiz_bg.wasm');",
+    "language": "javascript",
+    "takeaway": "Versioned cache entries turn repeat demo opens into near-instant loads.",
+    "trap": "Caching under unversioned keys so old quiz logic lingers after updates.",
+    "quiz": {
+      "q": "How do you avoid stale cached wasm?",
+      "options": [
+        "Version cache keys per release",
+        "Never update",
+        "Cache nothing",
+        "Use one global key"
+      ],
+      "answer": 0,
+      "explain": "Versioned names let new releases bypass entries from older bundles."
+    }
+  },
+  {
+    "id": "wasm-08-009",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Offline-first runners queue grading locally.",
+    "body_md": "Ship the lesson plus ferris-core wasm in one cached bundle so airplane mode still grades. Store attempts in localStorage, then sync when online returns. Show a clear offline badge so users trust pending marks.",
+    "code": "if (!navigator.onLine) {\n  queueAttempt(answers);\n  showBadge('offline, will sync');\n} else {\n  await gradeOnline(answers);\n}",
+    "language": "javascript",
+    "takeaway": "Bundled lessons plus local queues keep practice working without connectivity.",
+    "trap": "Blocking the demo on a network call that fails in tunnels.",
+    "quiz": {
+      "q": "Where do offline attempts wait?",
+      "options": [
+        "A local queue synced later",
+        "The recycle bin",
+        "A printer",
+        "Nowhere"
+      ],
+      "answer": 0,
+      "explain": "Local storage holds work until connectivity allows an upload."
+    }
+  },
+  {
+    "id": "wasm-08-010",
+    "track": "wasm",
+    "level": 2,
+    "hook": "ferris-core grades quizzes inside WebView.",
+    "body_md": "Compile the shared Rust quiz engine to wasm and call its grade function from the page. One logic copy serves web, Android, and desktop without drift. Pin the core version per app release for reproducible marks.",
+    "code": "import init, { grade_quiz } from './ferris_core.js';\nawait init();\nconst result = grade_quiz(JSON.stringify(answers));",
+    "language": "javascript",
+    "takeaway": "Shared Rust grading logic guarantees identical marks across every platform build.",
+    "trap": "Duplicating grading in Kotlin and JS until scores diverge mysteriously.",
+    "quiz": {
+      "q": "Why compile ferris-core to wasm for WebView?",
+      "options": [
+        "One logic copy prevents platform drift",
+        "It makes icons round",
+        "It drains battery",
+        "It needs no reason"
+      ],
+      "answer": 0,
+      "explain": "A single engine removes duplicate implementations that can disagree."
+    }
+  },
+  {
+    "id": "wasm-08-011",
+    "track": "wasm",
+    "level": 2,
+    "hook": "JS collects answers while Rust assigns marks.",
+    "body_md": "Gather form values in JS, serialize to JSON, pass the string to the Rust grade export, and render the returned verdict. Validate shapes on both sides so a missing field becomes a friendly error, not a trap.",
+    "code": "const verdict = JSON.parse(grade_quiz(JSON.stringify({\n  q1: pick('q1'), q2: pick('q2')\n})));\nrender(verdict);",
+    "language": "javascript",
+    "takeaway": "Thin JS shells around a Rust grader combine reach with trustworthy scoring.",
+    "trap": "Passing raw DOM nodes where the grader expects serializable data.",
+    "quiz": {
+      "q": "What crosses from JS to the Rust grader?",
+      "options": [
+        "Serialized answer data with clear shapes",
+        "DOM nodes",
+        "Passwords",
+        "CSS"
+      ],
+      "answer": 0,
+      "explain": "Structured data survives the boundary while live nodes do not."
+    }
+  },
+  {
+    "id": "wasm-08-012",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Readable panics beat silent black screens.",
+    "body_md": "Install console_error_panic_hook so Rust panics log file, line, and message to console. Catch the init promise in JS and show a friendly card with retry. Forward logs to crash reporting for field debugging.",
+    "code": "use console_error_panic_hook::set_once;\n#[wasm_bindgen(start)]\npub fn boot() { set_once(); }",
+    "language": "rust",
+    "takeaway": "Panic hooks translate crashes into actionable console messages with locations.",
+    "trap": "Shipping without the hook so failures vanish into undefined behavior.",
+    "quiz": {
+      "q": "What does the panic hook add?",
+      "options": [
+        "File and line details in console logs",
+        "Faster phones",
+        "Free data",
+        "New fonts"
+      ],
+      "answer": 0,
+      "explain": "Hooked panics print Rust context instead of a bare trap code."
+    }
+  },
+  {
+    "id": "wasm-08-013",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Wrap init in try catch with a retry card.",
+    "body_md": "Await the wasm init inside try catch, distinguishing network failures from compile errors. Show storage-safe messaging and a retry button plus a skip link. Log the error class so dashboards separate CDN issues from device limits.",
+    "code": "try {\n  await init('./quiz_bg.wasm');\n} catch (e) {\n  showRetryCard(e);\n}",
+    "language": "javascript",
+    "takeaway": "Guarded startup converts load failures into recoverable user interface states.",
+    "trap": "Letting init reject unhandled so the page sits blank and dead.",
+    "quiz": {
+      "q": "What should failed wasm init show?",
+      "options": [
+        "A retry card with a skip option",
+        "A blank page",
+        "A crash loop",
+        "Nothing"
+      ],
+      "answer": 0,
+      "explain": "Explicit handling preserves trust when networks or devices stumble."
+    }
+  },
+  {
+    "id": "wasm-08-014",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Measure on the cheapest phone you support.",
+    "body_md": "Time init plus first grade with performance now on a 2GB device over throttled 3G. Record cold versus warm cache runs. If init exceeds a few seconds, split features or defer non-quiz exports until after first paint.",
+    "code": "const t0 = performance.now();\nawait init();\nawait grade(sample);\nconsole.log('grade ms:', performance.now() - t0);",
+    "language": "javascript",
+    "takeaway": "Budget-device timing exposes real startup pain that emulators hide completely.",
+    "trap": "Benchmarking only on flagships then wondering about one-star reviews.",
+    "quiz": {
+      "q": "Which device defines your performance budget?",
+      "options": [
+        "The cheapest supported low-end phone",
+        "The CEO laptop",
+        "A server rack",
+        "A watch"
+      ],
+      "answer": 0,
+      "explain": "Low-end timing captures the worst credible experience for users."
+    }
+  },
+  {
+    "id": "wasm-08-015",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Guard memory on small devices explicitly.",
+    "body_md": "Request modest initial pages, free ImageData buffers promptly, and avoid parallel giant filters on 2GB phones. Listen for allocation failures and degrade to text mode. Test with background apps open to simulate pressure.",
+    "code": "if (deviceMemory && deviceMemory < 4) {\n  useLiteMode();\n} else {\n  useFullMode();\n}",
+    "language": "javascript",
+    "takeaway": "Adaptive memory modes keep constrained phones responsive under real pressure.",
+    "trap": "Allocating desktop-sized buffers that jetsam the WebView on phones.",
+    "quiz": {
+      "q": "What triggers lite mode here?",
+      "options": [
+        "Low device memory signals",
+        "The time of day",
+        "Screen color",
+        "Battery brand"
+      ],
+      "answer": 0,
+      "explain": "Hints route weak hardware to smaller buffers before crashes occur."
+    }
+  },
+  {
+    "id": "wasm-08-016",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Detect wasm before downloading anything.",
+    "body_md": "Check typeof WebAssembly plus validate a tiny probe module before fetching megabytes. Branch old WebViews to the server playground immediately. Cache the verdict in sessionStorage to skip probing every navigation.",
+    "code": "if (typeof WebAssembly === 'object') {\n  await startWasm();\n} else {\n  location.href = '/playground';\n}",
+    "language": "javascript",
+    "takeaway": "Early capability checks route legacy clients away before wasted downloads.",
+    "trap": "Downloading 5MB then discovering the engine cannot compile it.",
+    "quiz": {
+      "q": "When should feature detection run?",
+      "options": [
+        "Before any wasm bytes download",
+        "After downloading all",
+        "Never",
+        "At midnight"
+      ],
+      "answer": 0,
+      "explain": "Probing first saves bandwidth on devices that need the fallback anyway."
+    }
+  },
+  {
+    "id": "wasm-08-017",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Old WebViews deserve a server fallback.",
+    "body_md": "When detection fails, post the code to the hosted playground API and render returned output. Keep the same lesson UI so progress syncs later. Explain why the fallback appeared so users do not blame their answers.",
+    "code": "async function runRemote(code) {\n  const r = await fetch('/api/run', { method: 'POST', body: code });\n  return r.json();\n}",
+    "language": "javascript",
+    "takeaway": "Remote execution preserves lesson flow on devices that cannot run local wasm.",
+    "trap": "Showing a dead page instead of routing to available server compute.",
+    "quiz": {
+      "q": "What powers the fallback path?",
+      "options": [
+        "A hosted execution API endpoint",
+        "A toaster",
+        "A fax machine",
+        "Hope"
+      ],
+      "answer": 0,
+      "explain": "Server runners compute results the old client cannot produce locally."
+    }
+  },
+  {
+    "id": "wasm-08-018",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Inspect WebView live with desktop Chrome.",
+    "body_md": "Enable WebContentsDebuggingEnabled in debug builds, open chrome inspect on desktop, and attach to the phone WebView. Watch console, network, and memory while grading. Never ship debuggable true in release builds.",
+    "code": "if (BuildConfig.DEBUG) {\n    WebView.setWebContentsDebuggingEnabled(true)\n}",
+    "language": "rust",
+    "takeaway": "Remote inspection exposes console and memory behavior on real handsets directly.",
+    "trap": "Shipping debuggable WebView in release and opening users to inspection.",
+    "quiz": {
+      "q": "Where do you attach to a phone WebView?",
+      "options": [
+        "Desktop Chrome inspection page",
+        "A microwave",
+        "The Play Store listing",
+        "A billboard"
+      ],
+      "answer": 0,
+      "explain": "The inspect page tunnels devtools to USB-connected app pages."
+    }
+  },
+  {
+    "id": "wasm-08-019",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Update wasm without shipping a new APK.",
+    "body_md": "Host versioned wasm bundles on your CDN and let the app fetch the pinned quiz engine at runtime. Verify hashes before caching and roll back on bad init. App updates then carry only native shells, not lesson logic.",
+    "code": "const manifest = await (await fetch('/wasm/v4.json')).json();\nawait installBundle(manifest); // hash-checked",
+    "language": "javascript",
+    "takeaway": "Remote versioned bundles decouple lesson fixes from slow store releases.",
+    "trap": "Skipping hash checks so tampered bundles run with app privileges.",
+    "quiz": {
+      "q": "What protects over-the-air wasm updates?",
+      "options": [
+        "Hash verification before caching",
+        "Nice comments",
+        "Long filenames",
+        "Dark mode"
+      ],
+      "answer": 0,
+      "explain": "Hashes prove the fetched bundle matches the published lesson release."
+    }
+  },
+  {
+    "id": "wasm-08-020",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Queue offline marks then sync them later.",
+    "body_md": "Stamp each attempt with lesson id and core version, store in IndexedDB, and upload in order when online fires. Resolve conflicts by keeping the earliest pass or the highest score per policy. Confirm sync with a visible checkmark.",
+    "code": "addEventListener('online', flushQueue);\nasync function flushQueue() {\n  for (const a of await readQueue()) await upload(a);\n}",
+    "language": "javascript",
+    "takeaway": "Ordered offline queues preserve practice progress across connectivity gaps.",
+    "trap": "Writing marks only to RAM so a killed app loses everything.",
+    "quiz": {
+      "q": "Where do pending attempts persist?",
+      "options": [
+        "Durable local storage until upload",
+        "Volatile variables",
+        "The URL hash",
+        "A sticky note"
+      ],
+      "answer": 0,
+      "explain": "Persistent queues survive kills and sync in order when networks return."
+    }
+  }
+]

@@ -1,0 +1,266 @@
+[
+  {
+    "body_md": "WASI gives WASM portable syscalls: files, clocks, random, sockets. No ambient access \u2014 the host grants directories and fds explicitly. Same module runs on Linux, macOS, or edge with a WASI runtime.",
+    "code": null,
+    "hook": "POSIX, but with permission slips.",
+    "id": "wasm-03-001",
+    "language": null,
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "WASI exposes capability-based system interfaces instead of raw syscalls.",
+      "options": [
+        "A JS framework",
+        "A CSS engine",
+        "Capability-based syscalls for files/clocks/sockets",
+        "A SQL dialect"
+      ],
+      "q": "What is WASI?"
+    },
+    "takeaway": "WASI is the system interface for out-of-browser WASM.",
+    "trap": "Assuming open(\"/etc/passwd\") works without a preopened dir.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Capabilities mean no path escapes its grant. Grant `--dir /data` and the module sees only that tree. It cannot probe parent dirs or open sockets unless granted, limiting blast radius.",
+    "code": "wasmtime run --dir /data app.wasm\n# inside: only /data visible\n",
+    "hook": "You can only touch what you were handed.",
+    "id": "wasm-03-002",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Preopens scope filesystem visibility to granted dirs.",
+      "options": [
+        "Only granted dirs/fds are visible",
+        "All files are visible",
+        "Network is always open",
+        "Env vars are always shared"
+      ],
+      "q": "How do WASI capabilities restrict files?"
+    },
+    "takeaway": "Grant least privilege with explicit dirs and fds.",
+    "trap": "Granting repo root to dodge path bugs in production.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "wasmtime runs WASI modules from CLI: `wasmtime run --dir . app.wasm`. Add fuel limits, env vars, and args after `--`. Use it for plugins, CLIs, and serverless handlers.",
+    "code": "wasmtime run --dir ./data --env MODE=prod app.wasm -- input.txt\nwasmtime run --help | head -n 20",
+    "hook": "Your wasm binary is now a CLI.",
+    "id": "wasm-03-003",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "wasmtime CLI instantiates WASI with flags for dirs and env.",
+      "options": [
+        "Only browsers run WASM",
+        "wasmtime run executes WASI modules with grants",
+        "wasmtime edits video",
+        "wasmtime is a bundler"
+      ],
+      "q": "What does the wasmtime CLI do?"
+    },
+    "takeaway": "Run and sandbox WASI modules with explicit flags.",
+    "trap": "Forgetting --dir so file opens fail with cryptic errors.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Wasmer offers run, package, and edge deploy. `wasmer run app.wasm --mapdir` mounts dirs, and `wasmer publish` shares packages. Useful when you want a registry plus runtime in one tool.",
+    "code": "wasmer run app.wasm --mapdir data:./data\nwasmer --version",
+    "hook": "Run anywhere, ship everywhere.",
+    "id": "wasm-03-004",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Wasmer combines runtime, WAX packages, and deploy targets.",
+      "options": [
+        "A text editor",
+        "A SQL engine",
+        "A browser only",
+        "A runtime plus package registry for WASM"
+      ],
+      "q": "What is Wasmer?"
+    },
+    "takeaway": "Use Wasmer to run and distribute WASI apps.",
+    "trap": "Mixing wasmer and wasmtime flag syntax (--mapdir vs --dir).",
+    "track": "wasm"
+  },
+  {
+    "body_md": "The Component Model lets modules in many languages compose safely. Interfaces are typed, versioned, and sandboxed. One host can link a Rust parser with a Python formatter without FFI pain.",
+    "code": null,
+    "hook": "npm for polyglot sandboxed components.",
+    "id": "wasm-03-005",
+    "language": null,
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Components link via typed interfaces enforced by the runtime.",
+      "options": [
+        "Typed sandboxed composition across languages",
+        "Only Rust can compose",
+        "It disables sandboxing",
+        "It requires Docker"
+      ],
+      "q": "What problem does the Component Model solve?"
+    },
+    "takeaway": "Compose untrusted polyglot modules through typed interfaces.",
+    "trap": "Treating components like plain wasm modules; tooling differs.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "WIT describes component interfaces: functions, records, variants. Write `*.wit`, then generate Rust or JS bindings. Changing WIT versions cleanly without breaking all guests.",
+    "code": "package shop:cart;\ninterface store {\n  record item { id: string, qty: u32 }\n  add: func(i: item) -> bool;\n}",
+    "hook": "IDL for the component era.",
+    "id": "wasm-03-006",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "WIT is the interface language components bind from.",
+      "options": [
+        "A JS test runner",
+        "A CSS spec",
+        "WIT declares typed component interfaces",
+        "A WASI syscall"
+      ],
+      "q": "What is WIT?"
+    },
+    "takeaway": "Define shared types once in WIT, bind everywhere.",
+    "trap": "Hand-editing generated bindings instead of the WIT source.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Build a component from Rust with `cargo component`. Add `wit-bindgen` exports, `cargo component build`, and run with `wasmtime run` supporting components. Keep worlds small and explicit.",
+    "code": "cargo install cargo-component\ncargo component new shop\ncargo component build",
+    "hook": "cargo build, but for components.",
+    "id": "wasm-03-007",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "cargo-component wraps wit-bindgen and component linking.",
+      "options": [
+        "It builds Docker images",
+        "It scaffolds and builds WASM components",
+        "It runs SQL",
+        "It formats JS"
+      ],
+      "q": "What does cargo-component do?"
+    },
+    "takeaway": "Scaffold typed components with standard cargo flow.",
+    "trap": "Using plain --target wasm32 and wondering why components fail.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "warg is the registry for components with namespaced packages and signed versions. Depend on `shop:cart@1.0.0` and the runtime resolves bytes plus proofs, like cargo for portable sandboxes.",
+    "code": "# warg config excerpt\nregistry = \"https://warg.example\"\ndep = \"shop:cart@1.0.0\"",
+    "hook": "Crates.io for auditable components.",
+    "id": "wasm-03-008",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "warg stores content-addressed, signed component packages.",
+      "options": [
+        "Signed registry for versioned components",
+        "A JS minifier",
+        "A Postgres extension",
+        "A canvas API"
+      ],
+      "q": "What is warg?"
+    },
+    "takeaway": "Publish and pin components with verifiable supply chain.",
+    "trap": "Floating unpinned deps reintroduces supply-chain risk.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "WASI HTTP and sockets let edge handlers serve requests without containers. Bind to the provided listener, read request, write response. The host enforces TLS and timeouts outside the module.",
+    "code": "// wit world sketch\n// import wasi:http/incoming-handler;\n// export handle(req) -> response",
+    "hook": "Backend without the container.",
+    "id": "wasm-03-009",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "WASI HTTP exposes request/response handlers to the sandbox.",
+      "options": [
+        "WASM cannot serve HTTP",
+        "Needs raw sockets only",
+        "Needs Kubernetes",
+        "WASI provides hosted HTTP handlers"
+      ],
+      "q": "How does server WASM handle HTTP?"
+    },
+    "takeaway": "Implement the handler interface; host owns networking.",
+    "trap": "Blocking too long; edge hosts kill slow handlers.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Filesystem in WASI uses preopened Dir handles. Open relative paths, use atomic renames, and fsync before replying. Never assume absolute host paths exist inside the sandbox.",
+    "code": "use std::fs;\nlet s = fs::read_to_string(\"/data/input.txt\").unwrap();\nfs::write(\"/data/out.txt\", s.to_uppercase()).unwrap();",
+    "hook": "Paths are virtual \u2014 code accordingly.",
+    "id": "wasm-03-010",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Only preopened dirs like /data are visible inside.",
+      "options": [
+        "Use any absolute path",
+        "Use only granted preopened paths",
+        "Use C:\\ paths everywhere",
+        "Use URLs as paths"
+      ],
+      "q": "How should WASI code access files?"
+    },
+    "takeaway": "Read and write only inside granted directories.",
+    "trap": "Hardcoding developer laptop paths into the module.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Clocks and random come from WASI, not libc tricks. Use `wasi::clock_time_get` or Rust std which maps to it. Seed RNG from host random to stay deterministic-friendly and testable.",
+    "code": "use std::time::{SystemTime, UNIX_EPOCH};\nlet now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();\nprintln!(\"{}\", now.as_secs());",
+    "hook": "Time is a capability too.",
+    "id": "wasm-03-011",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "WASI provides monotonic/wall clocks as host calls.",
+      "options": [
+        "rdtsc everywhere",
+        "No time available",
+        "Time and random via WASI host calls",
+        "Time via DOM only"
+      ],
+      "q": "Where do time and randomness come from in WASI?"
+    },
+    "takeaway": "Call std time APIs; they route to WASI clocks.",
+    "trap": "Assuming clocks are monotonic across suspend/resume.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Test WASI with wasmtime fuel and deterministic seeds. Limit fuel to catch infinite loops, snapshot dirs with fixtures, and assert stdout. Same binary then deploys to edge unchanged.",
+    "code": "wasmtime run --fuel 1000000 --dir ./fixtures app.wasm\n# assert exit code + stdout in CI",
+    "hook": "Fuzz it locally, ship it globally.",
+    "id": "wasm-03-012",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Fuel metering bounds execution for safe tests.",
+      "options": [
+        "Fuel limits bound execution for tests",
+        "Fuel is gasoline",
+        "Tests need browsers",
+        "Stdout cannot be tested"
+      ],
+      "q": "How do you safely test untrusted WASI modules?"
+    },
+    "takeaway": "Bound execution and fixture filesystems in CI.",
+    "trap": "No fuel limit lets a buggy plugin hang CI.",
+    "track": "wasm"
+  }
+]

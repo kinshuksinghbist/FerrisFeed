@@ -1,0 +1,266 @@
+[
+  {
+    "body_md": "URL shortener: need 100M URLs/month, 10:1 reads. API POST /shorten, GET /:code. Store mapping in KV, cache hot in Redis. Bottleneck is write hotspot; snippet hashes with base62.",
+    "code": "import hashlib\ncode = hashlib.md5(url.encode()).hexdigest()[:7]",
+    "hook": "100M links, millisecond redirects.",
+    "id": "sd-case-001",
+    "language": "python",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Hash plus dedupe plus cache handles read-heavy load.",
+      "options": [
+        "SQL joins",
+        "Graph traversal",
+        "Hash to base62 with KV plus cache",
+        " blockchain"
+      ],
+      "q": "Core trick for URL shortener?"
+    },
+    "takeaway": "Hash, dedupe, cache hot redirects.",
+    "trap": "Sequential IDs leaking growth rate.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Twitter feed: requirements fan-out 300M users, timeline <200ms. API post, follow, timeline. Storage posts in Cassandra, graph in social DB. Bottleneck celebrity fan-out; snippet pushes async.",
+    "code": "// on post: for follower in followers[author]\n//   feed_cache.lpush(follower, post_id)",
+    "hook": "Push, pull, and the celebrity problem.",
+    "id": "sd-case-002",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Hybrid push/pull avoids million-write storms.",
+      "options": [
+        "Push to everyone always",
+        "Hybrid fan-out with pull for celebrities",
+        "No cache",
+        "Single SQL table"
+      ],
+      "q": "How do you scale feed fan-out?"
+    },
+    "takeaway": "Push normal, pull celebrities, cache timelines.",
+    "trap": "Pure pull scanning 1000 follows per read.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Rate limiter: need 10k rps API protection, burst 50. API gateway check. Storage Redis buckets per key with Lua. Bottleneck central Redis; snippet uses token bucket Lua.",
+    "code": "-- lua: refill then allow\nlocal t = redis.call('GET', KEYS[1]) or 0",
+    "hook": "Flood control at 10k rps.",
+    "id": "sd-case-003",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Atomic Lua on Redis enforces global rate.",
+      "options": [
+        "Atomic Redis bucket per key",
+        "In-memory only",
+        "No burst",
+        "Client-side only"
+      ],
+      "q": "Where does distributed rate limiting live?"
+    },
+    "takeaway": "Centralize counters with atomic scripts.",
+    "trap": "Per-node limits multiplying global allowance.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Chat: need 1M concurrent WebSockets, <100ms delivery, presence. API WS connect, send, presence heartbeat. Storage messages in Cassandra, presence in Redis. Bottleneck conn fan-out; snippet uses pub/sub.",
+    "code": "ws.onmessage = (m) => pub.publish(\"room:\"+room, m.data)",
+    "hook": "Million sockets, one truth: who is online.",
+    "id": "sd-case-004",
+    "language": "javascript",
+    "level": 3,
+    "quiz": {
+      "answer": 3,
+      "explain": "Sticky gateway plus pub/sub reaches all holders.",
+      "options": [
+        "Polling only",
+        "One server only",
+        "No presence",
+        "Gateway plus pub/sub for rooms"
+      ],
+      "q": "How do you scale chat?"
+    },
+    "takeaway": "Shard connections, broadcast via pub/sub.",
+    "trap": "No resume token losing messages on reconnect.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "S3 object store: need 11 nines, multipart uploads, presigned URLs. API PUT /object, GET range. Storage erasure-coded chunks plus metadata DB. Bottleneck metadata; snippet signs URL.",
+    "code": "import boto3\nurl = boto3.client(\"s3\").generate_presigned_url(\"put_object\", Params={\"Bucket\":\"b\",\"Key\":\"k\"})",
+    "hook": "Blobs at exabyte scale.",
+    "id": "sd-case-005",
+    "language": "python",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Direct-to-storage uploads bypass app servers.",
+      "options": [
+        "Proxy all bytes",
+        "Presigned URLs for direct upload",
+        "No metadata",
+        "Single disk"
+      ],
+      "q": "How do you scale uploads?"
+    },
+    "takeaway": "Sign URLs, store chunks with metadata index.",
+    "trap": "Proxying gigabytes through app tier.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Pastebin variant: requirements 10M pastes/month, TTL, burn-after-read. API POST paste, GET raw. Storage object store plus metadata Postgres. Bottleneck spam; snippet expires keys.",
+    "code": "SETEX paste:abc 86400 \"...\"\n# burn: GETDEL paste:abc",
+    "hook": "Text hosting with self-destruct.",
+    "id": "sd-case-006",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "TTL plus optional one-time read contains abuse.",
+      "options": [
+        "TTL plus optional burn-after-read",
+        "Keep forever",
+        "No auth",
+        "Store in memory only"
+      ],
+      "q": "Key design for pastebin?"
+    },
+    "takeaway": "Expire by default, burn on demand.",
+    "trap": "Predictable IDs enabling scraping.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Search autocomplete: need 100ms prefix hints for 10M terms. API GET /suggest?q=. Storage trie in memory plus Kafka updates. Bottleneck rebuild; snippet queries sorted set.",
+    "code": "ZADD suggest 100 \"rust\" \nZREVRANGEBYLEX suggest \"[rust\" \"[rust\\xff\" LIMIT 0 5",
+    "hook": "Typeahead in 100 milliseconds.",
+    "id": "sd-case-007",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Ranked prefix index serves instant hints.",
+      "options": [
+        "Full scan",
+        "LIKE %q%",
+        "Prefix index with ranked cache",
+        "No index"
+      ],
+      "q": "How do you serve typeahead fast?"
+    },
+    "takeaway": "Precompute ranked prefixes at write time.",
+    "trap": "Hitting DB per keystroke.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Notifications: requirements 50M pushes/day, dedupe, quiet hours. API enqueue event. Storage Kafka plus per-user queue. Bottleneck fan-out storms; snippet batches by user.",
+    "code": "async fn notify(user: Id, e: Event) {\n    if quiet_hours(&user) { queue_later(user, e).await }\n}",
+    "hook": "50M nudges without spam.",
+    "id": "sd-case-008",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Batching plus preferences prevents storms.",
+      "options": [
+        "Send immediately always",
+        "Batch, dedupe, respect preferences",
+        "No retry",
+        "Broadcast all"
+      ],
+      "q": "How do you avoid notification spam?"
+    },
+    "takeaway": "Batch and dedupe per user with backoff.",
+    "trap": "Retry storm waking users at 3am.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Ride-hailing match: need nearby drivers <500ms, surge. API request ride, update location. Storage geo index Redis GEOADD, trips in Postgres. Bottleneck geo query; snippet searches radius.",
+    "code": "GEOADD drivers 77.2 28.6 driver:9\nGEORADIUS drivers 77.2 28.6 3 km",
+    "hook": "Nearest driver, half a second.",
+    "id": "sd-case-009",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Geospatial index prunes candidates before ranking.",
+      "options": [
+        "Geo index then rank by ETA",
+        "Scan all drivers",
+        "Random assign",
+        "Single city server"
+      ],
+      "q": "How do you match riders fast?"
+    },
+    "takeaway": "Geo-query then rank by ETA and surge.",
+    "trap": "Stale locations dispatching ghost drivers.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Video pipeline: requirements 4K upload, transcode, HLS. API upload, webhook done. Storage S3 raw plus CDN segments. Bottleneck transcode; snippet enqueues job.",
+    "code": "# enqueue transcode\nffmpeg -i in.mp4 -map 0 -c:v libx264 out.m3u8",
+    "hook": "Upload once, play everywhere.",
+    "id": "sd-case-010",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 3,
+      "explain": "Async workers plus CDN decouple upload from playback.",
+      "options": [
+        "Sync transcode",
+        "Block upload",
+        "No CDN",
+        "Async transcode to HLS on CDN"
+      ],
+      "q": "How do you serve video at scale?"
+    },
+    "takeaway": "Async transcode, segment, cache at edge.",
+    "trap": "Serving 4K mp4 directly to phones.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "E-commerce checkout: requirements cart, pay once, inventory. API reserve, charge idempotent, confirm. Storage orders Postgres, stock Redis decrement. Bottleneck oversell; snippet uses saga.",
+    "code": "POST /pay\nIdempotency-Key: abc\n-- reserve stock, charge, confirm",
+    "hook": "Never sell the last shirt twice.",
+    "id": "sd-case-011",
+    "language": "sql",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Reserve plus idempotent charge plus confirm avoids double-sell.",
+      "options": [
+        "Charge first blindly",
+        "Reserve\u2192charge idempotent\u2192confirm saga",
+        "No inventory check",
+        "Double-charge ok"
+      ],
+      "q": "How do you prevent oversell?"
+    },
+    "takeaway": "Saga with reservation and idempotency.",
+    "trap": "No fencing letting two checkouts win.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Metrics pipeline: need 1M points/sec ingest, 7-day queries. API write batch, query range. Storage Kafka to ClickHouse downsampled. Bottleneck cardinality; snippet batches writes.",
+    "code": "# batch 1000 pts\n# clickhouse: AggregatingMergeTree",
+    "hook": "Million points a second, queryable.",
+    "id": "sd-case-012",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Batch plus columnar plus downsampling tames volume.",
+      "options": [
+        "One row per insert",
+        "Per-point HTTP",
+        "Batch ingest to columnar with downsampling",
+        "No retention"
+      ],
+      "q": "How do you ingest metrics cheaply?"
+    },
+    "takeaway": "Batch, compress, downsample by age.",
+    "trap": "Unbounded label cardinality exploding storage.",
+    "track": "system-design"
+  }
+]

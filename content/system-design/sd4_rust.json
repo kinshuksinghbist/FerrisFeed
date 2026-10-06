@@ -1,0 +1,332 @@
+[
+  {
+    "body_md": "Axum routers compose with `Router::new().route()`. Extractors like `Path`, `Query`, `Json` parse and validate. Nest versioned routes and share state via `Extension` or `State`.",
+    "code": "let app = Router::new()\n    .route(\"/posts/:id\", get(get_post))\n    .route(\"/posts\", post(create_post))\n    .with_state(pool.clone());",
+    "hook": "Routing as composable functions.",
+    "id": "sd-rust-001",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Routes map method+path to handlers with typed extractors.",
+      "options": [
+        "Routes map to typed handlers with extractors",
+        "Manual string parsing",
+        "No routing needed",
+        "Only one route allowed"
+      ],
+      "q": "How does axum routing work?"
+    },
+    "takeaway": "Declare routes with typed extractors for safety.",
+    "trap": "Cloning heavy state per request instead of Arc.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Tower layers add timeout, retry, rate-limit, CORS, and tracing. Order matters: `Trace` outside, `Timeout` inside. Reuse same stack for tests to catch policy bugs early.",
+    "code": "let app = Router::new().route(\"/\", get(h))\n    .layer(TraceLayer::new_for_http())\n    .layer(TimeoutLayer::new(Duration::from_millis(200)));",
+    "hook": "Middleware as Lego bricks.",
+    "id": "sd-rust-002",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Layers wrap service to add cross-cutting behavior.",
+      "options": [
+        "Copy-paste logic",
+        "Stack tower layers for timeout/trace/limits",
+        "Middleware impossible",
+        "Only logging matters"
+      ],
+      "q": "What is tower middleware?"
+    },
+    "takeaway": "Compose reliability policies as layers.",
+    "trap": "Wrong layer order timing out tracing spans.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Pool with bb8 or deadpool: set max_size near `(cores*2)+spindles`, plus connection timeout. Checkout per request, never hold across await sleeps. Monitor wait time as saturation signal.",
+    "code": "let pool = PgPoolOptions::new()\n    .max_connections(20)\n    .connect(&url).await.unwrap();",
+    "hook": "Pool it or drown the database.",
+    "id": "sd-rust-003",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Bounded pools cap concurrent DB load.",
+      "options": [
+        "New conn per request",
+        "Unbounded pool",
+        "Bounded pool with timeouts",
+        "Share one conn globally"
+      ],
+      "q": "How should Rust services pool Postgres?"
+    },
+    "takeaway": "Bound pools and watch checkout latency.",
+    "trap": "max_connections exceeding DB max_connections.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "sqlx gives compile-checked queries with `query!` and async Postgres. Run migrations at boot, use transactions for multi-write, and `QueryBuilder` for dynamic filters without string concat.",
+    "code": "sqlx::query!(\"SELECT id FROM posts WHERE id = $1\", id)\n    .fetch_one(&pool).await.unwrap();",
+    "hook": "SQL checked at compile time.",
+    "id": "sd-rust-004",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Macros validate SQL against live schema.",
+      "options": [
+        "Compile-checked async queries with migrations",
+        "Raw string concat",
+        "No transactions",
+        "Sync blocking calls"
+      ],
+      "q": "Why use sqlx?"
+    },
+    "takeaway": "Get type-safe SQL with async performance.",
+    "trap": "Offline builds without DATABASE_URL for query! macros.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Cache-aside in Rust: check Redis via `redis::aio`, fall back to sqlx, then `SETEX`. Use versioned keys and spawn invalidation on write. Wrap with singleflight via `tokio::sync`.",
+    "code": "let v: Option<String> = con.get(&key).await?;\nif v.is_none() {\n    let row = sqlx::query!(/*...*/).fetch_one(&pool).await?;\n}",
+    "hook": "Redis in front, Postgres behind.",
+    "id": "sd-rust-005",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Read-through with TTL shields the database.",
+      "options": [
+        "Cache never",
+        "DB only",
+        "Cache as truth",
+        "Cache-aside with TTL plus invalidation"
+      ],
+      "q": "How do you add Redis cache-aside in Rust?"
+    },
+    "takeaway": "Shield reads with expiring cache entries.",
+    "trap": "Forgetting invalidation leaving stale profiles.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Tracing with `tracing` plus OpenTelemetry exports spans to Jaeger. Instrument handlers, propagate `trace_id` in headers, and add `#[instrument]` on DB and Kafka calls.",
+    "code": "#[tracing::instrument(skip(pool))]\nasync fn get_post(State(pool): State<PgPool>, Path(id): Path<i64>) {}",
+    "hook": "Every request tells its journey.",
+    "id": "sd-rust-006",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Spans link logs across service boundaries.",
+      "options": [
+        "println everywhere",
+        "Instrument with tracing+OTel spans",
+        "No correlation needed",
+        "Logs only"
+      ],
+      "q": "How do you trace axum services?"
+    },
+    "takeaway": "Emit structured spans with propagated IDs.",
+    "trap": "Logging PII inside spans.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Graceful shutdown: catch SIGTERM, stop accepting, drain 30s, then close pools. In axum use `with_graceful_shutdown` and tokio cancellation tokens for background Kafka tasks.",
+    "code": "axum::serve(listener, app)\n    .with_graceful_shutdown(shutdown_signal())\n    .await.unwrap();",
+    "hook": "Drain, do not drop.",
+    "id": "sd-rust-007",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Draining lets in-flight requests finish cleanly.",
+      "options": [
+        "Kill -9 always",
+        "Ignore signals",
+        "Drain listeners then close pools",
+        "Deploy without health checks"
+      ],
+      "q": "How do you shut down cleanly?"
+    },
+    "takeaway": "Drain connections before exiting.",
+    "trap": "Zero grace period dropping uploads mid-write.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Config via `config` crate plus env: base.yaml, prod overrides, `APP__DB_URL` env. Validate at startup with serde; fail fast on missing secrets. Never bake creds into image.",
+    "code": "#[derive(Deserialize)]\nstruct Cfg { db_url: String }\n// APP__DB_URL overrides file",
+    "hook": "Twelve-factor config without surprises.",
+    "id": "sd-rust-008",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Layered files plus env allow per-env overrides.",
+      "options": [
+        "Layered files plus validated env vars",
+        "Hardcode secrets",
+        "One config for all envs",
+        "Env only without defaults"
+      ],
+      "q": "How should Rust services load config?"
+    },
+    "takeaway": "Validate typed config at boot.",
+    "trap": "Panicking on optional local-only settings.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Multi-stage Dockerfile: rust:bookworm builds with cargo-chef caching, then copies binary to distroless. Runs as nonroot, exposes 8080, sets RUST_LOG. Result under 50MB.",
+    "code": "FROM rust:1.78 AS build\nRUN cargo build --release\nFROM gcr.io/distroless/cc\nCOPY --from=build /app/server /server",
+    "hook": "50MB image, millisecond boot.",
+    "id": "sd-rust-009",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Build stage compiles; runtime stage ships only binary.",
+      "options": [
+        "One fat image",
+        "Compile in prod",
+        "Alpine with musl only",
+        "Multi-stage: build then minimal runtime"
+      ],
+      "q": "How do you containerize Rust services?"
+    },
+    "takeaway": "Ship minimal images with cached builds.",
+    "trap": "Running as root with debug symbols inside.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Health endpoints: `/healthz` for liveness, `/readyz` checking DB+Redis+Kafka. Return 200 only when ready; Kubernetes removes unready pods. Keep checks fast and dependency-scoped.",
+    "code": "async fn readyz(State(s): State<App>) -> StatusCode {\n    if s.pool.is_closed() { StatusCode::SERVICE_UNAVAILABLE }\n    else { StatusCode::OK }\n}",
+    "hook": "Tell Kubernetes the truth, fast.",
+    "id": "sd-rust-010",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Readiness gates traffic; liveness gates restarts.",
+      "options": [
+        "One / endpoint",
+        "Separate liveness vs readiness with deps",
+        "No health checks",
+        "Health checks query slowly"
+      ],
+      "q": "How do you implement health checks?"
+    },
+    "takeaway": "Expose lightweight liveness and readiness probes.",
+    "trap": "Readiness doing expensive full-table scan.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Error handling: `thiserror` for libs, `anyhow` for bins, map to HTTP with `IntoResponse`. Return 400 for validation, 404 for missing, 503 for downstream. Log with trace id, no unwrap in handlers.",
+    "code": "#[derive(thiserror::Error, Debug)]\nenum ApiErr { #[error(\"not found\")] NotFound }",
+    "hook": "Errors as types, not strings.",
+    "id": "sd-rust-011",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Typed errors map cleanly to status codes.",
+      "options": [
+        "unwrap everywhere",
+        "panic on 404",
+        "Typed errors mapped to responses",
+        "Stringly errors"
+      ],
+      "q": "How should axum handlers report errors?"
+    },
+    "takeaway": "Model errors and map to correct codes.",
+    "trap": "500 for user input errors triggering false alarms.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Auth: validate JWT in middleware, inject `Claims` extractor, check scopes per route. Cache JWKS, enforce expiry plus audience, and rate-limit login. Never trust client roles blindly.",
+    "code": "async fn auth(mut req: Request, next: Next) -> Response {\n    // verify bearer, insert claims\n    next.run(req).await\n}",
+    "hook": "Verify at the edge, enforce per route.",
+    "id": "sd-rust-012",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Middleware verifies signature then handlers authorize.",
+      "options": [
+        "Middleware verifies JWT then route checks scopes",
+        "Trust client headers",
+        "Long-lived tokens only",
+        "No expiry"
+      ],
+      "q": "Where does auth belong in axum?"
+    },
+    "takeaway": "Authenticate once, authorize everywhere.",
+    "trap": "Skipping audience check accepting foreign tokens.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Testing: `cargo test` for pure logic, `axum-test` or `tower::ServiceExt::oneshot` for routes, testcontainers for Postgres/Redis. Seed fixtures, assert status plus JSON, run migrations in setup.",
+    "code": "let res = app.oneshot(Request::get(\"/healthz\").body(Body::empty()).unwrap()).await.unwrap();\nassert_eq!(res.status(), 200);",
+    "hook": "Routes tested like functions.",
+    "id": "sd-rust-013",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "In-memory service calls test stack without sockets.",
+      "options": [
+        "Only manual curl",
+        "Oneshot route tests plus containers",
+        "No DB tests",
+        "Sleep-based asserts"
+      ],
+      "q": "How do you test axum apps?"
+    },
+    "takeaway": "Test handlers through the tower stack.",
+    "trap": "Shared DB state causing flaky parallel tests.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Rate limit with tower-governor or Redis token bucket. Key by IP plus user, return 429 with Retry-After, exempt health checks. Test burst vs sustained separately.",
+    "code": "// governor sketch\n// layer(GovernorLayer::new(peer_quota(10, secs(1))))",
+    "hook": "Protect the pool before the flood.",
+    "id": "sd-rust-014",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Edge limiting shields expensive handlers.",
+      "options": [
+        "No limits",
+        "Limit only frontend",
+        "Unlimited retries",
+        "Limit by key with 429 signaling"
+      ],
+      "q": "How do you rate-limit axum?"
+    },
+    "takeaway": "Throttle upstream with clear backoff signals.",
+    "trap": "Global limit blocking health probes.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Deploy: GH Actions builds, runs sqlx migrate check, pushes image, rolls Kubernetes with HPA on p95. Canary 5% first, auto-rollback on error budget burn. Tag images by SHA.",
+    "code": "# ci: cargo test\n# docker build -t app:$SHA\n# kubectl rollout restart deploy/api",
+    "hook": "Small, observable, reversible releases.",
+    "id": "sd-rust-015",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Progressive rollout plus migration safety enables noon deploys.",
+      "options": [
+        "Progressive rollout with canary plus rollback",
+        "Big-bang Friday deploy",
+        "Latest tag always",
+        "Skip migrations in CI"
+      ],
+      "q": "What is a safe Rust deploy pipeline?"
+    },
+    "takeaway": "Automate test, image, canary, and rollback.",
+    "trap": "Running non-backward-compatible migration first.",
+    "track": "system-design"
+  }
+]

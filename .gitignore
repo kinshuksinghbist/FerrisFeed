@@ -1,0 +1,27 @@
+# Rust
+/target/
+rust-core/target/
+Cargo.lock
+# keep Cargo.lock for app? uncomment next if lib-only
+# Cargo.lock
+
+# Android / Gradle
+.gradle/
+build/
+app/build/
+core-ui/build/
+feature-feed/build/
+feature-path/build/
+data/build/
+local.properties
+*.iml
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace

@@ -1,0 +1,442 @@
+[
+  {
+    "id": "wasm-06-001",
+    "track": "wasm",
+    "level": 1,
+    "hook": "Release builds shrink your wasm binary dramatically.",
+    "body_md": "wasm-pack builds debug output by default which is large and slow. Pass --release and tune the release profile with lto, codegen-units 1, and debug off. Compare file sizes in pkg before and after to see the win.",
+    "code": "[profile.release]\nopt-level = \"z\"\nlto = true\ncodegen-units = 1\ndebug = false\nstrip = true",
+    "language": "rust",
+    "takeaway": "Release profiles trade slower builds for much smaller and faster wasm output.",
+    "trap": "Shipping a debug build to production because --release was forgotten.",
+    "quiz": {
+      "q": "Which profile option helps shrink a release wasm binary?",
+      "options": [
+        "opt-level z with lto enabled",
+        "opt-level 0 with debug on",
+        "codegen-units 256",
+        "panic unwind everywhere"
+      ],
+      "answer": 0,
+      "explain": "Size opts plus link-time optimization remove dead code and inline aggressively."
+    }
+  },
+  {
+    "id": "wasm-06-002",
+    "track": "wasm",
+    "level": 1,
+    "hook": "One crate ships to web, bundler, and Node with targets.",
+    "body_md": "wasm-pack --target selects the JS glue style: bundler for webpack or Vite, web for bare ES modules, nodejs for Node, no-modules for plain script tags. Pick the one matching your host, since imports and init differ per target.",
+    "code": "wasm-pack build --target bundler\nwasm-pack build --target web\nwasm-pack build --target nodejs\nwasm-pack build --target no-modules",
+    "language": "rust",
+    "takeaway": "Each wasm-pack target emits glue code shaped for a different module host.",
+    "trap": "Using bundler glue with a plain script tag, which fails on bare imports.",
+    "quiz": {
+      "q": "Which target suits a plain script tag with no bundler?",
+      "options": [
+        "no-modules",
+        "bundler",
+        "nodejs with require",
+        "wee_alloc"
+      ],
+      "answer": 0,
+      "explain": "no-modules exposes a global instead of ES imports so script tags work."
+    }
+  },
+  {
+    "id": "wasm-06-003",
+    "track": "wasm",
+    "level": 2,
+    "hook": "wasm-opt squeezes binaries after Rust is done.",
+    "body_md": "Binaryen wasm-opt runs extra passes like dead-code elimination and inlining on the final wasm. Levels range from -O0 to -O4, with -Oz favoring size and -Os balancing size and speed. wasm-pack runs it automatically on release builds.",
+    "code": "wasm-opt -Oz input.wasm -o output.wasm\nwasm-opt -O4 input.wasm -o fast.wasm\nls -lh input.wasm output.wasm",
+    "language": "rust",
+    "takeaway": "Post-build optimization passes shrink wasm beyond what the compiler alone achieves.",
+    "trap": "Running -O0 expecting shrinkage when only -O2 and above optimize hard.",
+    "quiz": {
+      "q": "What does -Oz prioritize over -O4?",
+      "options": [
+        "Smallest file size",
+        "Fastest compile time",
+        "Loudest warnings",
+        "More debug symbols"
+      ],
+      "answer": 0,
+      "explain": "-Oz tunes passes for size while -O4 chases runtime speed."
+    }
+  },
+  {
+    "id": "wasm-06-004",
+    "track": "wasm",
+    "level": 2,
+    "hook": "wasm-snip cuts functions you never call.",
+    "body_md": "wasm-snip removes annotated or regex-matched functions from the binary, handy for stripping panics, formatting, or test helpers. Mark cold paths with Snip or pass a pattern. Always re-run tests after snipping to catch overreach.",
+    "code": "wasm-snip input.wasm -o slim.wasm \\\n  -p \"__wbindgen.*\"\nls -lh input.wasm slim.wasm",
+    "language": "rust",
+    "takeaway": "Snipping deletes matched functions to reclaim space from unused helpers.",
+    "trap": "Snipping a function that is actually reached through dynamic dispatch.",
+    "quiz": {
+      "q": "When is wasm-snip most useful?",
+      "options": [
+        "Removing known-dead helpers to save bytes",
+        "Adding new exports",
+        "Speeding up rustc",
+        "Generating docs"
+      ],
+      "answer": 0,
+      "explain": "It pattern-deletes kept-but-unused functions the optimizer cannot prove dead."
+    }
+  },
+  {
+    "id": "wasm-06-005",
+    "track": "wasm",
+    "level": 2,
+    "hook": "twiggy shows exactly what bloats your binary.",
+    "body_md": "twiggy top lists the largest size contributors like monomorphized generics, panic machinery, or embedded formatting tables. Run it on release output, then attack the top rows by trimming features, sharing generics, or swapping allocators.",
+    "code": "twiggy top pkg/app_bg.wasm\ntwiggy top -n 20 pkg/app_bg.wasm",
+    "language": "rust",
+    "takeaway": "Size profiling points the optimizer at the heaviest symbols first.",
+    "trap": "Guessing at bloat instead of measuring and tuning the wrong crate.",
+    "quiz": {
+      "q": "What does twiggy top report?",
+      "options": [
+        "Largest size contributors in the binary",
+        "JS bundle graphs",
+        "Network waterfalls",
+        "CSS specificity"
+      ],
+      "answer": 0,
+      "explain": "It ranks symbols and sections by bytes so you fix real bloat."
+    }
+  },
+  {
+    "id": "wasm-06-006",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Default allocator is heavy, tiny ones save kilobytes.",
+    "body_md": "Rust binaries link a full allocator by default. wee_alloc and lol_alloc are tiny bump-style allocators that cut tens of kilobytes for small apps. They are slower under churn, so keep the system allocator for allocation-heavy workloads.",
+    "code": "use wee_alloc::WeeAlloc;\n#[global_allocator]\nstatic ALLOC: WeeAlloc = WeeAlloc::INIT;",
+    "language": "rust",
+    "takeaway": "Tiny allocators trade allocation speed for a much smaller binary footprint.",
+    "trap": "Switching allocators in a hot loop app and wondering why it slowed down.",
+    "quiz": {
+      "q": "When does wee_alloc make sense?",
+      "options": [
+        "Small apps where binary size matters most",
+        "Heavy multithreaded servers",
+        "Kernels needing NUMA",
+        "GPU shaders"
+      ],
+      "answer": 0,
+      "explain": "Its bump design is tiny but slower under allocation churn."
+    }
+  },
+  {
+    "id": "wasm-06-007",
+    "track": "wasm",
+    "level": 1,
+    "hook": "Trunk builds apps while wasm-pack builds libraries.",
+    "body_md": "Trunk watches index.html, compiles the crate, bundles CSS and assets, and serves with live reload, ideal for Leptos or Yew apps. wasm-pack produces an npm-style package for embedding in an existing site. Choose by whether Rust owns the page.",
+    "code": "trunk serve\ntrunk build --release\nwasm-pack build --target web",
+    "language": "rust",
+    "takeaway": "Trunk owns the whole page pipeline while wasm-pack ships a reusable package.",
+    "trap": "Running wasm-pack for a full app and hand-wiring HTML the tool would manage.",
+    "quiz": {
+      "q": "You own a full Leptos page with assets, which tool fits?",
+      "options": [
+        "Trunk",
+        "wasm-pack no-modules",
+        "twiggy",
+        "wasm-snip"
+      ],
+      "answer": 0,
+      "explain": "Trunk handles HTML assets and serving while wasm-pack targets libraries."
+    }
+  },
+  {
+    "id": "wasm-06-008",
+    "track": "wasm",
+    "level": 1,
+    "hook": "Vite loads Rust wasm with two plugins.",
+    "body_md": "Install vite-plugin-wasm plus vite-plugin-top-level-await, then import the pkg output in JS. Vite serves wasm with correct MIME types in dev and hashes it into dist on build. Restart dev after adding the plugins.",
+    "code": "import init from './pkg/app.js';\nawait init();\nconsole.log('wasm ready');",
+    "language": "javascript",
+    "takeaway": "Vite needs dedicated plugins to fetch and initialize wasm modules cleanly.",
+    "trap": "Forgetting top-level-await plugin so init promises never resolve in dev.",
+    "quiz": {
+      "q": "Why add vite-plugin-top-level-await?",
+      "options": [
+        "Wasm init uses top-level await in glue code",
+        "Vite needs it for CSS",
+        "It replaces rustc",
+        "It disables HMR"
+      ],
+      "answer": 0,
+      "explain": "The generated init runs at module top level, so the bundler must allow awaiting there."
+    }
+  },
+  {
+    "id": "wasm-06-009",
+    "track": "wasm",
+    "level": 1,
+    "hook": "Webpack needs one flag to speak wasm.",
+    "body_md": "Set experiments asyncWebAssembly true, then import the wasm like any module. Webpack fetches it asynchronously at runtime and splits it into its own chunk. Without the flag the build errors on the binary import.",
+    "code": "experiments: {\n  asyncWebAssembly: true\n}\n// app.js\nimport init from './pkg/app.js';\nawait init();",
+    "language": "javascript",
+    "takeaway": "Enabling async wasm lets webpack chunk and load the binary at runtime.",
+    "trap": "Importing wasm with experiments off and blaming Rust for the build error.",
+    "quiz": {
+      "q": "What breaks if asyncWebAssembly is missing?",
+      "options": [
+        "The build fails on wasm imports",
+        "CSS stops loading",
+        "Rust stops compiling",
+        "Tests run faster"
+      ],
+      "answer": 0,
+      "explain": "Webpack only parses wasm modules when the experiment flag is on."
+    }
+  },
+  {
+    "id": "wasm-06-010",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Source maps connect panics back to Rust lines.",
+    "body_md": "Build with debug info kept aside, then load the map in devtools so stack frames show Rust files instead of wasm offsets. Never ship full maps publicly; upload them to your error tracker or serve them locally only.",
+    "code": "wasm-pack build --dev\n# keep maps local, strip for prod\nwasm-pack build --release",
+    "language": "rust",
+    "takeaway": "Debug maps translate raw wasm offsets into readable Rust source lines.",
+    "trap": "Shipping full source maps publicly and leaking internal source paths.",
+    "quiz": {
+      "q": "Where should full wasm source maps live?",
+      "options": [
+        "Local dev or a private error tracker",
+        "Public CDN root",
+        "Inside the wasm binary always",
+        "Nowhere, delete them"
+      ],
+      "answer": 0,
+      "explain": "They aid debugging but can expose sources if published openly."
+    }
+  },
+  {
+    "id": "wasm-06-011",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Devtools can breakpoint Rust through DWARF data.",
+    "body_md": "Chrome and Firefox read embedded DWARF to show Rust sources in the debugger. Build with debug info, open Sources, find the original file, and step as usual. Variables may show optimized-out under release opts.",
+    "code": "fn add(a: i32, b: i32) -> i32 {\n    a + b // breakpoint here in Sources\n}",
+    "language": "rust",
+    "takeaway": "Embedded debug data lets browsers step through original Rust sources directly.",
+    "trap": "Debugging a stripped release binary and seeing only raw offsets.",
+    "quiz": {
+      "q": "What enables Rust-level breakpoints in the browser?",
+      "options": [
+        "DWARF debug data in the build",
+        "Faster WiFi",
+        "More RAM",
+        "A bigger monitor"
+      ],
+      "answer": 0,
+      "explain": "Devtools map wasm addresses to source lines using DWARF records."
+    }
+  },
+  {
+    "id": "wasm-06-012",
+    "track": "wasm",
+    "level": 1,
+    "hook": "Memory Inspector reads raw linear memory bytes.",
+    "body_md": "Open Chrome devtools Memory Inspector on a WebAssembly.Memory object to watch bytes change live. Point it at the buffer after instantiating, then write from Rust and see cells update. Great for debugging string or pixel encoding bugs.",
+    "code": "const mem = new WebAssembly.Memory({ initial: 1 });\nconst bytes = new Uint8Array(mem.buffer);\nbytes[0] = 65;\nconsole.log(bytes[0]);",
+    "language": "javascript",
+    "takeaway": "Live byte views reveal exactly what Rust wrote into shared memory.",
+    "trap": "Holding a stale Uint8Array after memory grows and reading garbage.",
+    "quiz": {
+      "q": "What does Memory Inspector show?",
+      "options": [
+        "Live bytes of linear memory",
+        "Rust source code",
+        "Network timing",
+        "DOM tree"
+      ],
+      "answer": 0,
+      "explain": "It renders the buffer so encoding bugs become visible immediately."
+    }
+  },
+  {
+    "id": "wasm-06-013",
+    "track": "wasm",
+    "level": 1,
+    "hook": "Firefox shows WAT beside the running module.",
+    "body_md": "In Firefox debugger, open the wasm source to see disassembled WAT with functions and locals. Set breakpoints on WAT instructions when Rust sources are missing. Copy function names from there into bug reports for precision.",
+    "code": "(module\n  (func (export \"add\")\n    (param i32 i32) (result i32)\n    local.get 0\n    local.get 1\n    i32.add))",
+    "language": "rust",
+    "takeaway": "Disassembled text views make stepping possible even without original sources.",
+    "trap": "Assuming minified names match Rust names when reading raw disassembly.",
+    "quiz": {
+      "q": "When does the Firefox WAT view help most?",
+      "options": [
+        "Debugging builds without Rust sources",
+        "Styling pages",
+        "Writing SQL",
+        "Deploying servers"
+      ],
+      "answer": 0,
+      "explain": "WAT exposes real instructions and locals when source maps are absent."
+    }
+  },
+  {
+    "id": "wasm-06-014",
+    "track": "wasm",
+    "level": 1,
+    "hook": "Safari runs wasm but lags on newest features.",
+    "body_md": "WebKit supports core wasm plus threads and SIMD behind recent versions, so test on real iPhones not just desktop. Feature-detect WebAssembly and SIMD before using them, and keep a single-threaded fallback path for older releases.",
+    "code": "if (typeof WebAssembly === 'undefined') {\n  showFallback();\n} else {\n  await initWasm();\n}",
+    "language": "javascript",
+    "takeaway": "Guarded feature checks keep Apple devices on a working execution path.",
+    "trap": "Assuming desktop Chrome behavior matches an old iPhone WebView.",
+    "quiz": {
+      "q": "What is the safest Safari strategy?",
+      "options": [
+        "Feature-detect then fall back gracefully",
+        "Ship threads-only code",
+        "Skip testing on devices",
+        "Block all Apple users"
+      ],
+      "answer": 0,
+      "explain": "Detection routes old WebKit to fallback instead of crashing on init."
+    }
+  },
+  {
+    "id": "wasm-06-015",
+    "track": "wasm",
+    "level": 1,
+    "hook": "Node loads wasm with plain async instantiate.",
+    "body_md": "Read the file into bytes, call WebAssembly.instantiate with an imports object, then call exports. No bundler needed. Keep the glue JS next to the binary and pin versions so server deploys stay reproducible.",
+    "code": "import { readFile } from 'node:fs/promises';\nconst bytes = await readFile('./add.wasm');\nconst { instance } = await WebAssembly.instantiate(bytes, {});\nconsole.log(instance.exports.add(2, 3));",
+    "language": "javascript",
+    "takeaway": "Server-side instantiation needs only file bytes plus an imports object.",
+    "trap": "Passing a path string instead of bytes to instantiate.",
+    "quiz": {
+      "q": "What must you pass to WebAssembly.instantiate in Node?",
+      "options": [
+        "Binary bytes plus imports",
+        "A URL string only",
+        "CSS text",
+        "A TTY handle"
+      ],
+      "answer": 0,
+      "explain": "It compiles from bytes, so read the file first then instantiate."
+    }
+  },
+  {
+    "id": "wasm-06-016",
+    "track": "wasm",
+    "level": 1,
+    "hook": "Deno runs wasm with zero installs.",
+    "body_md": "Use Deno.readFile for bytes and WebAssembly.instantiate, same as browsers, with permissions guarding file access. Remote imports need --allow-net while local files need --allow-read. Cache the compiled module to skip recompiling each run.",
+    "code": "const bytes = await Deno.readFile('./add.wasm');\nconst mod = await WebAssembly.compile(bytes);\nconst { exports } = await WebAssembly.instantiate(mod, {});",
+    "language": "javascript",
+    "takeaway": "Deno permission flags wrap the same standard instantiation flow securely.",
+    "trap": "Forgetting allow-read so local wasm loads fail with permission errors.",
+    "quiz": {
+      "q": "Which flag lets Deno read a local wasm file?",
+      "options": [
+        "allow-read",
+        "allow-camera",
+        "allow-gpu",
+        "allow-sms"
+      ],
+      "answer": 0,
+      "explain": "File access is gated, so local bytes need explicit read permission."
+    }
+  },
+  {
+    "id": "wasm-06-017",
+    "track": "wasm",
+    "level": 1,
+    "hook": "Bun starts wasm fast from its own file API.",
+    "body_md": "Bun.file gives bytes quickly, then standard instantiate runs the module. Hot paths benefit from Bun fast startup, making it nice for CLIs and tests. Reuse one instance across calls instead of re-instantiating per request.",
+    "code": "const bytes = await Bun.file('./add.wasm').arrayBuffer();\nconst { instance } = await WebAssembly.instantiate(bytes, {});\nconsole.log(instance.exports.add(2, 3));",
+    "language": "javascript",
+    "takeaway": "Bun file helpers feed the standard loader with minimal startup overhead.",
+    "trap": "Re-instantiating per request instead of reusing one warm instance.",
+    "quiz": {
+      "q": "What feeds WebAssembly.instantiate under Bun?",
+      "options": [
+        "Bytes from Bun file helpers",
+        "A TCP socket",
+        "A GPU buffer",
+        "A CSS file"
+      ],
+      "answer": 0,
+      "explain": "The loader still consumes bytes, Bun just supplies them quickly."
+    }
+  },
+  {
+    "id": "wasm-06-018",
+    "track": "wasm",
+    "level": 2,
+    "hook": "wasm-pack test runs Rust tests in real browsers.",
+    "body_md": "Write #[wasm_bindgen_test] cases, then run wasm-pack test --headless --chrome or --firefox. It builds the crate, drives a headless browser, and reports failures like cargo test. Use it for DOM and fetch code that cannot run natively.",
+    "code": "wasm-pack test --headless --chrome\nwasm-pack test --headless --firefox",
+    "language": "rust",
+    "takeaway": "Headless browser harnesses exercise wasm code paths that native tests cannot reach.",
+    "trap": "Only running native cargo test for DOM code that needs a browser.",
+    "quiz": {
+      "q": "What does wasm-pack test add over cargo test?",
+      "options": [
+        "A real browser runtime for DOM cases",
+        "Faster rustc",
+        "Free hosting",
+        "CSS minify"
+      ],
+      "answer": 0,
+      "explain": "It executes tests inside Chrome or Firefox where web APIs exist."
+    }
+  },
+  {
+    "id": "wasm-06-019",
+    "track": "wasm",
+    "level": 2,
+    "hook": "cargo-bloat finds the generics eating your budget.",
+    "body_md": "Run cargo bloat in release for the wasm target to rank crates and symbols by size. Generics, regex tables, and panic formatting usually top the list. Trim features, box large variants, or swap crates based on the ranking.",
+    "code": "cargo bloat --release --target wasm32-unknown-unknown\ncargo bloat --release --crates",
+    "language": "rust",
+    "takeaway": "Crate-level size ranking turns vague bloat into concrete removal targets.",
+    "trap": "Removing random deps without measuring which one dominates size.",
+    "quiz": {
+      "q": "What guides diet decisions after cargo bloat?",
+      "options": [
+        "The ranked size table of crates",
+        "The weather",
+        "Line count of README",
+        "Star count"
+      ],
+      "answer": 0,
+      "explain": "Largest rows give the best byte-per-effort savings first."
+    }
+  },
+  {
+    "id": "wasm-06-020",
+    "track": "wasm",
+    "level": 2,
+    "hook": "A size checklist keeps bundles under budget.",
+    "body_md": "Combine release profile, wasm-opt -Oz, stripped symbols, tiny allocator, and trimmed features. Measure with twiggy after each change and gate CI on a kilobyte limit. One knob rarely suffices; the stack compounds.",
+    "code": "[profile.release]\nstrip = true\n# plus: wasm-opt -Oz, tiny alloc\n# plus: default-features = false",
+    "language": "rust",
+    "takeaway": "Layered size tactics compound into savings no single flag can match.",
+    "trap": "Applying -Oz but shipping debug symbols that dwarf the savings.",
+    "quiz": {
+      "q": "Why layer several size tactics?",
+      "options": [
+        "Savings compound across toolchain stages",
+        "It looks impressive",
+        "One flag is illegal",
+        "CI demands five lines"
+      ],
+      "answer": 0,
+      "explain": "Compiler, linker, allocator, and post passes each remove different waste."
+    }
+  }
+]

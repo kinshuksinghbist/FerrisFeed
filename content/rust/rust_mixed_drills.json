@@ -1,0 +1,486 @@
+[
+  {
+    "body_md": "Picture: `s1` box owns heap HI, `let s2 = s1` moves the arrow to `s2`, `s1` is crossed out. Moves transfer ownership — the old name dies. Clone with `s1.clone()` to keep both arrows alive.",
+    "code": "let s1 = String::from(\"hi\");\nlet s2 = s1;\n// println!(\"{s1}\"); // moved!",
+    "hook": "Two names, one String — which one owns it now?",
+    "id": "rust-drill-001",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 2,
+      "explain": "Assignment moves heap ownership so s1 is invalid after.",
+      "options": [
+        "Both s1 and s2 own it",
+        "s1 still owns it",
+        "s2 owns it and s1 is invalid",
+        "Ownership is shared automatically"
+      ],
+      "q": "After let s2 = s1 for a String, who owns it?"
+    },
+    "takeaway": "Moves transfer ownership so the source binding becomes unusable afterward.",
+    "track": "rust",
+    "trap": "Using the moved-from name again fails even though it looks alive."
+  },
+  {
+    "body_md": "Picture: one `&mut` arrow XOR many `&` arrows, never both. `let r1 = &mut v; let r2 = &v;` is rejected while `r1` lives. End the mutable borrow (NLL) before sharing immutably.",
+    "code": "let mut v = vec![1];\nlet r1 = &mut v;\nr1.push(2);\nlet r2 = &v; // ok after last r1 use\nprintln!(\"{r2:?}\");",
+    "hook": "One &mut or many & — never both at once.",
+    "id": "rust-drill-002",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Mutable and immutable borrows cannot overlap while both are live.",
+      "options": [
+        "Any borrows can always overlap",
+        "Mutable and shared borrows cannot overlap while live",
+        "Only two mut borrows conflict",
+        "Borrows never conflict"
+      ],
+      "q": "Can &mut and & coexist while both live?"
+    },
+    "takeaway": "End mutable borrows before creating shared borrows of the same value.",
+    "track": "rust",
+    "trap": "Holding a mut borrow across a later shared use trips the checker."
+  },
+  {
+    "body_md": "`match` must cover every case — add `_ =>` or list all variants. The compiler even names the missing pattern. For `Option` and `Result`, handle `None` and `Err` explicitly instead of unwrapping drills.",
+    "code": "let o: Option<i32> = None;\nmatch o {\n    Some(x) => println!(\"{x}\"),\n    None => println!(\"empty\"),\n}",
+    "hook": "Match on Option and forget None? The compiler will not let you.",
+    "id": "rust-drill-003",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 3,
+      "explain": "match requires exhaustive arms so missing cases fail to compile.",
+      "options": [
+        "Missing arms warn only",
+        "Missing arms panic at runtime",
+        "Missing arms are inferred",
+        "Missing arms fail compilation"
+      ],
+      "q": "What happens with a non-exhaustive match?"
+    },
+    "takeaway": "Write exhaustive matches with explicit arms for every possible case.",
+    "track": "rust",
+    "trap": "A catch-all too early hides specific arms below it silently."
+  },
+  {
+    "body_md": "`.map(f)` transforms `Some(x)` to `Some(f(x))`, leaves `None` alone. No match needed: `Some(2).map(|x| x * 10)` gives `Some(20)`. Chain maps instead of nesting matches for clean pipelines.",
+    "code": "let a: Option<i32> = Some(2);\nlet b = a.map(|x| x * 10);\nassert_eq!(b, Some(20));",
+    "hook": "Option map in ten seconds — transform without unwrapping.",
+    "id": "rust-drill-004",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "map applies only on Some and passes None through.",
+      "options": [
+        "map transforms Some and passes None through",
+        "map unwraps or panics",
+        "map always returns None",
+        "map requires a match block"
+      ],
+      "q": "What does Option map do on None?"
+    },
+    "takeaway": "Transform optional values with map instead of manual matching everywhere.",
+    "track": "rust",
+    "trap": "Using map for side effects hides intent; use if-let instead."
+  },
+  {
+    "body_md": "`.and_then(f)` chains fallible steps where `f` returns `Option`. Unlike `map` (which would nest `Some(Some(x))`), it flattens: `s.parse().ok().and_then(|n| check(n))`. Reads like a pipeline.",
+    "code": "\"42\".parse::<i32>().ok().and_then(|n| if n > 0 { Some(n) } else { None });",
+    "hook": "map gives Option of Option — and_then flattens it.",
+    "id": "rust-drill-005",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "and_then flattens while map would nest another Option layer.",
+      "options": [
+        "They behave identically",
+        "map flattens and and_then nests",
+        "and_then flattens functions returning Option",
+        "Neither works on None"
+      ],
+      "q": "How do map and and_then differ on Option?"
+    },
+    "takeaway": "Chain fallible Option steps with and_then to keep results flat.",
+    "track": "rust",
+    "trap": "Using map with a function returning Option nests two layers deep."
+  },
+  {
+    "body_md": "`.unwrap_or(default)` picks a ready value; `.unwrap_or_else(|| compute())` computes lazily only on `None`. Never put expensive work in `unwrap_or` — it runs eagerly even for `Some`. Clippy flags this.",
+    "code": "let o: Option<String> = None;\nlet s = o.unwrap_or_else(|| String::from(\"anon\"));",
+    "hook": "unwrap_or runs NOW, unwrap_or_else runs only if needed.",
+    "id": "rust-drill-006",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "unwrap_or evaluates eagerly while unwrap_or_else is lazy on None.",
+      "options": [
+        "They are identical helpers",
+        "unwrap_or is eager while unwrap_or_else is lazy",
+        "unwrap_or_else always panics",
+        "unwrap_or takes a closure"
+      ],
+      "q": "How do unwrap_or and unwrap_or_else differ?"
+    },
+    "takeaway": "Prefer unwrap_or_else for expensive defaults so work stays lazy.",
+    "track": "rust",
+    "trap": "Costly defaults inside unwrap_or run even when unneeded."
+  },
+  {
+    "body_md": "`.map(f)` on `Result` transforms `Ok`, `.map_err(g)` transforms `Err`. Convert low-level errors at boundaries: `read().map_err(|e| format!(\"config: {e}\"))`. Keeps happy path clean while adding context.",
+    "code": "let r: Result<i32, &str> = Ok(2);\nlet ok = r.map(|x| x * 2);\nlet e: Result<i32, String> = Err(\"x\".into());",
+    "hook": "Ok goes through map, Err goes through map_err — drill it.",
+    "id": "rust-drill-007",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "map touches Ok values while map_err touches Err values.",
+      "options": [
+        "map touches Ok and map_err touches Err",
+        "Both touch Ok only",
+        "Both touch Err only",
+        "They swap Ok and Err"
+      ],
+      "q": "What do Result map and map_err transform?"
+    },
+    "takeaway": "Translate Result halves separately with map for values and map_err for errors.",
+    "track": "rust",
+    "trap": "Mapping the wrong half silently skips the transform you intended."
+  },
+  {
+    "body_md": "Chain `Result` with `and_then` and finish with `?`: `parse(a).and_then(|x| parse(b).map(|y| x + y))`. `?` early-returns `Err` with conversion via `From`. Mixed error types need map_err first.",
+    "code": "fn sum(a: &str, b: &str) -> Result<i32, std::num::ParseIntError> {\n    Ok(a.parse::<i32>()? + b.parse::<i32>()?)\n}",
+    "hook": "Two parses, one Result — chain with ? and and_then.",
+    "id": "rust-drill-008",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "? unwraps Ok or returns Err early with From conversion.",
+      "options": [
+        "? panics on Err always",
+        "? only works on Option",
+        "? ignores error types",
+        "? returns Err early from the function"
+      ],
+      "q": "What does ? do on Err?"
+    },
+    "takeaway": "Propagate chained failures with question mark for early error return.",
+    "track": "rust",
+    "trap": "Using ? across mismatched error types fails without a From conversion."
+  },
+  {
+    "body_md": "`v[i]` panics on bad index; `v.get(i)` returns `Option`. In drills prefer `get` plus pattern handling. Same for slices and arrays. Index only when bounds were just checked or are provably safe.",
+    "code": "let v = vec![1, 2];\nassert_eq!(v.get(9), None);\n// let boom = v[9]; // panics",
+    "hook": "Index or get? One panics, one returns Option.",
+    "id": "rust-drill-009",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 2,
+      "explain": "Indexing panics out of bounds while get returns None safely.",
+      "options": [
+        "Both panic identically",
+        "Both return Option",
+        "Indexing panics while get returns Option",
+        "get panics while indexing is safe"
+      ],
+      "q": "How do v[i] and v.get(i) differ?"
+    },
+    "takeaway": "Access vectors with get when indices come from uncertain input.",
+    "track": "rust",
+    "trap": "Indexing with user input panics the whole program on bad values."
+  },
+  {
+    "body_md": "`String::push_str` appends without realloc each time (amortized). `HashMap::entry` avoids double lookup: `map.entry(k).or_insert(0)`. Both replace clumsy contains-then-insert patterns you see in drills.",
+    "code": "use std::collections::HashMap;\nlet mut m = HashMap::new();\n*m.entry(\"a\").or_insert(0) += 1;",
+    "hook": "Stop checking contains_key then inserting — entry does both.",
+    "id": "rust-drill-010",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "entry performs one lookup for insert-or-update logic.",
+      "options": [
+        "entry does two lookups",
+        "entry does one lookup for insert or update",
+        "entry clones the map",
+        "entry only reads values"
+      ],
+      "q": "Why use the entry API?"
+    },
+    "takeaway": "Update maps with entry to combine lookup and insert in one step.",
+    "track": "rust",
+    "trap": "Contains-then-insert double lookups race and waste work under contention."
+  },
+  {
+    "body_md": "Closures capture by shared borrow, mutable borrow, or move — compiler picks the weakest that works. `|| x` borrows, `|| x.push(1)` borrows mutably, `move || x` owns. Check captures when spawn demands ownership.",
+    "code": "let v = vec![1];\nlet read = || v.len();\nlet dobro = move || v.len();\nprintln!(\"{} {}\", read(), dobro());",
+    "hook": "Same closure body, three capture modes — which one fired?",
+    "id": "rust-drill-011",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Closures auto-pick shared, mutable, or owned captures by usage.",
+      "options": [
+        "Closures auto-pick the weakest capture that works",
+        "Closures always move captures",
+        "Closures always copy captures",
+        "Closures never capture environment"
+      ],
+      "q": "How do closures capture variables?"
+    },
+    "takeaway": "Inspect closure captures when ownership or thread bounds complain loudly.",
+    "track": "rust",
+    "trap": "Assuming closures copy values leads to borrow errors on later use."
+  },
+  {
+    "body_md": "`move` forces ownership into the closure — required for `thread::spawn`. Without move, the thread might outlive the borrow. With move, the parent loses the value unless it was cloned first.",
+    "code": "let v = vec![1, 2, 3];\nlet h = std::thread::spawn(move || v.len());\nprintln!(\"{}\", h.join().unwrap());",
+    "hook": "thread::spawn demands move — here is the five-second why.",
+    "id": "rust-drill-012",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Spawned threads need owned data because borrows might outlive the parent.",
+      "options": [
+        "move makes threads faster",
+        "move shares borrows freely",
+        "spawn needs owned data that outlives the parent",
+        "move disables Send checks"
+      ],
+      "q": "Why does thread spawn need move closures?"
+    },
+    "takeaway": "Move owned data into spawned threads because borrows may outlive parents.",
+    "track": "rust",
+    "trap": "Forgetting move borrows locals that may vanish before the thread ends."
+  },
+  {
+    "body_md": "Iterators do nothing until consumed: `map` without `collect` or `for` never runs. Add `.collect::<Vec<_>>()` or a terminal like `sum()`. Side effects inside lazy adapters may never fire — classic drill trap.",
+    "code": "let v = vec![1, 2, 3];\nlet it = v.iter().map(|x| x * 2);\nlet out: Vec<_> = it.collect();",
+    "hook": "Your map closure never ran — iterators are lazy.",
+    "id": "rust-drill-013",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Adapters stay lazy until a consumer like collect runs them.",
+      "options": [
+        "Adapters run immediately",
+        "Adapters run only when consumed",
+        "collect skips all adapters",
+        "for loops skip adapters"
+      ],
+      "q": "When does iterator map execute?"
+    },
+    "takeaway": "Terminate lazy iterator chains with a consumer so work actually runs.",
+    "track": "rust",
+    "trap": "Relying on side effects inside map means they vanish without a consumer."
+  },
+  {
+    "body_md": "`Rc` cycles leak: A points to B, B points to A, counts never hit zero. Break with `Weak`: parents own children via `Rc`, children point back via `Weak::upgrade`. Check `upgrade()` for `None` after drops.",
+    "code": "use std::rc::{Rc, Weak};\nlet a = Rc::new(1);\nlet w: Weak<i32> = Rc::downgrade(&a);\nassert_eq!(w.upgrade(), Some(a.clone()));",
+    "hook": "Two Rcs pointing at each other leak forever — Weak breaks it.",
+    "id": "rust-drill-014",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Weak does not bump the strong count so cycles can deallocate.",
+      "options": [
+        "Weak back-links avoid leaking reference cycles",
+        "Rc alone handles all cycles",
+        "Weak always upgrades successfully",
+        "Cycles free automatically"
+      ],
+      "q": "How do you break Rc cycles?"
+    },
+    "takeaway": "Point back-edges with Weak so reference cycles can deallocate cleanly.",
+    "track": "rust",
+    "trap": "Linking both directions with Rc leaks the whole graph silently."
+  },
+  {
+    "body_md": "`thread::spawn` needs `'static + Send`: owned data only. Clone an `Arc` per thread instead of sharing `&`. Join handles to propagate panics; detached threads hide failures in drills.",
+    "code": "use std::sync::Arc;\nlet a = Arc::new(5);\nlet c = Arc::clone(&a);\nlet h = std::thread::spawn(move || *c + 1);",
+    "hook": "Spawned thread borrowing a local? The compiler says no.",
+    "id": "rust-drill-015",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Threads require static owned data so borrows cannot dangle.",
+      "options": [
+        "Threads accept any borrow",
+        "Threads skip Send checks",
+        "Threads share stack freely",
+        "Threads need owned static data"
+      ],
+      "q": "What data can cross into a spawned thread?"
+    },
+    "takeaway": "Give spawned threads owned static data and join handles for results.",
+    "track": "rust",
+    "trap": "Sharing stack borrows with detached threads risks use-after-return."
+  },
+  {
+    "body_md": "Blocking on async inside async deadlocks single-threaded runtimes: `block_on(fut)` parks the thread the future needs. Use `.await` instead. Only `block_on` from sync `main` or dedicated threads.",
+    "code": "// inside async fn: use inner.await\n// from sync main: futures::executor::block_on(inner)",
+    "hook": "block_on inside async hangs forever — await instead.",
+    "id": "rust-drill-016",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Nested block_on parks the executor thread that must drive the inner future.",
+      "options": [
+        "It speeds up polling",
+        "It deadlocks by parking the driving thread",
+        "It spawns extra workers",
+        "It cancels the future"
+      ],
+      "q": "Why is block_on inside async dangerous?"
+    },
+    "takeaway": "Await inside async code and reserve blocking waits for sync boundaries.",
+    "track": "rust",
+    "trap": "Nesting blocking waits inside async tasks stalls the whole executor."
+  },
+  {
+    "body_md": "**Hygiene** means macro locals cannot clash with caller names: `let __x = 1;` inside `macro_rules!` stays scoped to the expansion. Prefer unique names and `$crate` paths so call-site items resolve correctly.",
+    "code": "macro_rules! double { ($e:expr) => {{ let v = $e; v * 2 }}; }\nassert_eq!(double!(21), 42);",
+    "hook": "Macros cannot steal your variable names — hygiene prevents it.",
+    "id": "rust-drill-017",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Hygiene scopes macro locals so they cannot capture caller bindings.",
+      "options": [
+        "Macros share all locals",
+        "Macros cannot take arguments",
+        "Macro locals stay scoped to the expansion",
+        "Macros ignore all scopes"
+      ],
+      "q": "What does macro hygiene guarantee?"
+    },
+    "takeaway": "Trust macro hygiene for locals and qualify paths with crate anchors.",
+    "track": "rust",
+    "trap": "Assuming macro temps overwrite caller variables misreads expansion scope."
+  },
+  {
+    "body_md": "Match guards do not narrow ownership: `Some(x) if x > 0` still moves on match. Bind with `ref` or match on `&opt` to borrow. Guard order matters — first true arm wins in drills.",
+    "code": "let o = Some(5);\nmatch &o {\n    Some(x) if *x > 0 => println!(\"pos {x}\"),\n    _ => println!(\"other\"),\n}",
+    "hook": "Match guard passed but the value still moved — why?",
+    "id": "rust-drill-018",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Guards test values without changing move semantics so borrow explicitly.",
+      "options": [
+        "Guards do not borrow so match on references to avoid moves",
+        "Guards always borrow values",
+        "Guards skip arm ordering",
+        "Guards prevent all moves"
+      ],
+      "q": "How do match guards interact with moves?"
+    },
+    "takeaway": "Match on references when guards inspect values you must keep afterward.",
+    "track": "rust",
+    "trap": "Matching by value with guards moves data you still need later."
+  },
+  {
+    "body_md": "`collect::<Vec<_>>()` turbofish pins the container when inference stalls. Without it, `let x = iter.collect()` leaves the target ambiguous. Add the fish or annotate the binding type directly.",
+    "code": "let v: Vec<i32> = (1..4).collect();\nlet w = (1..4).collect::<Vec<i32>>();",
+    "hook": "collect needs a target type — turbofish tells it which.",
+    "id": "rust-drill-019",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "collect is generic over containers so the target must be known.",
+      "options": [
+        "collect always makes vectors",
+        "collect needs a known target container type",
+        "turbofish slows compilation",
+        "annotations are forbidden"
+      ],
+      "q": "Why does bare collect often fail inference?"
+    },
+    "takeaway": "Annotate collect targets with turbofish or bindings so inference can finish.",
+    "track": "rust",
+    "trap": "Leaving collect target ambiguous produces confusing inference errors."
+  },
+  {
+    "body_md": "Drill: counting words. `map.entry(w).or_insert(0)` then `+= 1` in one pass. The naive `if !contains { insert }` double-lookups and clones keys. Entry borrows the key slot directly and wins.",
+    "code": "use std::collections::HashMap;\nlet mut c = HashMap::new();\nfor w in [\"a\", \"b\", \"a\"] { *c.entry(w).or_insert(0) += 1; }",
+    "hook": "Word count in one hash lookup per word — entry API drill.",
+    "id": "rust-drill-020",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "entry reuses one lookup for get-or-insert plus mutation.",
+      "options": [
+        "entry reuses one lookup for update logic",
+        "entry requires two lookups",
+        "entry cannot mutate values",
+        "entry only works on empty maps"
+      ],
+      "q": "Why is entry faster than contains plus insert?"
+    },
+    "takeaway": "Count with entry and in-place mutation to avoid redundant map lookups.",
+    "track": "rust",
+    "trap": "Cloning keys for a pre-check lookup doubles hashing cost per word."
+  },
+  {
+    "body_md": "Two threads each `send` then `recv` on the other channel can deadlock if buffers fill. Order sends/receives consistently or use bounded channels with timeouts. Draw the wait arrows to spot cycles.",
+    "code": "let (tx, rx) = std::sync::mpsc::channel();\ntx.send(1).unwrap();\n// rx.recv() must run; missing recv blocks sender eventually",
+    "hook": "Two threads, two channels, zero progress — classic deadlock.",
+    "id": "rust-drill-021",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Symmetric blocking sends can wait on each other forever.",
+      "options": [
+        "Channels never block",
+        "Deadlock needs three threads",
+        "Symmetric blocking sends can wait forever",
+        "recv always times out"
+      ],
+      "q": "How does a channel deadlock happen?"
+    },
+    "takeaway": "Order channel operations consistently to avoid cyclic blocking waits.",
+    "track": "rust",
+    "trap": "Blocking send and receive in mirrored order stalls both threads."
+  },
+  {
+    "body_md": "`Rc<Cell<i32>>` is not `Send`, so `spawn(move || ...)` rejects it. Swap to `Arc<Mutex<_>>` for threads. Read the missing-`Send` error as use-the-thread-safe-twin hint in every drill.",
+    "code": "// fails: Rc is not Send\n// let h = std::thread::spawn(move || rc.clone());\nuse std::sync::Arc;\nlet ok = Arc::new(1);",
+    "hook": "Rc crossed a thread boundary? Send says absolutely not.",
+    "id": "rust-drill-022",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Rc lacks atomic counts so only Arc may cross threads.",
+      "options": [
+        "Rc is Send and Sync",
+        "Rc cannot cross threads but Arc can",
+        "Arc cannot cross threads",
+        "Both always cross freely"
+      ],
+      "q": "Can Rc move into a thread?"
+    },
+    "takeaway": "Swap reference-counted pointers to Arc before sharing across threads.",
+    "track": "rust",
+    "trap": "Wrapping non-thread-safe types in Arc still fails the Send check."
+  }
+]

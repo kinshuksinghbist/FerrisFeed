@@ -1,0 +1,11 @@
+# UniFFI bindings configuration for ferris-core.
+# Used when generating Kotlin/Swift bindings with `uniffi-bindgen`.
+
+[bindings.kotlin]
+package_name = "com.ferrisfeed.core"
+
+[bindings.swift]
+module_name = "FerrisCore"
+
+[bindings.python]
+module_name = "ferris_core"

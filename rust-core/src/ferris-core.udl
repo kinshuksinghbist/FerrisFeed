@@ -1,0 +1,25 @@
+// ferris-core.udl — minimal UniFFI interface definition for ferris-core.
+//
+// Kept in sync with the `#[uniffi::export]` items in src/ffi.rs.
+// Free functions use JSON strings so the schema can evolve without
+// changing the FFI surface; the DAG is exposed as an object.
+
+namespace ferris_core {
+    string validate_reel_json(string reel_json);
+    string grade_quiz_json(string reel_json, u32 chosen);
+    u32 xp_for_reel(u8 level, boolean quiz_correct, u32 streak_days);
+};
+
+interface TopicGraph {
+    constructor();
+    void add_topic(string id);
+    void add_edge(string prereq, string next);
+    sequence<string> topo_order();
+    sequence<string> unlocked(sequence<string> completed);
+};
+
+[Error]
+enum FfiError {
+    "InvalidInput",
+    "CycleDetected",
+};

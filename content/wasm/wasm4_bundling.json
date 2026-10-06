@@ -1,0 +1,222 @@
+[
+  {
+    "body_md": "Vite loads wasm-pack output as an ES module. Put pkg in deps, `import init from './pkg/app.js'`, and call `await init()` before exports. HMR keeps Rust state while JS reloads around it.",
+    "code": "import init, { add } from \"./pkg/app.js\";\nawait init();\nconsole.log(add(1, 2));",
+    "hook": "Vite + wasm-pack in two imports.",
+    "id": "wasm-04-001",
+    "language": "javascript",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Vite serves .wasm with correct MIME and bundles the glue.",
+      "options": [
+        "Import glue JS and await init before use",
+        "Use script src only",
+        "WASM needs webpack 1",
+        "Vite cannot serve wasm"
+      ],
+      "q": "How do you wire wasm-pack output into Vite?"
+    },
+    "takeaway": "Import glue, initialize once, then call exports.",
+    "trap": "Calling exports before init resolves causes null traps.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "`wasm-opt -Oz` shrinks binaries by inlining, DCE, and simplifying. Run it after wasm-pack or enable in CI. Measure before and after; -Oz trades tiny speed for smallest bytes.",
+    "code": "wasm-opt -Oz pkg/app_bg.wasm -o pkg/app_bg.wasm\nls -lh pkg/*.wasm",
+    "hook": "One flag, 20% smaller shipping.",
+    "id": "wasm-04-002",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Binaryen optimizer removes dead code and folds constants.",
+      "options": [
+        "It formats Rust",
+        "It optimizes wasm size with -Oz",
+        "It runs tests",
+        "It signs packages"
+      ],
+      "q": "What does wasm-opt -Oz do?"
+    },
+    "takeaway": "Optimize for size before measuring budgets.",
+    "trap": "Running -O4 blindly when -Oz fits caching better.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "wee_alloc is a tiny allocator for wasm, replacing dlmalloc to save kilobytes. Add it as global allocator for size-sensitive widgets. Skip it if you alloc heavily or need speed.",
+    "code": "#[global_allocator]\nstatic ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;",
+    "hook": "Trade allocator brawn for bytes.",
+    "id": "wasm-04-003",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "wee_alloc is optimized for code size over throughput.",
+      "options": [
+        "A JS bundler",
+        "A CSS reset",
+        "A size-focused allocator for WASM",
+        "A SQL index"
+      ],
+      "q": "What is wee_alloc?"
+    },
+    "takeaway": "Use wee_alloc when every kilobyte counts.",
+    "trap": "Using it for alloc-heavy workloads tanks performance.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Lazy-load WASM in WebViews only when needed. Show shell UI, `import()` the module on interaction, and cache in IndexedDB. Keeps cold start under budget on low-end Android.",
+    "code": "async function onDemand() {\n  const { default: init, run } = await import(\"./pkg/app.js\");\n  await init(); run();\n}",
+    "hook": "Do not pay for WASM until the tap.",
+    "id": "wasm-04-004",
+    "language": "javascript",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Dynamic import defers fetch+compile until used.",
+      "options": [
+        "Load all wasm at boot",
+        "Inline wasm in HTML",
+        "Preload every route",
+        "Dynamically import wasm on demand"
+      ],
+      "q": "How do you keep WebView startup fast with WASM?"
+    },
+    "takeaway": "Defer WASM load until the feature is requested.",
+    "trap": "Eager-loading 2MB wasm on app launch.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Set a size budget: e.g. 150KB gzipped for widget, 500KB for editor. Track `wasm-pack` output in CI with `ls` and `gzip -c | wc -c`. Fail builds that regress beyond 5%.",
+    "code": "gzip -c pkg/app_bg.wasm | wc -c\n# budget check in CI\ntest $(gzip -c pkg/app_bg.wasm | wc -c) -lt 153600",
+    "hook": "Budgets beat diets \u2014 enforce them in CI.",
+    "id": "wasm-04-005",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Gzip size predicts transfer cost; CI gates regressions.",
+      "options": [
+        "Gate wasm gzip size in CI",
+        "Ignore binary size",
+        "Only measure .js size",
+        "Size does not matter"
+      ],
+      "q": "How do you enforce WASM size budgets?"
+    },
+    "takeaway": "Measure gzipped bytes and fail on regressions.",
+    "trap": "Checking raw size while serving brotli in production.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Split features behind dynamic imports and feature flags. Ship core editor now, load image codecs later. wasm-bindgen `weakRefs` plus Vite code-splitting keeps initial fetch lean.",
+    "code": "// vite code-split\nconst editor = await import(\"./pkg/editor.js\");\nconst codecs = await import(\"./pkg/codecs.js\");",
+    "hook": "Ship half now, half on demand.",
+    "id": "wasm-04-006",
+    "language": "javascript",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Code-splitting defers optional wasm payloads.",
+      "options": [
+        "One giant blob always",
+        "Split wasm by feature with dynamic import",
+        "Disable caching",
+        "Embed wasm in CSS"
+      ],
+      "q": "How do you split large WASM apps?"
+    },
+    "takeaway": "Partition by route or capability for faster first paint.",
+    "trap": "Over-splitting causes waterfall fetches.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Serve `.wasm` as `application/wasm` with long immutable cache plus `Cross-Origin` headers if threaded. Preload critical modules with `<link rel=preload as=fetch>` and streaming compile.",
+    "code": "<link rel=\"preload\" as=\"fetch\" crossorigin href=\"/pkg/app_bg.wasm\" />\n<!-- server: Content-Type: application/wasm -->",
+    "hook": "Headers are half the performance.",
+    "id": "wasm-04-007",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Correct MIME enables streaming compile; caching avoids refetch.",
+      "options": [
+        "Serve as text/plain",
+        "No headers needed",
+        "Correct MIME plus immutable caching",
+        "Disable compression"
+      ],
+      "q": "How should servers deliver .wasm?"
+    },
+    "takeaway": "Right MIME, compressed, cached aggressively.",
+    "trap": "Missing COOP/COEP breaks SharedArrayBuffer threads.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Strip symbols and debug sections for release: `wasm-strip` plus `RUSTFLAGS=-s` and LTO. Keep a separate debuginfo artifact for crashes, not in the shipped bundle.",
+    "code": "[profile.release]\nlto = true\nstrip = true\npanic = \"abort\"",
+    "hook": "Ship bytes, not symbols.",
+    "id": "wasm-04-008",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "LTO plus strip removes dead code and symbols.",
+      "options": [
+        "Enable LTO and strip symbols for release",
+        "Ship debug builds",
+        "Disable optimizations",
+        "Include DWARF in prod"
+      ],
+      "q": "How do you shrink release WASM builds?"
+    },
+    "takeaway": "Optimize and strip release profiles aggressively.",
+    "trap": "Stripping before you can symbolize field crashes.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Measure with browser perf panel and `performance.now()` around init and frames. Track compile time vs run time separately. A 50ms compile plus 5ms frames beats 500ms compile with 3ms frames.",
+    "code": "const t0 = performance.now();\nawait init();\nconsole.log(\"init\", performance.now() - t0);",
+    "hook": "Time compile and run separately.",
+    "id": "wasm-04-009",
+    "language": "javascript",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Separating phases shows whether to optimize size or hot loops.",
+      "options": [
+        "Guess from bundle size",
+        "Time init vs frame cost separately",
+        "Only time Rust",
+        "Never measure"
+      ],
+      "q": "How do you profile WASM startup?"
+    },
+    "takeaway": "Instrument init and steady-state independently.",
+    "trap": "Optimizing hot loops when startup dominates bounce rate.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Fallback to JS if WASM fails: feature-detect `WebAssembly.instantiateStreaming`, catch init errors, and load pure-JS path. Log failures to know when fallback actually triggers.",
+    "code": "try { await init(); runWasm(); }\ncatch (e) { console.warn(e); runJsFallback(); }",
+    "hook": "WASM is progressive enhancement.",
+    "id": "wasm-04-010",
+    "language": "javascript",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Graceful fallback keeps app working on old WebViews.",
+      "options": [
+        "Crash if wasm fails",
+        "Require latest Chrome",
+        "Block rendering",
+        "Try wasm then fallback to JS on error"
+      ],
+      "q": "How do you handle WASM load failure?"
+    },
+    "takeaway": "Always ship a JS fallback for hostile networks.",
+    "trap": "Assuming all WebViews support SIMD or threads.",
+    "track": "wasm"
+  }
+]

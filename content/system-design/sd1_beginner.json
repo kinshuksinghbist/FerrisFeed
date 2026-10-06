@@ -1,0 +1,332 @@
+[
+  {
+    "body_md": "HTTP is stateless request-response over TCP. Client sends method, path, headers; server returns status plus body. HTTPS adds TLS. Keep requests idempotent where possible and cache GETs.",
+    "code": "GET /feed?page=2 HTTP/1.1\nHost: api.ferrisfeed.dev\n\nHTTP/1.1 200 OK\nContent-Type: application/json",
+    "hook": "The one protocol every design builds on.",
+    "id": "sd-beg-001",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Each request carries full context; servers need not remember.",
+      "options": [
+        "HTTP keeps server session sockets",
+        "HTTP is stateless request-response",
+        "HTTP is only for files",
+        "HTTP requires WebSocket"
+      ],
+      "q": "What is core HTTP semantics?"
+    },
+    "takeaway": "Design stateless handlers that scale horizontally.",
+    "trap": "Storing session in server memory breaks scaling.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "REST uses resources plus verbs: GET reads, POST creates, PUT replaces, PATCH merges, DELETE removes. Return 201 with Location on create, 404 for missing, 409 for conflicts. Version via /v1.",
+    "code": "POST /v1/posts\n{\"title\":\"hi\"}\n=> 201 Created\nLocation: /v1/posts/42",
+    "hook": "Resources, verbs, status codes \u2014 done right.",
+    "id": "sd-beg-002",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "REST maps CRUD to HTTP verbs on noun URLs.",
+      "options": [
+        "Map CRUD to verbs on resource URLs",
+        "Use GET for deletes",
+        "Put verbs in URLs",
+        "Ignore status codes"
+      ],
+      "q": "What is REST style?"
+    },
+    "takeaway": "Name resources as nouns, act with verbs.",
+    "trap": "RPC-style /getPostById inside REST APIs.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "gRPC uses Protobuf over HTTP/2 with streaming. Define service in .proto, generate stubs, get typed clients in any language. Great for internal microservices needing speed and contracts.",
+    "code": "service Feed {\n  rpc ListPosts (ListReq) returns (ListRes);\n  rpc StreamPosts (ListReq) returns (stream Post);\n}",
+    "hook": "Typed contracts at 10x speed.",
+    "id": "sd-beg-003",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 2,
+      "explain": "Protobuf plus HTTP/2 gives compact binary streaming.",
+      "options": [
+        "JSON over HTTP/1",
+        "XML over FTP",
+        "Protobuf over HTTP/2 with codegen",
+        "Raw TCP strings"
+      ],
+      "q": "What characterizes gRPC?"
+    },
+    "takeaway": "Use gRPC for fast internal service calls.",
+    "trap": "Exposing gRPC directly to browsers without gateway.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "GraphQL lets clients request exactly fields they need in one query. Server defines schema and resolvers. Solves over-fetching but needs query cost limits and persisted queries to avoid abuse.",
+    "code": "query { post(id: 42) {\n  title author { name }\n}}",
+    "hook": "One query, exactly the fields you want.",
+    "id": "sd-beg-004",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 3,
+      "explain": "Client-specified selection reduces round trips.",
+      "options": [
+        "Fixed REST responses",
+        "SOAP envelopes",
+        "Thrift only",
+        "Client-selected fields via schema"
+      ],
+      "q": "When does GraphQL win?"
+    },
+    "takeaway": "Choose GraphQL for flexible client-driven reads.",
+    "trap": "Unbounded nested queries enabling DoS.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "WebSocket upgrades HTTP to full-duplex frames. Handshake once, then both sides push. Ideal for chat and presence. Add heartbeats, resume tokens, and horizontal sticky or pub/sub fan-out.",
+    "code": "const ws = new WebSocket(\"wss://api/x\");\nws.onmessage = (e) => render(e.data);\nws.send(JSON.stringify({t:\"hi\"}));",
+    "hook": "One handshake, endless push both ways.",
+    "id": "sd-beg-005",
+    "language": "javascript",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "After upgrade, frames flow both directions without polling.",
+      "options": [
+        "Poll every second",
+        "Upgrade to persistent bidirectional frames",
+        "Use FTP",
+        "Use email"
+      ],
+      "q": "What is WebSocket?"
+    },
+    "takeaway": "Use WebSockets for low-latency bidirectional push.",
+    "trap": "No heartbeat so dead peers linger.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "SQL gives ACID, joins, and schema; NoSQL gives flexible scale-out for keys, docs, or wide rows. Choose Postgres for relations and transactions, Dynamo-style KV for massive simple lookups.",
+    "code": "CREATE TABLE posts (\n  id BIGSERIAL PRIMARY KEY,\n  author_id BIGINT NOT NULL,\n  body TEXT NOT NULL\n);",
+    "hook": "Relations vs scale \u2014 pick by query pattern.",
+    "id": "sd-beg-006",
+    "language": "sql",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "Joins and transactions favor SQL; huge KV favors NoSQL.",
+      "options": [
+        "SQL for relations+transactions, NoSQL for scale/simple access",
+        "NoSQL always better",
+        "SQL cannot scale at all",
+        "They are identical"
+      ],
+      "q": "SQL vs NoSQL rule of thumb?"
+    },
+    "takeaway": "Model queries first, then pick the store.",
+    "trap": "Storing graphs in relational joins at depth 5.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Redis is in-memory with strings, hashes, lists, sets, sorted sets, and streams. Use for cache, counters, leaderboards, and rate limits. Persist with AOF+RDB and cluster when memory exceeds one node.",
+    "code": "SET post:42 1 EX 3600\nZADD leaderboard 950 user:7\nGET post:42",
+    "hook": "Memory as a data structure server.",
+    "id": "sd-beg-007",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 2,
+      "explain": "Rich types plus expiry enable cache and realtime patterns.",
+      "options": [
+        "Disk-only archive",
+        "SQL replacement",
+        "In-memory structures for cache/realtime",
+        "File backup"
+      ],
+      "q": "What is Redis good for?"
+    },
+    "takeaway": "Put hot, ephemeral, or ranked data in Redis.",
+    "trap": "Treating cache as source of truth without TTL.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Load balancers spread traffic: L4 by connection, L7 by URL/header. Algorithms include round-robin, least-conn, and consistent hash. Health-check backends and drain before deploy.",
+    "code": null,
+    "hook": "No single server should feel famous.",
+    "id": "sd-beg-008",
+    "language": null,
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Distributing requests avoids hotspots and single failure.",
+      "options": [
+        "Send all to one server",
+        "Spread load with health checks",
+        "Use DNS only",
+        "Skip health checks"
+      ],
+      "q": "What does a load balancer do?"
+    },
+    "takeaway": "Balance plus health-check for resilient tiers.",
+    "trap": "Sticky sessions hiding uneven load.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "CDNs cache static assets at edge PoPs near users. Origin sets Cache-Control, CDN serves hits in ms. Use versioned URLs for immutable assets and purge on deploy for HTML.",
+    "code": "Cache-Control: public, max-age=31536000, immutable\n# app.abc123.js cached at edge",
+    "hook": "Milliseconds, worldwide, for free-ish.",
+    "id": "sd-beg-009",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 3,
+      "explain": "Edge caching cuts latency and origin load.",
+      "options": [
+        "Store DB at edge",
+        "Run transactions at edge",
+        "Only for videos",
+        "Cache static content near users"
+      ],
+      "q": "What does a CDN do?"
+    },
+    "takeaway": "Cache immutable assets at the edge.",
+    "trap": "Caching personalized HTML at edge leaks data.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Latency vs throughput: latency is time per request, throughput is requests per second. CDN and caching cut latency; horizontal scale and batching raise throughput. Measure p95, not averages.",
+    "code": null,
+    "hook": "Fast once vs fast often \u2014 different fixes.",
+    "id": "sd-beg-010",
+    "language": null,
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "p95 latency shows user pain; throughput shows capacity.",
+      "options": [
+        "Optimize latency with caching, throughput with scale",
+        "They are the same",
+        "Only averages matter",
+        "Throughput fixes latency"
+      ],
+      "q": "How do latency and throughput differ?"
+    },
+    "takeaway": "Track p95 latency and max throughput separately.",
+    "trap": "Averaging hides tail-latency outages.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Polling vs push: short-poll wastes requests, long-poll holds open, SSE streams one-way, WebSocket is bidirectional. Choose SSE for feeds, WebSocket for chat.",
+    "code": "const es = new EventSource(\"/events\");\nes.onmessage = (e) => console.log(e.data);",
+    "hook": "Stop polling, start streaming.",
+    "id": "sd-beg-011",
+    "language": "javascript",
+    "level": 1,
+    "quiz": {
+      "answer": 2,
+      "explain": "SSE suits server-to-client streams; WebSocket suits duplex.",
+      "options": [
+        "Always short-poll",
+        "Always WebSocket",
+        "SSE for one-way streams, WS for duplex",
+        "Never use HTTP"
+      ],
+      "q": "SSE vs WebSocket?"
+    },
+    "takeaway": "Match push primitive to directionality.",
+    "trap": "Polling a feed every second from a million clients.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "API pagination: cursor-based with `after_id` scales, offset breaks on inserts. Return `next_cursor` and limit. Order by indexed (created_at, id) for stable pages.",
+    "code": "SELECT * FROM posts\nWHERE id < $1 ORDER BY id DESC LIMIT 20;",
+    "hook": "Pages that survive new inserts.",
+    "id": "sd-beg-012",
+    "language": "sql",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Keyset pagination avoids skipped rows during writes.",
+      "options": [
+        "OFFSET always",
+        "Cursor on indexed key for stable pages",
+        "Load all rows",
+        "No pagination"
+      ],
+      "q": "Best pagination for feeds?"
+    },
+    "takeaway": "Paginate by cursor on indexed columns.",
+    "trap": "Deep OFFSET scans slowing page 1000.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Caching levels: browser, CDN, LB, app, Redis, DB. Cache-aside reads Redis then DB on miss. Set TTLs, version keys, and invalidate on write. Stampede-protect with singleflight.",
+    "code": "val = redis.get(k)\nif !val:\n  val = db.load(k)\n  redis.setex(k, 300, val)",
+    "hook": "Every layer can save your database.",
+    "id": "sd-beg-013",
+    "language": "python",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "Cache-aside keeps app in control of fill and expiry.",
+      "options": [
+        "App checks cache then loads DB on miss",
+        "DB polls cache",
+        "Cache writes DB directly",
+        "No TTL needed"
+      ],
+      "q": "What is cache-aside?"
+    },
+    "takeaway": "Read cache first, fill on miss with TTL.",
+    "trap": "No TTL causing permanently stale reads.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Status codes matter: 2xx success, 301/304 redirect/cache, 400 bad input, 401 unauth, 403 forbidden, 404 missing, 429 slow down, 5xx server fault. Retry only 429/5xx with backoff.",
+    "code": "HTTP/1.1 429 Too Many Requests\nRetry-After: 2",
+    "hook": "Codes are contracts \u2014 honor them.",
+    "id": "sd-beg-014",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 3,
+      "explain": "Codes tell clients whether to fix, retry, or wait.",
+      "options": [
+        "All errors are 200",
+        "Always retry 400",
+        "Ignore codes",
+        "Retry 429/5xx with backoff only"
+      ],
+      "q": "How should clients use status codes?"
+    },
+    "takeaway": "Signal precisely so retries behave correctly.",
+    "trap": "Returning 200 with error JSON breaks tooling.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Monolith vs microservices: start modular monolith, extract when teams or scale demand. Microservices add deploy freedom but need discovery, tracing, and versioned contracts.",
+    "code": null,
+    "hook": "Modular first, distributed when it hurts.",
+    "id": "sd-beg-015",
+    "language": null,
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Monolith minimizes ops until boundaries are clear.",
+      "options": [
+        "Microservices always",
+        "Start modular monolith, split on pressure",
+        "Monoliths cannot scale",
+        "Network calls are free"
+      ],
+      "q": "When to choose microservices?"
+    },
+    "takeaway": "Split by team or scaling pressure, not hype.",
+    "trap": "Distributed monolith with all the costs, none of the gains.",
+    "track": "system-design"
+  }
+]

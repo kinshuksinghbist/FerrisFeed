@@ -1,0 +1,332 @@
+[
+  {
+    "body_md": "Consistent hashing maps nodes and keys onto a ring. Adding a node moves only ~1/N keys. Add virtual nodes to smooth skew. Used by Dynamo, Cassandra, and CDN routing.",
+    "code": "# ring position\npos = hash(key) % 360\nnode = first_node_clockwise(pos)",
+    "hook": "Add servers without reshuffling everything.",
+    "id": "sd-int-001",
+    "language": "python",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Only neighbors on ring take over key ranges.",
+      "options": [
+        "Rehash all keys",
+        "Modulo by N always",
+        "Ring limits moves to neighbors",
+        "Broadcast everything"
+      ],
+      "q": "Why consistent hashing?"
+    },
+    "takeaway": "Scale cache and storage with minimal remapping.",
+    "trap": "No virtual nodes causing hotspots.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "CAP: under partition you pick consistency or availability. PACELC adds: else latency vs consistency. Most systems choose eventual consistency with tunable quorum for balance.",
+    "code": null,
+    "hook": "Partition forces a choice \u2014 latency forces another.",
+    "id": "sd-int-002",
+    "language": null,
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "CAP covers partitions; PACELC covers normal latency tradeoff.",
+      "options": [
+        "CAP plus latency tradeoff when healthy",
+        "Only CA systems exist",
+        "Consistency is free",
+        "Partitions never happen"
+      ],
+      "q": "What does PACELC add over CAP?"
+    },
+    "takeaway": "State your partition and latency tradeoffs explicitly.",
+    "trap": "Claiming CA distributed system across data centers.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Sharding splits rows by key: user_id % N or range. Pick high-cardinality shard key aligned to queries. Rebalance with split/merge; avoid cross-shard transactions in hot paths.",
+    "code": "-- shard by author\nSELECT * FROM posts_shard_3\nWHERE author_id = 42;",
+    "hook": "Split the table before it splits you.",
+    "id": "sd-int-003",
+    "language": "sql",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Shard key decides locality and balance.",
+      "options": [
+        "Random sharding",
+        "Shard by query-aligned high-cardinality key",
+        "One shard forever",
+        "Join across all shards always"
+      ],
+      "q": "How do you pick a shard key?"
+    },
+    "takeaway": "Shard by what you query by.",
+    "trap": "Monotonic timestamps creating write hotspot.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Replication: single-leader is simple, multi-leader helps multi-region writes, leaderless (Dynamo) tunes R+W quorum. Async replicas lag; sync costs latency. Monitor lag and conflicts.",
+    "code": null,
+    "hook": "Copies for safety, speed, and locality.",
+    "id": "sd-int-004",
+    "language": null,
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Leader models trade write simplicity for availability.",
+      "options": [
+        "No replication needed",
+        "Sync everywhere always",
+        "Multi-leader never conflicts",
+        "Choose model by write locality needs"
+      ],
+      "q": "How do replication models differ?"
+    },
+    "takeaway": "Match replication to read/write geography.",
+    "trap": "Reading stale replica for money balances.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Kafka is a partitioned commit log. Producers append, consumers track offsets, brokers retain. Key by entity for order, scale with partitions, retain for replay. Exactly-once needs idempotent producers plus transactions.",
+    "code": "producer.send(\"posts\", key=user_id, value=json)\nconsumer.commit(offset) # at-least-once",
+    "hook": "The log is the database for events.",
+    "id": "sd-int-005",
+    "language": "python",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Partitions give parallelism; offsets give resume.",
+      "options": [
+        "Partitions plus offsets enable scalable replay",
+        "Kafka is a cache",
+        "Offsets are optional",
+        "One partition always"
+      ],
+      "q": "What makes Kafka scalable?"
+    },
+    "takeaway": "Partition ordered logs, track offsets per consumer.",
+    "trap": "Too few partitions throttling throughput.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Token bucket allows bursts up to capacity, refilling at rate. Check `tokens >= cost` then deduct. Store buckets in Redis with Lua for atomicity across instances.",
+    "code": "use std::time::Instant;\nstruct Bucket { tokens: f64, last: Instant }\n// refill = elapsed * rate; allow if tokens>=1.0",
+    "hook": "Bursts allowed, floods denied.",
+    "id": "sd-int-006",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Bucket caps burst while enforcing average rate.",
+      "options": [
+        "Fixed window only",
+        "Leaky bucket only",
+        "Token bucket for burst plus rate",
+        "No limiting"
+      ],
+      "q": "How does token bucket limiting work?"
+    },
+    "takeaway": "Enforce average rate while permitting bursts.",
+    "trap": "Per-instance buckets letting global limit slip N-fold.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Idempotency: same request twice has one effect. Send `Idempotency-Key`, server stores result and returns it on retry. Essential for payments and Kafka consumers with at-least-once delivery.",
+    "code": "POST /pay\nIdempotency-Key: 550e8400-e29b-41d4\n=> 200 {\"status\":\"charged_once\"}",
+    "hook": "Retry safely \u2014 charge once.",
+    "id": "sd-int-007",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Keys dedupe retries from timeouts or crashes.",
+      "options": [
+        "Retries are unsafe",
+        "Keys dedupe retries to one effect",
+        "Double-charge is fine",
+        "UUIDs hurt"
+      ],
+      "q": "How do you make POST safe to retry?"
+    },
+    "takeaway": "Key every mutating call that may retry.",
+    "trap": "Non-unique keys collapsing distinct payments.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Quorum: with N=3, W=2,R=2 you tolerate 1 failure and get strong reads. W+R>N ensures overlap. Tune: W=1 for speed, W=all for safety. Sloppy quorum keeps writes during partitions.",
+    "code": "# N=3, overlap check\nok = (W + R > N)  # 2+2>3 => strong",
+    "hook": "Math that keeps data alive.",
+    "id": "sd-int-008",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Overlapping read/write sets see latest writes.",
+      "options": [
+        "W+R>N gives strong reads",
+        "Any W,R works",
+        "Quorum needs N=1",
+        "Quorums prevent all latency"
+      ],
+      "q": "What quorum gives strong consistency?"
+    },
+    "takeaway": "Size quorums to overlap on N replicas.",
+    "trap": "W=1,R=1 silently serving stale data.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Cache invalidation: write-through updates cache synchronously, write-behind batches, cache-aside lazy. Use versioned keys `post:42:v3` and short TTLs to bound staleness during races.",
+    "code": "SET post:42:v3 \"...\" EX 300\n# readers use latest version pointer",
+    "hook": "There are only two hard things...",
+    "id": "sd-int-009",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Versioning avoids racy overwrites of hot keys.",
+      "options": [
+        "Delete nothing ever",
+        "TTL infinite",
+        "No versioning",
+        "Version keys plus TTL to bound staleness"
+      ],
+      "q": "How do you avoid stale cache races?"
+    },
+    "takeaway": "Version and expire to contain inconsistency.",
+    "trap": "Delete-then-update causing stampede on miss.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Back-of-envelope: 1M DAU posting twice daily is ~23 writes/sec average, ~100 peak. Storage 1KB each is ~2GB/day. Size DB, Kafka, and cache from such math before choosing instances.",
+    "code": "# 1e6 * 2 / 86400 \u2248 23 rps avg\n# 23 * 1KB * 86400 \u2248 2GB/day",
+    "hook": "Arithmetic before architecture.",
+    "id": "sd-int-010",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Averages times peak factor size every tier.",
+      "options": [
+        "Guess instance sizes",
+        "Estimate rps/storage from DAU behavior",
+        "Skip capacity planning",
+        "Peak equals average"
+      ],
+      "q": "How do you start capacity planning?"
+    },
+    "takeaway": "Derive rps and bytes from user behavior.",
+    "trap": "Forgetting 3x peak plus replication overhead.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Indexes trade read speed for write cost. B-tree for range, hash for point lookup, GIN for full-text. Check `EXPLAIN` for seq scans; add covering index on (author_id, id DESC) for feeds.",
+    "code": "CREATE INDEX idx_posts_author\nON posts (author_id, id DESC);\nEXPLAIN SELECT * FROM posts WHERE author_id=1;",
+    "hook": "Indexes are prepaid queries.",
+    "id": "sd-int-011",
+    "language": "sql",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Matching index order avoids sort and scan.",
+      "options": [
+        "Index every column",
+        "Index to match query order/filter",
+        "No indexes needed",
+        "Indexes are free"
+      ],
+      "q": "How do you index feed queries?"
+    },
+    "takeaway": "Index the filter plus order you actually query.",
+    "trap": "Over-indexing slowing every write.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Write path in Rust: validate, check idempotency key in Redis, insert via sqlx, publish to Kafka, invalidate cache. Return 202 for async jobs. Log trace id across all steps.",
+    "code": "async fn create_post(pool: &PgPool, body: Post) -> Result<Id> {\n    sqlx::query!(\"INSERT INTO posts (..) VALUES (..)\").execute(pool).await?;\n    Ok(Id(1))\n}",
+    "hook": "Validate, dedupe, store, publish.",
+    "id": "sd-int-012",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Ordered steps keep retries and debugging sane.",
+      "options": [
+        "Validate\u2192dedupe\u2192store\u2192publish",
+        "Publish first always",
+        "Skip validation",
+        "Cache before DB"
+      ],
+      "q": "What is a safe write path order?"
+    },
+    "takeaway": "Sequence side effects for retry safety.",
+    "trap": "Publishing event before DB commit causes ghosts.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Read path: edge cache, Redis, read replica, then primary. Use singleflight so 100 misses trigger one DB load. Serve stale-while-revalidate for feeds to hide tail latency.",
+    "code": "// singleflight sketch\n// group.do(key, || db.load(key))",
+    "hook": "Miss once, not a thousand times.",
+    "id": "sd-int-013",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Request coalescing prevents stampedes on hot keys.",
+      "options": [
+        "Thundering herd is fine",
+        "Coalesce concurrent misses to one load",
+        "Bypass cache",
+        "Query primary always"
+      ],
+      "q": "How do you prevent cache stampede?"
+    },
+    "takeaway": "Dedupe concurrent loads for the same key.",
+    "trap": "Infinite stale serving without background refresh.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Timeouts, retries with jitter, circuit breakers: set 200ms downstream timeout, retry twice with exponential backoff, trip breaker after 50% failures. Fail fast to preserve threads.",
+    "code": " // tower policy\n // timeout(200ms) + retry(2) + breaker",
+    "hook": "Fail fast so one slow dep cannot sink you.",
+    "id": "sd-int-014",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Bounded retries plus breakers stop cascading failure.",
+      "options": [
+        "Retry forever",
+        "No timeouts",
+        "Block threads",
+        "Timeout+backoff+breaker for resilience"
+      ],
+      "q": "How do you stop cascading failures?"
+    },
+    "takeaway": "Bound every downstream call with policy.",
+    "trap": "Retrying 500s aggressively amplifying outage.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Observability trio: metrics for alerts, structured logs for context, traces for causality. Propagate `trace-id` via tower middleware and OpenTelemetry; dashboard RED (rate, errors, duration).",
+    "code": null,
+    "hook": "If you cannot see it, you cannot scale it.",
+    "id": "sd-int-015",
+    "language": null,
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Correlated signals pinpoint slow or failing tiers.",
+      "options": [
+        "Metrics+logs+traces correlated by ID",
+        "Println only",
+        "Metrics alone suffice",
+        "No dashboards needed"
+      ],
+      "q": "What makes a service observable?"
+    },
+    "takeaway": "Emit correlated metrics, logs, and traces.",
+    "trap": "High-cardinality labels exploding Prometheus.",
+    "track": "system-design"
+  }
+]

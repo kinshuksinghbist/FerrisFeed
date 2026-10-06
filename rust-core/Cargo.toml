@@ -1,0 +1,27 @@
+[package]
+name = "ferris-core"
+version = "0.1.0"
+edition = "2021"
+description = "Shared Rust core for FerrisFeed: curriculum model, SRS scheduler, XP, prereq DAG, quiz grading"
+license = "MIT"
+
+[lib]
+name = "ferris_core"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+wasm = ["dep:wasm-bindgen", "dep:serde-wasm-bindgen", "dep:js-sys"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde", "clock"] }
+uniffi = "0.29"
+wasm-bindgen = { version = "0.2", optional = true }
+serde-wasm-bindgen = { version = "0.6", optional = true }
+js-sys = { version = "0.3", optional = true }
+
+[dev-dependencies]
+# Unit + integration tests only need std plus the main dependencies above
+# (serde_json for fixtures, chrono for due-date assertions). No extra dev-deps.

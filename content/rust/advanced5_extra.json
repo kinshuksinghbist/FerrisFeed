@@ -1,0 +1,486 @@
+[
+  {
+    "body_md": "A `Future` must stay put in memory while polled, so `Pin<&mut F>` promises it will not move. `Box::pin` heap-pins; stack futures need `pin!`. Never call `mem::swap` on a pinned future.",
+    "code": "let fut = async { 42 };\nlet mut boxed = Box::pin(fut);\nlet n = futures::executor::block_on(&mut boxed);",
+    "hook": "Async futures cannot move once polled — Pin enforces that.",
+    "id": "rust-a5-001",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Pin guarantees the future memory stays stable across polls.",
+      "options": [
+        "It makes futures Send",
+        "It pins futures in memory across polls",
+        "It cancels futures early",
+        "It speeds up polling"
+      ],
+      "q": "Why do futures need Pin?"
+    },
+    "takeaway": "Pin async futures before polling so self-references stay valid across awaits.",
+    "track": "rust",
+    "trap": "Moving a self-referential future after polling invalidates internal pointers."
+  },
+  {
+    "body_md": "Structs holding pinned futures need **pin projection**: map `Pin<&mut Self>` to `Pin<&mut field>` via `pin_project` crate or manual unsafe. Never project by plain mutable access — use the projected pin.",
+    "code": "struct Wrapper<F> { fut: F }\n// use pin_project to get Pin<&mut F>\n// from Pin<&mut Wrapper<F>> safely",
+    "hook": "A struct with a pinned field needs projection, not plain access.",
+    "id": "rust-a5-002",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Projection converts outer pin to inner field pins without moving.",
+      "options": [
+        "Projection maps outer pin to pinned fields safely",
+        "Projection unpins all fields",
+        "Projection clones the future",
+        "Projection blocks polling"
+      ],
+      "q": "What is pin projection?"
+    },
+    "takeaway": "Project pins structurally instead of moving fields out of pinned structs.",
+    "track": "rust",
+    "trap": "Using get_mut to reach inside a pinned struct silently breaks the pin promise."
+  },
+  {
+    "body_md": "**Variance** decides if `&'a T` shrinks to `&'b T`. Shared refs are covariant, `Cell<T>` is invariant, `fn(T)` flips inputs contravariantly. Invariance errors often mean interior mutability blocks shrinking.",
+    "code": "fn shrink<'a, 'b>(x: &'a str) -> &'b str\nwhere 'a: 'b { x }\n// covariance allows shortening here",
+    "hook": "Why does &'a T coerce but Cell<T> refuse? Variance.",
+    "id": "rust-a5-003",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Covariant types allow lifetime shortening while invariant ones forbid it.",
+      "options": [
+        "All generics are covariant",
+        "All generics are contravariant",
+        "Shared refs allow shrinking but Cell forbids it",
+        "Variance only affects async code"
+      ],
+      "q": "How does variance affect lifetimes?"
+    },
+    "takeaway": "Read invariance errors as interior mutability blocking safe lifetime shrinking.",
+    "track": "rust",
+    "trap": "Storing covariant refs inside invariant cells surprises lifetime shortening."
+  },
+  {
+    "body_md": "**Drop check** ensures a value cannot be dropped while borrows it owns still live. Generic `struct S<T>(T)` gets extra rules; `#[may_dangle]` (unsafe) relaxes them. Keep owned data drop-safe by avoiding borrowed fields.",
+    "code": "struct Owner<'a> { name: &'a str }\n// drop check: Owner cannot outlive name\nlet s = String::from(\"hi\");",
+    "hook": "Drop check: your destructor might outlive its borrows.",
+    "id": "rust-a5-004",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Drop check rejects owners whose destructor could outlive borrowed fields.",
+      "options": [
+        "It checks for memory leaks",
+        "It forbids drops that outlive borrowed fields",
+        "It counts allocations",
+        "It verifies Send bounds"
+      ],
+      "q": "What does drop check enforce?"
+    },
+    "takeaway": "Design owning types so destructors never outlive the borrows they hold.",
+    "track": "rust",
+    "trap": "Adding a Drop impl to a borrowing type triggers unexpected drop-check errors."
+  },
+  {
+    "body_md": "`MaybeUninit<T>` reserves uninitialized memory you fill before reading. Pattern: `let mut slot = MaybeUninit::uninit(); ptr.write(val); slot.assume_init()`. Never read before init — that is instant UB.",
+    "code": "use std::mem::MaybeUninit;\nlet mut slot = MaybeUninit::<u32>::uninit();\nslot.write(7);\nlet v = unsafe { slot.assume_init() };",
+    "hook": "Uninitialized memory without UB? MaybeUninit, used exactly right.",
+    "id": "rust-a5-005",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "MaybeUninit must be written before assume_init reads it.",
+      "options": [
+        "Write before assume_init or face undefined behavior",
+        "Read before writing is fine",
+        "assume_init zeroes memory",
+        "MaybeUninit skips destructors always"
+      ],
+      "q": "What is the MaybeUninit contract?"
+    },
+    "takeaway": "Write every MaybeUninit slot fully before reading it as initialized.",
+    "track": "rust",
+    "trap": "Reading uninitialized slots even to debug-print triggers undefined behavior."
+  },
+  {
+    "body_md": "`MaybeUninit::zeroed()` is only valid when all-zero bits are legal (ints, not refs). Prefer `uninit()` plus explicit writes. `assume_init` on padding or enums with invalid bit patterns is UB.",
+    "code": "use std::mem::MaybeUninit;\nlet mut buf = MaybeUninit::<[u8; 64]>::uninit();\nbuf.write([0u8; 64]);\nlet b = unsafe { buf.assume_init() };",
+    "hook": "Zeroed is not always valid — all-zero bits can still be UB.",
+    "id": "rust-a5-006",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 3,
+      "explain": "zeroed requires all-zero to be a valid value for that type.",
+      "options": [
+        "zeroed works for every type",
+        "zeroed skips initialization",
+        "zeroed is faster than uninit",
+        "zeroed needs all-zero to be a valid value"
+      ],
+      "q": "When is MaybeUninit zeroed sound?"
+    },
+    "takeaway": "Use zeroed only for types where all-zero bits form a legal value.",
+    "track": "rust",
+    "trap": "Zeroing a reference or bool-like enum creates invalid bit patterns silently."
+  },
+  {
+    "body_md": "`#[repr(C)]` fixes field order for FFI, `repr(packed)` removes padding but makes unaligned access UB on read. Check size with `size_of::<T>()`. Prefer explicit padding fields over packed for perf.",
+    "code": "#[repr(C)]\nstruct Header { tag: u8, len: u32 }\n// size includes padding for alignment\nassert!(std::mem::size_of::<Header>() == 8);",
+    "hook": "Your struct is bigger than its fields — padding did that.",
+    "id": "rust-a5-007",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "repr C fixes layout for FFI while default Rust layout is unspecified.",
+      "options": [
+        "repr C shrinks all structs",
+        "repr C fixes layout for foreign interfaces",
+        "repr C removes all padding",
+        "repr C enables inheritance"
+      ],
+      "q": "Why use repr C?"
+    },
+    "takeaway": "Choose explicit representations for foreign interfaces and measure padding effects.",
+    "track": "rust",
+    "trap": "Reading packed fields by reference creates unaligned references and UB."
+  },
+  {
+    "body_md": "Atomics take `Ordering`: `Relaxed` for counters, `Acquire`/`Release` for handoff, `SeqCst` for total order (slowest). Match load/store pairs: release-store pairs with acquire-load to publish data safely.",
+    "code": "use std::sync::atomic::{AtomicBool, Ordering};\nstatic READY: AtomicBool = AtomicBool::new(false);\nREADY.store(true, Ordering::Release);\nassert!(READY.load(Ordering::Acquire));",
+    "hook": "Relaxed versus SeqCst can be a 10x gap — pick deliberately.",
+    "id": "rust-a5-008",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Release store pairs with acquire load to hand off data safely.",
+      "options": [
+        "Release store pairs with acquire load for handoff",
+        "Relaxed orders everything globally",
+        "SeqCst is always fastest",
+        "Ordering only affects x86 chips"
+      ],
+      "q": "How do Release and Acquire pair?"
+    },
+    "takeaway": "Pair release stores with acquire loads and reserve SeqCst for global order.",
+    "track": "rust",
+    "trap": "Using Relaxed for flag handoff lets readers see stale data."
+  },
+  {
+    "body_md": "`compare_exchange(expected, desired, ok, fail)` loops until the atomic matches: the lock-free retry pattern. Use `compare_exchange_weak` in loops (allows spurious fail, faster on ARM). Back off under contention.",
+    "code": "use std::sync::atomic::{AtomicUsize, Ordering};\nlet c = AtomicUsize::new(0);\nc.fetch_add(1, Ordering::AcqRel);",
+    "hook": "No mutex, no lock — just retry the atomic until it sticks.",
+    "id": "rust-a5-009",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Lock-free code retries compare_exchange until the expected value matches.",
+      "options": [
+        "It blocks the thread",
+        "It takes a mutex first",
+        "It retries atomics until the expected value matches",
+        "It disables interrupts"
+      ],
+      "q": "What is the lock-free retry pattern?"
+    },
+    "takeaway": "Build lock-free updates with compare-exchange loops plus backoff under contention.",
+    "track": "rust",
+    "trap": "Spinning without backoff on contended atomics burns CPU and slows everyone."
+  },
+  {
+    "body_md": "**Intrusive** lists store next/prev pointers inside nodes, avoiding allocator churn. Great for kernels and async runtimes. Cost: unsafe link management plus pinned nodes that must never move.",
+    "code": "// concept: node holds its own links\nstruct Node { next: *mut Node, value: u32 }\n// runtime wires nodes without extra alloc",
+    "hook": "Zero-alloc linked lists? Store the pointers in the nodes.",
+    "id": "rust-a5-010",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Intrusive lists embed links in nodes to avoid extra allocation.",
+      "options": [
+        "They use garbage collection",
+        "They embed links inside nodes to skip allocation",
+        "They store data on the stack only",
+        "They require reference counting"
+      ],
+      "q": "Why use intrusive collections?"
+    },
+    "takeaway": "Use intrusive lists for zero-allocation linking when unsafe costs are justified.",
+    "track": "rust",
+    "trap": "Moving a linked intrusive node invalidates neighbor pointers instantly."
+  },
+  {
+    "body_md": "Implement `GlobalAlloc` to swap allocators: `#[global_allocator] static A: MyAlloc;`. You must provide `alloc` and `dealloc` with correct layout handling. Measure first — default is excellent for most apps.",
+    "code": "use std::alloc::{GlobalAlloc, Layout, System};\nstruct Mine;\nunsafe impl GlobalAlloc for Mine {\n    unsafe fn alloc(&self, l: Layout) -> *mut u8 { System.alloc(l) }\n    unsafe fn dealloc(&self, p: *mut u8, l: Layout) { System.dealloc(p, l) }\n}",
+    "hook": "Replace every allocation in your program with ten lines.",
+    "id": "rust-a5-011",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "GlobalAlloc lets you replace the default allocator program-wide.",
+      "options": [
+        "GlobalAlloc swaps the program-wide allocator",
+        "GlobalAlloc only affects one struct",
+        "GlobalAlloc disables the heap",
+        "GlobalAlloc runs at compile time"
+      ],
+      "q": "What does GlobalAlloc do?"
+    },
+    "takeaway": "Swap global allocators through GlobalAlloc only after measuring real bottlenecks.",
+    "track": "rust",
+    "trap": "A buggy custom allocator corrupts every allocation and defies debugging."
+  },
+  {
+    "body_md": "`jemalloc` shines for multithreaded servers with many small allocations. Enable via `tikv-jemallocator`, set `MALLOC_CONF` for background threads and dirty-page decay. Benchmark before and after — it can also regress.",
+    "code": "# Cargo.toml\n# tikv-jemallocator = \"0.6\"\n// #[global_allocator]\n// static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;",
+    "hook": "jemalloc cut our tail latency 30 percent — then we tuned decay.",
+    "id": "rust-a5-012",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "jemalloc often helps threaded servers but needs tuning and measurement.",
+      "options": [
+        "jemalloc always wins everywhere",
+        "jemalloc disables threads",
+        "jemalloc helps threaded servers but needs benchmarking",
+        "jemalloc only works on embedded"
+      ],
+      "q": "When does jemalloc help?"
+    },
+    "takeaway": "Trial jemalloc for threaded servers and tune decay only with benchmarks.",
+    "track": "rust",
+    "trap": "Enabling jemalloc without measuring can regress latency on small binaries."
+  },
+  {
+    "body_md": "LLVM **autovectorizes** simple loops into SIMD when it sees contiguous access, no aliasing, and known counts. Help it: use iterators, `slice::chunks_exact`, and `#[inline]`. Check output with `cargo asm` or godbolt.",
+    "code": "fn sum(x: &[f32]) -> f32 {\n    x.iter().sum()\n}",
+    "hook": "Four floats per instruction for free — if your loop allows it.",
+    "id": "rust-a5-013",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Simple contiguous iterator loops vectorize best under LLVM.",
+      "options": [
+        "Linked lists vectorize best",
+        "Simple contiguous iterator loops vectorize best",
+        "HashMap loops vectorize best",
+        "Branchy pointer loops vectorize best"
+      ],
+      "q": "Which loops autovectorize well?"
+    },
+    "takeaway": "Write simple contiguous loops so the compiler can emit SIMD instructions.",
+    "track": "rust",
+    "trap": "Hidden aliasing and branches silently block autovectorization."
+  },
+  {
+    "body_md": "`criterion` reports median, slope, and outliers — not just one timing. Compare baselines with `cargo bench` HTML reports. Watch for bimodal plots (throttling) and keep benchmarks on quiet machines.",
+    "code": "use criterion::{criterion_group, criterion_main, Criterion};\nfn b(c: &mut Criterion) { c.bench_function(\"sum\", |b| b.iter(|| 1 + 1)); }",
+    "hook": "Your benchmark improved 5 percent? Criterion says that is noise.",
+    "id": "rust-a5-014",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Criterion uses statistics to separate real gains from noise.",
+      "options": [
+        "Criterion separates signal from noise with statistics",
+        "Criterion runs code once",
+        "Criterion only checks correctness",
+        "Criterion disables optimization"
+      ],
+      "q": "Why use criterion over a timer?"
+    },
+    "takeaway": "Judge speedups with criterion statistics instead of single timing runs.",
+    "track": "rust",
+    "trap": "Benchmarking on a busy laptop produces bimodal noise mistaken for regressions."
+  },
+  {
+    "body_md": "Capture with `cargo flamegraph`, then read top-down: wide boxes are hot, tall stacks show call chains. Look for unexpected `memcpy`, locking, or allocator frames dominating width. Optimize the widest plateau first.",
+    "code": "$ cargo install flamegraph\n$ cargo flamegraph --bench mybench\n# open flamegraph.svg in browser",
+    "hook": "The widest box in the flamegraph is where your CPU went.",
+    "id": "rust-a5-015",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 3,
+      "explain": "Width shows CPU share so the widest plateau is the bottleneck.",
+      "options": [
+        "Tall boxes are hottest",
+        "Colors show correctness",
+        "Narrow boxes are bottlenecks",
+        "Wide boxes show where CPU time goes"
+      ],
+      "q": "How do you read a flamegraph?"
+    },
+    "takeaway": "Optimize the widest flamegraph plateau before touching narrow stacks.",
+    "track": "rust",
+    "trap": "Optimizing a tall narrow stack ignores the wide frame eating real cycles."
+  },
+  {
+    "body_md": "`perf stat` shows cycles, cache misses, and branch mispredicts per run. High miss rates mean layout or prefetch issues, not just slow code. Pair with `perf record` for per-symbol hotspots on Linux.",
+    "code": "$ perf stat -d ./target/release/app\n# watch cache-misses and branch-misses",
+    "hook": "Cycles lie, cache misses confess — perf stat tells which.",
+    "id": "rust-a5-016",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "perf stat reveals hardware counters like misses behind slowdowns.",
+      "options": [
+        "It formats source code",
+        "It reveals hardware counters behind slowdowns",
+        "It publishes crates",
+        "It runs unit tests"
+      ],
+      "q": "What does perf stat add beyond timing?"
+    },
+    "takeaway": "Check hardware counters with perf stat before rewriting hot code paths.",
+    "track": "rust",
+    "trap": "Tuning instructions while cache misses dominate wastes optimization effort."
+  },
+  {
+    "body_md": "`lto = true` enables whole-program optimization; `codegen-units = 1` trades slower builds for better inlining. Set them in `[profile.release]`. Keep dev profiles fast and only ship tuned release builds.",
+    "code": "[profile.release]\nlto = true\ncodegen-units = 1\nstrip = true",
+    "hook": "Ten percent faster binary, three times slower build — worth it?",
+    "id": "rust-a5-017",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "LTO plus single codegen unit improves optimization at higher build cost.",
+      "options": [
+        "They speed up debug builds",
+        "They reduce source size",
+        "They trade slower builds for faster release binaries",
+        "They disable all inlining"
+      ],
+      "q": "What do LTO and single codegen units do?"
+    },
+    "takeaway": "Enable link-time optimization for release binaries while keeping dev builds fast.",
+    "track": "rust",
+    "trap": "Enabling full LTO in dev profiles makes every iteration painfully slow."
+  },
+  {
+    "body_md": "`sccache` shares compiled crates across builds and machines via Redis or S3. Set `RUSTC_WRAPPER=sccache` and warm the cache in CI. Watch hit rates — misses on new toolchains are expected.",
+    "code": "$ export RUSTC_WRAPPER=sccache\n$ sccache --show-stats",
+    "hook": "Never compile serde twice again — share it with sccache.",
+    "id": "rust-a5-018",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "sccache caches compiled crates across builds and machines.",
+      "options": [
+        "It formats workspace code",
+        "It caches compiled crates across builds and machines",
+        "It lints unsafe code",
+        "It signs release binaries"
+      ],
+      "q": "What is sccache for?"
+    },
+    "takeaway": "Share compilation artifacts with sccache to speed up team and CI builds.",
+    "track": "rust",
+    "trap": "Expecting cache hits across compiler upgrades ignores toolchain-keyed invalidation."
+  },
+  {
+    "body_md": "`cargo deny` and `cargo audit` scan licenses, advisories, and banned crates. Run `cargo audit` in CI and pin a policy file. Treat new RUSTSEC advisories like failing tests — fix or document exceptions.",
+    "code": "$ cargo install cargo-audit\n$ cargo audit\n$ cargo deny check",
+    "hook": "A dependency has a CVE and your CI stayed green? Fix that.",
+    "id": "rust-a5-019",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Audit tools scan advisories and licenses to block risky dependencies.",
+      "options": [
+        "Audit tools block risky advisories and licenses in CI",
+        "Audit tools speed up linking",
+        "Audit tools format manifests",
+        "Audit tools publish docs"
+      ],
+      "q": "What do cargo audit and deny check?"
+    },
+    "takeaway": "Scan dependencies for advisories in CI and treat warnings as failures.",
+    "track": "rust",
+    "trap": "Ignoring advisory warnings for months ships known vulnerabilities to users."
+  },
+  {
+    "body_md": "**Reproducible builds** produce bit-identical binaries from the same sources: pin toolchains with `rust-toolchain`, lock deps, strip paths, and set `SOURCE_DATE_EPOCH`. Verify by rebuilding in two containers and diffing hashes.",
+    "code": "[toolchain]\nchannel = \"1.78\"\ncomponents = [\"rustfmt\", \"clippy\"]",
+    "hook": "Same source, different hash? Your build is not reproducible.",
+    "id": "rust-a5-020",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Pinned toolchains plus locked deps remove common nondeterminism sources.",
+      "options": [
+        "They make builds faster",
+        "They remove all tests",
+        "They pin inputs so outputs hash identically",
+        "They skip codegen entirely"
+      ],
+      "q": "What makes builds reproducible?"
+    },
+    "takeaway": "Pin toolchains and dependencies so release binaries rebuild bit-identically.",
+    "track": "rust",
+    "trap": "Embedding absolute paths and timestamps breaks hash equality across machines."
+  },
+  {
+    "body_md": "**PGO** feeds real profiles back into LLVM: build with `-Cprofile-generate`, run a representative workload, rebuild with `-Cprofile-use`. Hot paths get better inlining and layout. Automate the three-step flow in release CI.",
+    "code": "$ RUSTFLAGS=\"-Cprofile-generate=/tmp/pgo\" cargo build --release\n# run workload, then rebuild with -Cprofile-use",
+    "hook": "Let production traffic teach LLVM how to optimize your binary.",
+    "id": "rust-a5-021",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "PGO uses runtime profiles to guide inlining and layout in rebuilds.",
+      "options": [
+        "It disables all optimization",
+        "It guides optimization with real runtime profiles",
+        "It profiles only test code",
+        "It replaces benchmarking"
+      ],
+      "q": "What is profile-guided optimization?"
+    },
+    "takeaway": "Apply profile-guided optimization to hot binaries using representative workloads.",
+    "track": "rust",
+    "trap": "Training PGO on toy inputs mis-optimizes the paths production actually hits."
+  },
+  {
+    "body_md": "Track heap with `dhat`, `massif`, or allocator stats before guessing. Watch peak bytes, churn per request, and fragmentation. Fix arenas, pooling, or `jemalloc` tuning based on numbers — not vibes.",
+    "code": "$ valgrind --tool=dhat ./target/release/app\n# inspect peak heap and hot alloc sites",
+    "hook": "Memory high but CPU idle? Profile the heap, not the code.",
+    "id": "rust-a5-022",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Heap profilers show peak usage and hot allocation sites to fix.",
+      "options": [
+        "Heap profilers reveal peak usage and hot allocation sites",
+        "Heap profilers format code",
+        "Heap profilers check licenses",
+        "Heap profilers sign binaries"
+      ],
+      "q": "What does heap profiling reveal?"
+    },
+    "takeaway": "Profile heap usage first and fix allocation hotspots with measured changes.",
+    "track": "rust",
+    "trap": "Hand-pooling objects before profiling adds complexity without proven gains."
+  }
+]

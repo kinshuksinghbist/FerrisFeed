@@ -1,0 +1,442 @@
+[
+  {
+    "id": "wasm-07-001",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Memory grows in 64KiB pages on demand.",
+    "body_md": "Linear memory starts small and extends via memory.grow, with each page adding 64KiB. Growing detaches old JS views, so re-create Uint8Array wrappers after growth. Pre-size initial pages when you know the workload to avoid repeated grows.",
+    "code": "(module\n  (memory 1 10)\n  (func (export \"grow\") (param i32) (result i32)\n    local.get 0\n    memory.grow))",
+    "language": "rust",
+    "takeaway": "Page-based growth extends memory while invalidating older host views.",
+    "trap": "Caching one TypedArray forever and reading stale zeros after growth.",
+    "quiz": {
+      "q": "How large is one wasm memory page?",
+      "options": [
+        "64KiB",
+        "1 byte",
+        "1GiB",
+        "4 bits"
+      ],
+      "answer": 0,
+      "explain": "The spec fixes pages at 64KiB for portable growth math."
+    }
+  },
+  {
+    "id": "wasm-07-002",
+    "track": "wasm",
+    "level": 2,
+    "hook": "JS can donate memory to the module.",
+    "body_md": "Instead of the module owning memory, JS creates WebAssembly.Memory and passes it in imports. Both sides then share one buffer for zero-copy exchange. Sizes and shared flags must agree or instantiation rejects the import.",
+    "code": "const mem = new WebAssembly.Memory({ initial: 2, maximum: 10 });\nconst { instance } = await WebAssembly.instantiate(bytes, { env: { mem } });\nnew Uint8Array(mem.buffer)[0] = 7;",
+    "language": "javascript",
+    "takeaway": "Imported shared buffers let hosts and modules exchange bytes without copying.",
+    "trap": "Mismatching maximum limits so instantiation fails on import checking.",
+    "quiz": {
+      "q": "Who allocates when memory is imported?",
+      "options": [
+        "The host JS side",
+        "Nobody, it appears magically",
+        "The CSS engine",
+        "The GPU"
+      ],
+      "answer": 0,
+      "explain": "JS constructs the Memory object and the module uses that buffer."
+    }
+  },
+  {
+    "id": "wasm-07-003",
+    "track": "wasm",
+    "level": 3,
+    "hook": "Tables hold callable function references.",
+    "body_md": "A table stores funcref values that call_indirect can dispatch through at runtime, enabling callbacks and vtables. Declare the table, place functions in it with elem segments, then index by number. Type signatures must match exactly.",
+    "code": "(module\n  (type $v (func))\n  (table 2 funcref)\n  (elem (i32.const 0) $a $b)\n  (func $a) (func $b))",
+    "language": "rust",
+    "takeaway": "Indirect function tables enable dynamic dispatch over stored references.",
+    "trap": "Calling an index whose signature differs and trapping at runtime.",
+    "quiz": {
+      "q": "What does call_indirect dispatch through?",
+      "options": [
+        "A table of function references",
+        "A SQL index",
+        "A DOM list",
+        "A cookie jar"
+      ],
+      "answer": 0,
+      "explain": "Tables map indices to typed functions for runtime selection."
+    }
+  },
+  {
+    "id": "wasm-07-004",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Closures cross to JS with a handle object.",
+    "body_md": "Wrap a Rust closure in Closure::wrap to get a JS function for listeners or timers. Keep the handle alive as long as JS may call it. Dropping it early unregisters the callback and later calls trap.",
+    "code": "use wasm_bindgen::prelude::*;\nlet cb = Closure::wrap(Box::new(|| log(\"hi\")) as Box<dyn Fn()>);\nwindow().set_onclick(cb.as_ref().unchecked_ref());",
+    "language": "rust",
+    "takeaway": "Wrapped closure handles project Rust logic into callable JS functions.",
+    "trap": "Letting the handle drop while JS still holds the callback.",
+    "quiz": {
+      "q": "What keeps a JS-bound Rust closure callable?",
+      "options": [
+        "Holding the Closure handle alive",
+        "Deleting it fast",
+        "Minifying harder",
+        "Adding CSS"
+      ],
+      "answer": 0,
+      "explain": "The handle owns the closure, so dropping it frees the callable code."
+    }
+  },
+  {
+    "id": "wasm-07-005",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Forget leaks unless you free the closure.",
+    "body_md": "Calling Closure::forget intentionally leaks to keep callbacks alive forever, which suits static handlers but bleeds memory per dynamic listener. Instead store handles in a Vec or struct and drop them on cleanup to reclaim each closure.",
+    "code": "struct Handlers { clicks: Vec<Closure<dyn Fn()>> }\n// on teardown:\n// handlers.clicks.clear(); // drops and frees",
+    "language": "rust",
+    "takeaway": "Stored handles allow deliberate cleanup instead of permanent intentional leaks.",
+    "trap": "Calling forget per row in a list and leaking hundreds of closures.",
+    "quiz": {
+      "q": "How do you avoid Closure forget leaks?",
+      "options": [
+        "Store handles and drop them on cleanup",
+        "Forget more often",
+        "Never use closures",
+        "Restart the browser"
+      ],
+      "answer": 0,
+      "explain": "Dropping the handle runs cleanup while forget abandons it forever."
+    }
+  },
+  {
+    "id": "wasm-07-006",
+    "track": "wasm",
+    "level": 2,
+    "hook": "JsValue carries anything across the boundary.",
+    "body_md": "JsValue boxes unknown JS data like objects, arrays, or undefined for Rust to inspect. Use is_string, as_string, is_undefined, and property getters to narrow it. Convert at the edge and work with typed Rust inside.",
+    "code": "use wasm_bindgen::JsValue;\n#[wasm_bindgen]\npub fn ping(v: JsValue) -> JsValue {\n    if v.is_string() { v } else { JsValue::NULL }\n}",
+    "language": "rust",
+    "takeaway": "Dynamic value boxes defer typing decisions until Rust inspects the payload.",
+    "trap": "Assuming every JsValue is a string without checking its kind first.",
+    "quiz": {
+      "q": "What is JsValue for?",
+      "options": [
+        "Carrying dynamic JS data into typed Rust",
+        "Styling buttons",
+        "Routing HTTP",
+        "Signing certs"
+      ],
+      "answer": 0,
+      "explain": "It wraps arbitrary values so Rust can test and convert them safely."
+    }
+  },
+  {
+    "id": "wasm-07-007",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Serde bridges structs and JS objects cleanly.",
+    "body_md": "Derive Serialize and Deserialize, then use JsValue::from_serde and into_serde to convert whole structs. Failures surface as errors instead of silent undefined fields. Prefer this over manual property poking for nested quiz or config data.",
+    "code": "use serde::{Serialize, Deserialize};\n#[derive(Serialize, Deserialize)]\nstruct Quiz { score: u32 }\nlet js = JsValue::from_serde(&Quiz { score: 9 }).unwrap();",
+    "language": "rust",
+    "takeaway": "Derived conversions move whole structs across the boundary without manual field code.",
+    "trap": "Hand-reading fields and missing renamed keys after a refactor.",
+    "quiz": {
+      "q": "Why derive Serialize on boundary structs?",
+      "options": [
+        "To convert whole structs to JS values",
+        "To paint pixels",
+        "To open sockets",
+        "To minify CSS"
+      ],
+      "answer": 0,
+      "explain": "Serde maps fields automatically and reports mismatches as errors."
+    }
+  },
+  {
+    "id": "wasm-07-008",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Fetch from Rust awaits like native async.",
+    "body_md": "Combine web-sys fetch with wasm-bindgen-futures JsFuture to await responses inside Rust. Convert the promise, await bytes or text, then deserialize. Spawn via spawn_local so the future runs on the browser event loop.",
+    "code": "let resp = JsFuture::await(&window().fetch_with_str(url))?;\nlet text = JsFuture::await(&resp.text()?)?.as_string().unwrap();",
+    "language": "rust",
+    "takeaway": "Promise bridging lets Rust await browser networking on the event loop.",
+    "trap": "Blocking the thread waiting instead of awaiting the promise future.",
+    "quiz": {
+      "q": "What runs a Rust fetch future in the browser?",
+      "options": [
+        "spawn_local on the event loop",
+        "A SQL trigger",
+        "A cron job",
+        "A printer"
+      ],
+      "answer": 0,
+      "explain": "The future must park on the JS loop since browsers lack thread blocking."
+    }
+  },
+  {
+    "id": "wasm-07-009",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Pixels are just a loop over bytes.",
+    "body_md": "Grab ImageData from canvas, walk the RGBA buffer four bytes at a time, and write results back with put_image_data. Keep the loop tight and typed arrays reused. Heavy filters belong in workers to protect frame rate.",
+    "code": "let mut px = ctx.get_image_data(0.0, 0.0, w, h)?.data();\nfor c in px.chunks_exact_mut(4) {\n    c[0] = 255 - c[0]; // invert red\n}",
+    "language": "rust",
+    "takeaway": "Direct byte loops over image buffers implement fast custom canvas filters.",
+    "trap": "Reading pixels with getImageData per frame without reusing buffers.",
+    "quiz": {
+      "q": "How do you invert canvas colors?",
+      "options": [
+        "Loop the RGBA bytes and rewrite them",
+        "Restart the GPU",
+        "Edit the HTML",
+        "Change the URL"
+      ],
+      "answer": 0,
+      "explain": "Each pixel is four bytes, so arithmetic per chunk transforms the image."
+    }
+  },
+  {
+    "id": "wasm-07-010",
+    "track": "wasm",
+    "level": 3,
+    "hook": "WebGL triangles start from Rust strings.",
+    "body_md": "Compile vertex and fragment shaders via web-sys, link a program, bind a buffer, and draw arrays. Check compile logs on failure since one typo blanks the canvas. Wrap init in Result and surface logs to console.",
+    "code": "gl.compile_shader(&vs);\nassert!(gl.get_shader_parameter(&vs, COMPILE_STATUS));\ngl.link_program(&prog);\ngl.draw_arrays(TRIANGLES, 0, 3);",
+    "language": "rust",
+    "takeaway": "Shader compilation plus buffer binding turns Rust calls into GPU draws.",
+    "trap": "Ignoring compile status so a typo renders a silent black canvas.",
+    "quiz": {
+      "q": "What reveals a broken WebGL shader?",
+      "options": [
+        "The shader compile log status",
+        "The page title",
+        "The favicon",
+        "The scrollbar"
+      ],
+      "answer": 0,
+      "explain": "GL reports errors per shader, so check status before drawing."
+    }
+  },
+  {
+    "id": "wasm-07-011",
+    "track": "wasm",
+    "level": 2,
+    "hook": "One oscillator makes a test beep.",
+    "body_md": "Create AudioContext, add an OscillatorNode plus GainNode, connect to destination, and stop after a short envelope. Resume the context inside a user gesture since autoplay policies block silent starts. Vary frequency for quiz feedback tones.",
+    "code": "let osc = ctx.create_oscillator()?;\nosc.frequency().set_value(440.0);\nosc.connect_with_audio_node(&gain)?;\nosc.start()?;\nosc.stop_with_when(0.2)?;",
+    "language": "rust",
+    "takeaway": "Short oscillator envelopes produce reliable UI feedback tones in browsers.",
+    "trap": "Starting audio before any gesture so autoplay policy silences it.",
+    "quiz": {
+      "q": "Why resume AudioContext in a click handler?",
+      "options": [
+        "Autoplay rules block sound before gestures",
+        "Clicks speed CPUs",
+        "Gestures add reverb",
+        "It saves disk"
+      ],
+      "answer": 0,
+      "explain": "Browsers require engagement before pages may emit audible output."
+    }
+  },
+  {
+    "id": "wasm-07-012",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Workers init their own wasm copy.",
+    "body_md": "Spawn a Worker pointing at a small JS bootstrap that imports the pkg glue and calls init. Post tasks with postMessage and receive results back. Keep heavy quiz grading or image loops off the main thread for smooth input.",
+    "code": "const worker = new Worker('worker.js');\nworker.postMessage({ pixels: buf }, [buf]);\nworker.onmessage = (e) => draw(e.data);",
+    "language": "javascript",
+    "takeaway": "Dedicated worker instances move heavy wasm jobs off the main thread.",
+    "trap": "Loading the main-thread glue inside a worker where window is missing.",
+    "quiz": {
+      "q": "Where does worker wasm init run?",
+      "options": [
+        "Inside the worker bootstrap script",
+        "In the GPU",
+        "In the URL bar",
+        "In a cookie"
+      ],
+      "answer": 0,
+      "explain": "Each worker is isolated, so it instantiates its own module copy."
+    }
+  },
+  {
+    "id": "wasm-07-013",
+    "track": "wasm",
+    "level": 3,
+    "hook": "Threads share one memory with atomics.",
+    "body_md": "Build with atomics and bulk-memory features so workers share a single SharedArrayBuffer. The JS Memory must set shared true. Atomics synchronize access; plain reads race. This unlocks real parallelism for filters and solvers.",
+    "code": "const mem = new WebAssembly.Memory({\n  initial: 16, maximum: 64, shared: true\n});",
+    "language": "javascript",
+    "takeaway": "Shared buffers plus atomic operations enable true parallel wasm workers.",
+    "trap": "Sharing memory but using plain reads that race across threads.",
+    "quiz": {
+      "q": "What makes shared wasm memory safe?",
+      "options": [
+        "Atomic operations on shared bytes",
+        "Louder fans",
+        "Bigger fonts",
+        "Longer URLs"
+      ],
+      "answer": 0,
+      "explain": "Atomics order concurrent access where plain loads would data-race."
+    }
+  },
+  {
+    "id": "wasm-07-014",
+    "track": "wasm",
+    "level": 2,
+    "hook": "Two headers unlock shared memory.",
+    "body_md": "Serve with Cross-Origin-Opener-Policy same-origin and Cross-Origin-Embedder-Policy require-corp to isolate the page. Without both, SharedArrayBuffer is undefined and threaded builds fail init. Verify in devtools network headers, not just code.",
+    "code": "Cross-Origin-Opener-Policy: same-origin\nCross-Origin-Embedder-Policy: require-corp",
+    "language": "rust",
+    "takeaway": "Isolation headers gate access to shared memory for cross-origin safety.",
+    "trap": "Enabling threads while serving without the headers and blaming wasm.",
+    "quiz": {
+      "q": "Which pair enables SharedArrayBuffer?",
+      "options": [
+        "COOP plus COEP isolation headers",
+        "Two cookies",
+        "HTTP2 plus HTTP3",
+        "CORS plus CSS"
+      ],
+      "answer": 0,
+      "explain": "Browsers expose shared memory only to isolated pages with both set."
+    }
+  },
+  {
+    "id": "wasm-07-015",
+    "track": "wasm",
+    "level": 3,
+    "hook": "Rayon pools map onto wasm workers.",
+    "body_md": "With the threaded toolchain, rayon scopes and par_iter distribute chunks across the worker pool sized to navigator hardwareConcurrency. Start with coarse chunks to amortize messaging. Measure speedup since tiny inputs may run slower in parallel.",
+    "code": "pool.install(|| {\n    data.par_iter_mut().for_each(|x| *x += 1)\n});",
+    "language": "rust",
+    "takeaway": "Data parallel iterators spread chunks across the browser worker pool.",
+    "trap": "Parallelizing tiny slices where dispatch costs exceed compute savings.",
+    "quiz": {
+      "q": "When does rayon in wasm win?",
+      "options": [
+        "Coarse chunks over many workers",
+        "Single tiny arrays",
+        "Blocking the main thread",
+        "Zero workers"
+      ],
+      "answer": 0,
+      "explain": "Parallelism pays when chunk work dwarfs scheduling and message costs."
+    }
+  },
+  {
+    "id": "wasm-07-016",
+    "track": "wasm",
+    "level": 3,
+    "hook": "Sockets are still a WASI proposal.",
+    "body_md": "wasi-sockets standardizes TCP, UDP, and poll for sandboxed wasm, but support varies by runtime. Gate code behind the proposal interface and keep an HTTP fallback. Track wasmtime and WAMR matrices before promising socket behavior everywhere.",
+    "code": "// plan: open TcpSocket via wasi-sockets\n// fallback: wasi-http fetch when missing\n// check runtime matrix first",
+    "language": "rust",
+    "takeaway": "Proposal-gated networking keeps socket code portable while runtimes catch up.",
+    "trap": "Assuming every runtime already implements the draft socket API.",
+    "quiz": {
+      "q": "How should you ship wasi-sockets today?",
+      "options": [
+        "Gate behind the proposal with an HTTP fallback",
+        "Hard-require draft APIs",
+        "Open raw syscalls",
+        "Skip error handling"
+      ],
+      "answer": 0,
+      "explain": "Draft status means runtimes differ, so fallback paths stay mandatory."
+    }
+  },
+  {
+    "id": "wasm-07-017",
+    "track": "wasm",
+    "level": 3,
+    "hook": "wasi-http fetches without a browser.",
+    "body_md": "Implement the outgoing-handler to issue requests from server wasm with explicit schemes, methods, and bodies. Responses stream back as status plus bytes. This brings fetch-style code to edge and CLI components uniformly.",
+    "code": "let res: IncomingResponse = fetcher.handle(opts)?;\nassert_eq!(res.status(), 200);",
+    "language": "rust",
+    "takeaway": "Standardized handlers give server components portable outbound web access.",
+    "trap": "Smuggling browser-only fetch assumptions into a headless component.",
+    "quiz": {
+      "q": "What does wasi-http standardize?",
+      "options": [
+        "Outgoing requests for server-side components",
+        "DOM styling",
+        "GPU drivers",
+        "Print queues"
+      ],
+      "answer": 0,
+      "explain": "It defines request handling so components call the web without browsers."
+    }
+  },
+  {
+    "id": "wasm-07-018",
+    "track": "wasm",
+    "level": 3,
+    "hook": "WIT files generate both sides of bindings.",
+    "body_md": "Write a wit package describing records and functions, then run wit-bindgen for Rust guests and JS hosts. Regenerate on every interface edit so types never drift. Commit the wit file as the contract, not the generated glue.",
+    "code": "wit-bindgen rust ./quiz.wit\nwit-bindgen js ./quiz.wit",
+    "language": "rust",
+    "takeaway": "Generated bindings keep guest and host types aligned from one contract file.",
+    "trap": "Hand-editing generated glue instead of updating the interface contract.",
+    "quiz": {
+      "q": "What is the source of truth for bindings?",
+      "options": [
+        "The WIT contract file",
+        "The generated output",
+        "A screenshot",
+        "A chat log"
+      ],
+      "answer": 0,
+      "explain": "Generators derive both sides, so edits belong in the interface file."
+    }
+  },
+  {
+    "id": "wasm-07-019",
+    "track": "wasm",
+    "level": 3,
+    "hook": "Registries version components like crates.",
+    "body_md": "Publish components to a warg registry with semantic versions and content hashes. Consumers pin ranges, verify signatures, and upgrade deliberately. Yank broken releases instead of overwriting tags so builds stay reproducible.",
+    "code": "warg publish quiz.wasm --version 1.2.0\nwarg install quiz@1.2.0",
+    "language": "rust",
+    "takeaway": "Versioned registries make component upgrades explicit and reproducible.",
+    "trap": "Overwriting a published tag and breaking every pinned consumer silently.",
+    "quiz": {
+      "q": "Why never rewrite a published component version?",
+      "options": [
+        "Pinned builds must resolve identically forever",
+        "Tags are decorative",
+        "Hashes are optional",
+        "Users love surprises"
+      ],
+      "answer": 0,
+      "explain": "Immutability keeps downstream builds deterministic across reinstalls."
+    }
+  },
+  {
+    "id": "wasm-07-020",
+    "track": "wasm",
+    "level": 3,
+    "hook": "Memory64 lifts the 4GB ceiling teaser.",
+    "body_md": "The memory64 proposal swaps 32-bit indices for 64-bit, letting huge datasets live in one address space. Toolchains and browsers are still rolling it out, so gate usage and benchmark pointer-heavy code before committing to it.",
+    "code": "(module\n  (memory i64 1)\n  ;; teaser: needs memory64 toolchain\n)",
+    "language": "rust",
+    "takeaway": "Wider addressing unlocks huge single-memory workloads once runtimes adopt it.",
+    "trap": "Shipping memory64 binaries to browsers that only accept 32-bit memory.",
+    "quiz": {
+      "q": "What does memory64 change?",
+      "options": [
+        "Index width from 32 to 64 bits",
+        "CSS colors",
+        "HTTP verbs",
+        "Keyboard layout"
+      ],
+      "answer": 0,
+      "explain": "Bigger indices address beyond the classic 4GB linear limit."
+    }
+  }
+]

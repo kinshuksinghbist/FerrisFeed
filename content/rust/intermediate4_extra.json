@@ -1,0 +1,486 @@
+[
+  {
+    "body_md": "`From<T>` builds one type from another; `Into<T>` is the automatic flip side. Implement `From` once and `into()` works free via the blanket impl. Use `value.into()` when the target type is known from context.",
+    "code": "struct Port(u16);\nimpl From<u16> for Port {\n    fn from(p: u16) -> Self { Port(p) }\n}\nlet p: Port = 8080u16.into();",
+    "hook": "Implement From once, get Into for free — here is how.",
+    "id": "rust-i4-001",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "A From impl gives you Into automatically through the blanket impl.",
+      "options": [
+        "From gives Into automatically",
+        "Into gives From automatically",
+        "Both must be written by hand",
+        "Neither can convert types"
+      ],
+      "q": "If you implement From<A> for B, what do you get?"
+    },
+    "takeaway": "Implement From for conversions and rely on Into for ergonomic call sites.",
+    "track": "rust",
+    "trap": "Implementing both From and Into manually causes conflicting-impl errors."
+  },
+  {
+    "body_md": "`Debug` (`{:?}`) is for developers with derived output. `Display` (`{}`) is for users and must be written by hand. Derive Debug always, implement Display for messages, errors, and pretty CLI output.",
+    "code": "#[derive(Debug)]\nstruct Point { x: i32, y: i32 }\nimpl std::fmt::Display for Point {\n    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n        write!(f, \"({}, {})\", self.x, self.y)\n    }\n}",
+    "hook": "Derive Debug, hand-write Display — know which is which.",
+    "id": "rust-i4-002",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Debug is developer-facing and derivable while Display is user-facing and manual.",
+      "options": [
+        "Display is derivable, Debug is manual",
+        "They are interchangeable traits",
+        "Debug is for developers and Display is for users",
+        "Neither supports formatting"
+      ],
+      "q": "How do Debug and Display differ?"
+    },
+    "takeaway": "Derive Debug for diagnostics and implement Display for user-facing output.",
+    "track": "rust",
+    "trap": "Using Debug output in user interfaces leaks internals and looks unpolished."
+  },
+  {
+    "body_md": "`Deref` lets `Box<String>` act like `&str` via **deref coercion**. Method calls auto-borrow through the chain. Implement `Deref` for smart pointers, never just to save keystrokes on normal structs.",
+    "code": "let b: Box<String> = Box::new(\"hi\".into());\nlet s: &str = &b; // deref coercion\nprintln!(\"{}\", s.len());",
+    "hook": "Why does Box<String> have string methods? Deref coercion.",
+    "id": "rust-i4-003",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Deref coercion auto-converts smart pointers to their inner borrow.",
+      "options": [
+        "It clones the inner value",
+        "It auto-borrows smart pointers as their target",
+        "It moves out of the box",
+        "It leaks memory safely"
+      ],
+      "q": "What does deref coercion do?"
+    },
+    "takeaway": "Rely on deref coercion for smart pointers but avoid abusing it elsewhere.",
+    "track": "rust",
+    "trap": "Implementing Deref on domain types hides ownership and confuses method resolution."
+  },
+  {
+    "body_md": "`Cow<'a, str>` holds borrowed **or** owned text. Return borrowed when no edit is needed, owned only when you must allocate. Call `.into_owned()` or `.to_mut()` at the boundary that needs ownership.",
+    "code": "use std::borrow::Cow;\nfn greet(name: &str) -> Cow<'_, str> {\n    if name.is_empty() { Cow::Owned(\"guest\".into()) } else { Cow::Borrowed(name) }\n}",
+    "hook": "Borrow when you can, own when you must — Cow does both.",
+    "id": "rust-i4-004",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Cow avoids allocation on the common borrowed path and owns only when needed.",
+      "options": [
+        "It always clones input",
+        "It only borrows statically",
+        "It only owns heap data",
+        "It borrows by default and owns when required"
+      ],
+      "q": "Why return Cow instead of String?"
+    },
+    "takeaway": "Return Cow to avoid allocation when the borrowed fast path suffices.",
+    "track": "rust",
+    "trap": "Calling into_owned too early defeats Cow and allocates on every call."
+  },
+  {
+    "body_md": "`AsRef<str>` accepts `String`, `&str`, and `Box<str>` in one signature. Write `fn open<P: AsRef<Path>>(p: P)` style APIs so callers pass whatever they hold. Prefer `AsRef` over concrete `&String` params.",
+    "code": "fn shout<S: AsRef<str>>(s: S) {\n    println!(\"{}\", s.as_ref().to_uppercase());\n}\nshout(\"hi\");\nshout(String::from(\"yo\"));",
+    "hook": "Take &String and you annoy every caller — take AsRef instead.",
+    "id": "rust-i4-005",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "AsRef accepts many owned and borrowed forms of the same data.",
+      "options": [
+        "AsRef accepts many shapes of the same data",
+        "AsRef only takes static refs",
+        "AsRef forces heap allocation",
+        "AsRef disables borrowing"
+      ],
+      "q": "Why use AsRef<str> parameters?"
+    },
+    "takeaway": "Accept AsRef in public APIs so callers can pass owned or borrowed values.",
+    "track": "rust",
+    "trap": "Taking &String blocks &str callers for no benefit; use AsRef or &str."
+  },
+  {
+    "body_md": "`Borrow<str>` powers `HashMap<String>` lookups by `&str`. Because `String: Borrow<str>` plus `str: Eq + Hash`, `map.get(\"key\")` works without allocating. Keep key types Borrow-compatible.",
+    "code": "use std::collections::HashMap;\nlet mut m = HashMap::new();\nm.insert(\"k\".to_string(), 1);\nassert_eq!(m.get(\"k\"), Some(&1));",
+    "hook": "HashMap<String> looked up by &str with zero alloc — Borrow magic.",
+    "id": "rust-i4-006",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Borrow lets owned map keys be queried with borrowed equivalents.",
+      "options": [
+        "It hashes faster",
+        "It sorts the map",
+        "It allows borrowed lookups on owned keys",
+        "It resizes the map"
+      ],
+      "q": "What does Borrow enable for maps?"
+    },
+    "takeaway": "Rely on Borrow so owned-key maps support cheap borrowed lookups.",
+    "track": "rust",
+    "trap": "Custom keys without a Borrow impl force wasteful owned lookups."
+  },
+  {
+    "body_md": "Model failures as enums with `thiserror`: each variant carries context and `#[error(\"... {0}\")]` renders messages. Derive `Error` plus `Debug`. Use for library APIs where callers match on cases.",
+    "code": "#[derive(Debug, thiserror::Error)]\nenum DbErr {\n    #[error(\"missing user {0}\")]\n    Missing(String),\n    #[error(transparent)]\n    Io(#[from] std::io::Error),\n}",
+    "hook": "One error enum to rule every failure in your library.",
+    "id": "rust-i4-007",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "thiserror derives Error for enums with formatted messages per variant.",
+      "options": [
+        "It replaces Result entirely",
+        "It derives typed errors with per-variant messages",
+        "It only logs warnings",
+        "It catches panics automatically"
+      ],
+      "q": "What is thiserror for?"
+    },
+    "takeaway": "Derive typed library errors with thiserror so callers can match precisely.",
+    "track": "rust",
+    "trap": "Using stringly errors in libraries prevents callers from handling cases."
+  },
+  {
+    "body_md": "`anyhow::Result` plus `.context(\"loading config\")` adds a breadcrumb trail to app errors. The `?` propagates, context explains what you were doing. Print with `{:?}` for the full chain in logs.",
+    "code": "fn load() -> anyhow::Result<String> {\n    std::fs::read_to_string(\"app.toml\")\n        .context(\"loading app config\")\n}",
+    "hook": "File not found — but WHICH file and WHY were you reading it?",
+    "id": "rust-i4-008",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "context attaches what-you-were-doing notes to propagated errors.",
+      "options": [
+        "context adds actionable breadcrumbs to errors",
+        "context suppresses error messages",
+        "context retries failed calls",
+        "context changes error types"
+      ],
+      "q": "What does anyhow context add?"
+    },
+    "takeaway": "Attach anyhow context at app boundaries to make failures easy to diagnose.",
+    "track": "rust",
+    "trap": "Adding context inside tight loops buries the root cause under noise."
+  },
+  {
+    "body_md": "`map` transforms, `filter` keeps matches, `filter_map` does both. They are lazy until consumed. Chain then `collect()`: `(1..10).filter(|x| x % 2 == 0).map(|x| x * x)`. Name closures for clarity.",
+    "code": "let sq: Vec<i32> = (1..10)\n    .filter(|x| x % 2 == 0)\n    .map(|x| x * x)\n    .collect();",
+    "hook": "Filter then map in one pass — no temp vectors needed.",
+    "id": "rust-i4-009",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Adapters are lazy and fuse into one pass when consumed.",
+      "options": [
+        "Each adapter allocates a vector",
+        "Adapters run eagerly at once",
+        "filter needs collect first",
+        "Adapters stay lazy until a consumer runs"
+      ],
+      "q": "When do map and filter execute?"
+    },
+    "takeaway": "Chain lazy adapters and consume once to process data in a single pass.",
+    "track": "rust",
+    "trap": "Forgetting the final collect means the adapter chain never runs at all."
+  },
+  {
+    "body_md": "`fold` reduces to one value with an accumulator: `iter.fold(0, |acc, x| acc + x)`. Use it for sums, histograms, or building maps. Prefer `sum()` and `product()` shorthands when they fit.",
+    "code": "let sum = (1..=4).fold(0, |acc, x| acc + x);\nlet prod: i32 = (1..=4).product();",
+    "hook": "Sum, count, histogram — fold turns many values into one.",
+    "id": "rust-i4-010",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "fold threads an accumulator through every element to one result.",
+      "options": [
+        "It filters elements lazily",
+        "It reduces many elements into one accumulator",
+        "It zips two iterators together",
+        "It clones the iterator"
+      ],
+      "q": "What does fold do?"
+    },
+    "takeaway": "Use fold to reduce iterators into a single summary value or collection.",
+    "track": "rust",
+    "trap": "Folding with a shared mutable accumulator across threads causes data races."
+  },
+  {
+    "body_md": "`enumerate` adds indices, `zip` pairs two iterators and stops at the shorter. Perfect for progress bars and pairwise diffs: `for (i, (a, b)) in xs.iter().zip(ys).enumerate()`. Check lengths first if truncation matters.",
+    "code": "let a = [10, 20, 30];\nlet b = [1, 2];\nfor (i, (x, y)) in a.iter().zip(&b).enumerate() {\n    println!(\"{i}: {x}-{y}\");\n}",
+    "hook": "Need index plus two values at once? Zip meets enumerate.",
+    "id": "rust-i4-011",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "zip stops at the shorter iterator while enumerate adds indices.",
+      "options": [
+        "zip pads the shorter side",
+        "enumerate skips every other item",
+        "zip stops at the shorter iterator",
+        "zip requires equal lengths or panics"
+      ],
+      "q": "What happens when zipped iterators differ in length?"
+    },
+    "takeaway": "Pair iterators with zip and enumerate but verify lengths when truncation matters.",
+    "track": "rust",
+    "trap": "Silent zip truncation drops trailing data when inputs differ in length."
+  },
+  {
+    "body_md": "Collect into `Result<Vec<_>, E>` to fail fast: `list.iter().map(parse).collect::<Result<Vec<_>, _>>()?`. First `Err` short-circuits the whole collection. Use for validating batches of inputs at once.",
+    "code": "let xs = [\"1\", \"2\", \"oops\"];\nlet nums: Result<Vec<i32>, _> =\n    xs.iter().map(|s| s.parse()).collect();",
+    "hook": "Parse ten strings, fail on the first bad one — one collect.",
+    "id": "rust-i4-012",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Collecting to Result short-circuits on the first error.",
+      "options": [
+        "Collecting to Result short-circuits on first error",
+        "Collecting to Result skips all errors",
+        "Collecting to Result panics on success",
+        "Collecting needs a loop always"
+      ],
+      "q": "What does collect::<Result<Vec<_>, _>> do on error?"
+    },
+    "takeaway": "Collect fallible maps into Result to validate whole batches with early exit.",
+    "track": "rust",
+    "trap": "Collecting into Vec then checking loses which element failed first."
+  },
+  {
+    "body_md": "Elision has three rules: each input `&` gets its own lifetime, one input lifetime flows to outputs, and `&self` dominates methods. `fn f(a: &str) -> &str` works; `fn f(a: &str, b: &str) -> &str` needs annotations.",
+    "code": "fn first(a: &str) -> &str { a }\n// fn pick(a: &str, b: &str) -> &str // ambiguous\nfn pick<'a>(a: &'a str, _b: &str) -> &'a str { a }",
+    "hook": "Three elision rules explain 90 percent of lifetime errors.",
+    "id": "rust-i4-013",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "With two input borrows the compiler cannot guess which flows to output.",
+      "options": [
+        "Elision handles any number of inputs",
+        "Two input borrows need explicit output lifetimes",
+        "Outputs never need lifetimes",
+        "self borrows are ignored"
+      ],
+      "q": "Why does fn pick(a: &str, b: &str) -> &str fail?"
+    },
+    "takeaway": "Learn the three elision rules so you annotate only truly ambiguous signatures.",
+    "track": "rust",
+    "trap": "Annotating every lifetime by hand hides the simple elided shape."
+  },
+  {
+    "body_md": "**HRTB** `for<'a>` means works for *any* lifetime: `fn f(x: &dyn Fn(&str))`. Needed when a closure must accept fresh borrows each call. You will meet it in async trait bounds and higher-order functions.",
+    "code": "fn apply(f: &dyn for<'a> Fn(&'a str) -> usize) -> usize {\n    f(\"hi\")\n}",
+    "hook": "A closure that works for ANY lifetime? That is HRTB.",
+    "id": "rust-i4-014",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "HRTB expresses bounds that must hold for every possible lifetime.",
+      "options": [
+        "A runtime borrow checker",
+        "A thread pool builder",
+        "A macro repetition rule",
+        "A bound valid for every possible lifetime"
+      ],
+      "q": "What does for<'a> in a bound mean?"
+    },
+    "takeaway": "Recognize higher-ranked bounds when closures must accept any fresh borrow.",
+    "track": "rust",
+    "trap": "Forcing one concrete lifetime where any-lifetime is needed over-constrains callers."
+  },
+  {
+    "body_md": "`dyn Trait` erases concrete type for heterogeneous lists: `Vec<Box<dyn Draw>>`. You pay a vtable plus no inlining. Keep trait objects object-safe (no generics) and prefer generics on hot paths.",
+    "code": "trait Draw { fn draw(&self); }\nlet shapes: Vec<Box<dyn Draw>> = vec![];\n// each element may differ in type",
+    "hook": "A vector of different types? Trait objects erase the difference.",
+    "id": "rust-i4-015",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "dyn Trait uses dynamic dispatch through a vtable per object.",
+      "options": [
+        "dyn Trait uses dynamic dispatch with a vtable",
+        "dyn Trait monomorphizes every type",
+        "dyn Trait requires Sized bounds",
+        "dyn Trait avoids all indirection"
+      ],
+      "q": "What is the cost of dyn Trait?"
+    },
+    "takeaway": "Use trait objects for heterogeneous collections and generics for hot paths.",
+    "track": "rust",
+    "trap": "Putting non-object-safe generic methods on a dyn trait breaks compilation."
+  },
+  {
+    "body_md": "`Send` means safe to move across threads, `Sync` means safe to share by reference. `Rc` is neither; `Arc` is both when `T` is. The compiler checks bounds on `spawn` and channels — trust the errors.",
+    "code": "// std::thread::spawn requires Send\nlet v = vec![1, 2, 3];\nlet h = std::thread::spawn(move || v.len());\nlet _ = h.join();",
+    "hook": "Send versus Sync in one sentence each — finally clear.",
+    "id": "rust-i4-016",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Send allows moving ownership across threads while Sync allows sharing refs.",
+      "options": [
+        "They control async polling",
+        "They control memory layout",
+        "Send allows moving and Sync allows sharing across threads",
+        "They control trait object safety"
+      ],
+      "q": "What do Send and Sync guarantee?"
+    },
+    "takeaway": "Let Send and Sync bounds guide which types can cross thread boundaries.",
+    "track": "rust",
+    "trap": "Wrapping Rc in Arc or sending raw pointers across threads breaks safety."
+  },
+  {
+    "body_md": "`Arc<T>` shares ownership across threads with atomic counts. Clone the `Arc` (cheap counter bump), not the inner data. Pair with `Mutex` or atomics for mutation. Watch for reference cycles in graphs.",
+    "code": "use std::sync::Arc;\nlet a = Arc::new(vec![1, 2]);\nlet b = Arc::clone(&a);\nlet h = std::thread::spawn(move || b.len());",
+    "hook": "Share data across threads without copying — Arc clone is cheap.",
+    "id": "rust-i4-017",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Arc clone bumps the atomic count without copying inner data.",
+      "options": [
+        "It deep-copies the data",
+        "It bumps the shared count without copying data",
+        "It moves data to the heap",
+        "It locks a mutex first"
+      ],
+      "q": "What does Arc::clone do?"
+    },
+    "takeaway": "Share immutable data across threads with cheap Arc clones around it.",
+    "track": "rust",
+    "trap": "Cloning inner data instead of the Arc copies megabytes on every spawn."
+  },
+  {
+    "body_md": "A `Mutex` **poisons** when a holder panics — `lock()` returns `Err` carrying the guard. Usually the data is still fine: call `.lock().unwrap_or_else(|e| e.into_inner())` to recover deliberately after auditing state.",
+    "code": "use std::sync::Mutex;\nlet m = Mutex::new(0);\nlet guard = m.lock().unwrap_or_else(|e| e.into_inner());\nprintln!(\"{guard}\");",
+    "hook": "Mutex poisoned after a panic — crash or keep going?",
+    "id": "rust-i4-018",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Poisoning signals a panic while holding the lock and lock returns Err.",
+      "options": [
+        "Poisoning means a holder panicked and lock yields Err",
+        "Poisoning means the mutex is empty",
+        "Poisoning means deadlock occurred",
+        "Poisoning means the data was freed"
+      ],
+      "q": "What is mutex poisoning?"
+    },
+    "takeaway": "Handle poisoned mutexes deliberately by recovering only after auditing state.",
+    "track": "rust",
+    "trap": "Blindly unwrapping lock results turns recoverable poison into a second crash."
+  },
+  {
+    "body_md": "`mpsc::channel` moves values between threads; `recv` blocks. For many producers, clone the `Sender`. When you need timeouts or multiple inputs, use `crossbeam::select!` or check `try_recv` in a loop.",
+    "code": "let (tx, rx) = std::sync::mpsc::channel();\ntx.send(42).unwrap();\nlet v = rx.recv().unwrap();",
+    "hook": "Threads talking past each other? Give them a channel.",
+    "id": "rust-i4-019",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Cloned senders allow many producers feeding one receiver.",
+      "options": [
+        "Receivers must be cloned",
+        "Channels cannot cross threads",
+        "Cloned senders enable multi-producer patterns",
+        "Sending always needs a mutex"
+      ],
+      "q": "How do you get multiple producers on mpsc?"
+    },
+    "takeaway": "Connect threads with channels and clone senders for multi-producer flows.",
+    "track": "rust",
+    "trap": "Blocking recv on the main thread with no sender left deadlocks forever."
+  },
+  {
+    "body_md": "**Scoped threads** (`thread::scope`) borrow stack data safely — no `Arc` needed. The scope joins all children before returning, so borrows cannot outlive the parent. Prefer scopes for fork-join parallelism.",
+    "code": "let mut v = vec![1, 2, 3];\nstd::thread::scope(|s| {\n    s.spawn(|| v.push(4));\n    s.spawn(|| println!(\"{v:?}\"));\n});",
+    "hook": "Borrow stack data in threads with zero Arc — scoped threads.",
+    "id": "rust-i4-020",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Scopes guarantee children join before borrows expire.",
+      "options": [
+        "They run threads forever",
+        "They join children before borrows expire",
+        "They share memory unsafely",
+        "They replace async tasks"
+      ],
+      "q": "Why can scoped threads borrow locals?"
+    },
+    "takeaway": "Use scoped threads for fork-join work that borrows local data safely.",
+    "track": "rust",
+    "trap": "Spawning detached threads that borrow locals escapes the borrow checker illegally."
+  },
+  {
+    "body_md": "`DerefMut` enables `*box_ref = new_val` through smart pointers. `MutexGuard` uses it so `guard.field = x` writes through the lock. Do not implement `DerefMut` unless shared mutation is the point.",
+    "code": "let mut b = Box::new(5);\n*b = 10; // DerefMut in action\nprintln!(\"{b}\");",
+    "hook": "Assign THROUGH a pointer as if it were the value itself.",
+    "id": "rust-i4-021",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "DerefMut powers mutable access through smart pointer wrappers.",
+      "options": [
+        "DerefMut enables mutation through smart pointers",
+        "DerefMut clones on every write",
+        "DerefMut only works on raw pointers",
+        "DerefMut prevents all mutation"
+      ],
+      "q": "What does DerefMut enable?"
+    },
+    "takeaway": "Use DerefMut for pointer-like mutation and avoid it on plain domain types.",
+    "track": "rust",
+    "trap": "DerefMut on value types lets callers silently mutate internals."
+  },
+  {
+    "body_md": "Prefer `TryFrom` for fallible conversions: `impl TryFrom<&str> for Port` returns `Result`. Use `?` at call sites. Reserve panicking `From` for truly infallible mappings like widening integers.",
+    "code": "struct Port(u16);\nimpl TryFrom<i32> for Port {\n    type Error = String;\n    fn try_from(p: i32) -> Result<Self, String> {\n        u16::try_from(p).map(Port).map_err(|e| e.to_string())\n    }\n}",
+    "hook": "Conversion can fail? Then From is the wrong trait.",
+    "id": "rust-i4-022",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "TryFrom signals failure with Result instead of panicking.",
+      "options": [
+        "From returns Option always",
+        "Into cannot fail ever",
+        "TryFrom handles fallible conversions with Result",
+        "TryFrom is infallible by design"
+      ],
+      "q": "When should you use TryFrom?"
+    },
+    "takeaway": "Model fallible conversions with TryFrom so failures surface as Results.",
+    "track": "rust",
+    "trap": "Panicking inside From for invalid input turns bad data into crashes."
+  }
+]

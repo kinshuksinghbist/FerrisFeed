@@ -1,0 +1,464 @@
+[
+  {
+    "body_md": "B-tree updates pages in place so reads stay fast but random writes pay seek cost. LSM buffers writes in memory then flushes sorted runs so ingest screams while reads check several levels.",
+    "code": "// writes: memtable insert O(1), reads merge levels\n// pick LSM for ingest, B-tree for range scans",
+    "hook": "LSM loves writes, B-tree loves reads.",
+    "id": "sd-data-001",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "LSM batches writes sequentially while B-tree keeps sorted pages for reads.",
+      "options": [
+        "Both optimize reads",
+        "Both skip memory",
+        "LSM for write throughput and B-tree for read locality",
+        "LSM for joins"
+      ],
+      "q": "When do you pick LSM over B-tree?"
+    },
+    "takeaway": "Choose LSM for write bursts and B-tree for range reads.",
+    "trap": "Using B-tree for 100k writes per second without batching.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "WAL appends every mutation to sequential log before applying it. On crash you replay the log so committed data survives even if memtables and pages never flushed.",
+    "code": "wal.append(entry)?; // fsync per batch\napply_to_memtable(entry);\n// replay wal on restart",
+    "hook": "WAL first, applause after crash recovery.",
+    "id": "sd-data-002",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Append-then-apply plus replay gives durability without random writes.",
+      "options": [
+        "Skip fsync always",
+        "Append to WAL then apply and replay on crash",
+        "Flush indexes first",
+        "Compact before writing"
+      ],
+      "q": "What order makes writes durable?"
+    },
+    "takeaway": "Append to the log first then replay it after a crash.",
+    "trap": "Applying to memory before the log is durable.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "SSTables are immutable sorted files flushed from memtables. They store keys with block indexes and checksums so reads binary search blocks and compactions merge them without locking writers.",
+    "code": null,
+    "hook": "Immutable sorted files that make reads mergeable.",
+    "id": "sd-data-003",
+    "language": null,
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Immutability lets readers snapshot files while mergers rewrite them.",
+      "options": [
+        "Immutable sorted runs with indexes for lock-free reads",
+        "Mutable heaps",
+        "Unsorted logs only",
+        "Single JSON file"
+      ],
+      "q": "Why are SSTables immutable?"
+    },
+    "takeaway": "Freeze sorted runs so reads and merges never block writes.",
+    "trap": "Updating SSTables in place and breaking snapshots.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Bloom filters are bit arrays that answer maybe-present fast. Size them by expected keys and target false positive rate, then skip SSTables whose filter says definitely-not-present.",
+    "code": "if !filter.may_contain(&key) { continue; } // skip sstable\n// else open block index",
+    "hook": "Skip disk reads with a maybe-no filter.",
+    "id": "sd-data-004",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Bloom says no with certainty and yes with tuned false positives.",
+      "options": [
+        "Exact membership",
+        "Range queries",
+        "Sorting keys",
+        "Cheap negative lookups before disk reads"
+      ],
+      "q": "What do Bloom filters guarantee?"
+    },
+    "takeaway": "Use Bloom filters to skip SSTables that cannot hold a key.",
+    "trap": "Treating a maybe-yes as proof the key exists.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Compaction merges SSTables and drops tombstones. Leveled compaction bounds read levels with more write work while tiered compaction batches merges with cheaper writes and slower reads.",
+    "code": null,
+    "hook": "Leveled reads fast, tiered writes cheap.",
+    "id": "sd-data-005",
+    "language": null,
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Leveling rewrites more but keeps fewer overlapping runs per key.",
+      "options": [
+        "Tiered for reads",
+        "Leveled for read latency and tiered for write throughput",
+        "No deletes ever",
+        "Compact every second"
+      ],
+      "q": "Leveled versus tiered compaction tradeoff?"
+    },
+    "takeaway": "Pick leveled compaction for reads and tiered for ingest speed.",
+    "trap": "Running no compaction until disk fills with tombstones.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Postgres B-tree indexes serve equality and ordered ranges with logarithmic seeks. Index low-cardinality flags alone and the planner skips them, so pair with selective columns or partial indexes.",
+    "code": "CREATE INDEX idx_orders_user_ts ON orders(user_id, created_at);\nEXPLAIN ANALYZE SELECT * FROM orders WHERE user_id = $1;",
+    "hook": "B-tree wins when the filter is selective.",
+    "id": "sd-data-006",
+    "language": "sql",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Composite leading columns prune pages for selective predicates.",
+      "options": [
+        "Composite B-tree on selective leading column",
+        "Index every boolean",
+        "Hash all text",
+        "Drop primary key"
+      ],
+      "q": "Best B-tree for user timeline queries?"
+    },
+    "takeaway": "Index selective leading columns and keep ranges ordered.",
+    "trap": "Indexing a boolean alone and expecting faster scans.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "GIN indexes map tokens to row lists so full text and array containment avoid full scans. They cost slower writes and bigger size, so use them for search tags and JSONB containment.",
+    "code": "CREATE INDEX idx_docs_tsv ON docs USING GIN(to_tsvector('english', body));\nSELECT * FROM docs WHERE to_tsvector('english', body) @@ plainto_tsquery($1);",
+    "hook": "GIN turns text search into index lookups.",
+    "id": "sd-data-007",
+    "language": "sql",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "GIN posts token to row mapping for containment queries.",
+      "options": [
+        "B-tree for substrings",
+        "Seq scan always",
+        "GIN for full text and array containment",
+        "No index needed"
+      ],
+      "q": "When is GIN the right Postgres index?"
+    },
+    "takeaway": "Use GIN for text search and array containment workloads.",
+    "trap": "Putting GIN on a hot counter column with constant writes.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "EXPLAIN ANALYZE runs the query and shows actual rows versus estimates plus buffers and timing. Look for seq scans on big tables, nested loops exploding, and wrong row estimates needing ANALYZE or better stats.",
+    "code": "EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM orders\nWHERE user_id = 42 ORDER BY created_at DESC LIMIT 20;",
+    "hook": "Stop guessing plans, measure actual rows.",
+    "id": "sd-data-008",
+    "language": "sql",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Actual versus planned rows reveal bad stats and wrong join choices.",
+      "options": [
+        "Read code only",
+        "Compare actual rows and buffers against the plan",
+        "Add indexes blindly",
+        "Restart Postgres"
+      ],
+      "q": "What do you read in EXPLAIN ANALYZE first?"
+    },
+    "takeaway": "Compare actual rows with estimates before adding any index.",
+    "trap": "Adding indexes without checking buffers and actual timing.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Pool size follows cores and latency, not wishful thinking. Little math says concurrent slots near core count times one plus wait over service time, then cap per Postgres host around a few hundred.",
+    "code": "-- pool ~= cores * (1 + wait/service)\n-- 8 cores, 20ms wait, 5ms query -> ~40 conns",
+    "hook": "Pool math beats pool mythology every time.",
+    "id": "sd-data-009",
+    "language": "sql",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Too many connections thrash context switches and memory.",
+      "options": [
+        "Size pools from cores and latency then cap per host",
+        "Ten thousand per app",
+        "One per request",
+        "Unbounded pools"
+      ],
+      "q": "How do you size a Postgres pool?"
+    },
+    "takeaway": "Size pools from cores and latency then enforce a hard cap.",
+    "trap": "Opening thousands of direct connections per service.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Read replicas replay the primary log so heavy writes create lag. Serve stale-tolerant feeds from replicas and read-your-write paths from primary or wait for replay position.",
+    "code": "-- route critical read to primary\n-- SELECT pg_last_wal_replay_lsn(); -- check lag",
+    "hook": "Replicas lag exactly when you need them most.",
+    "id": "sd-data-010",
+    "language": "sql",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Lag spikes under write bursts break read-your-write assumptions.",
+      "options": [
+        "All reads to replicas",
+        "No replicas",
+        "Stale reads from replicas and critical reads from primary",
+        "Sync every read"
+      ],
+      "q": "How do you survive replica lag?"
+    },
+    "takeaway": "Send tolerant reads to replicas and critical reads to primary.",
+    "trap": "Reading own write from a lagging replica.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Partitioning splits one table by key for pruning while sharding spreads data across hosts for scale. Partition first for time ranges, shard when one node cannot hold writes or connections.",
+    "code": "CREATE TABLE events_2026_10 PARTITION OF events\nFOR VALUES FROM ('2026-10-01') TO ('2026-11-01');",
+    "hook": "Partition to prune, shard to survive growth.",
+    "id": "sd-data-011",
+    "language": "sql",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Partitions prune locally while shards add independent capacity.",
+      "options": [
+        "Shard day one",
+        "Partition for pruning on one node and shard for multi-node scale",
+        "Never partition",
+        "Shard by random"
+      ],
+      "q": "Partitioning versus sharding rule?"
+    },
+    "takeaway": "Partition single tables for pruning and shard clusters for capacity.",
+    "trap": "Sharding before exhausting indexes and partitioning.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Hash each node to many points on a ring and walk clockwise to place keys. Adding a node steals only neighbor ranges, and virtual nodes even out hot spots from uneven hashes.",
+    "code": "let idx = ring.iter().find(|v| v.hash >= h)\n    .unwrap_or(&ring[0]).node; // clockwise owner",
+    "hook": "Walk the ring clockwise to find your data.",
+    "id": "sd-data-012",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 3,
+      "explain": "Virtual nodes spread load so one join moves little data.",
+      "options": [
+        "Modulo everything",
+        "Single master",
+        "Random placement",
+        "Ring with virtual nodes for minimal remapping"
+      ],
+      "q": "Why use consistent hashing with virtual nodes?"
+    },
+    "takeaway": "Map nodes to ring points so joins move only neighbor ranges.",
+    "trap": "Using plain modulo and reshuffling all keys on resize.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Quorums trade latency for safety with W plus R above N. Write to W replicas and read from R so the sets overlap and the reader always sees the latest acknowledged write.",
+    "code": "// N=3, W=2, R=2 -> overlap guarantees latest read\nif w_ok >= 2 && r_overlap { return newest; }",
+    "hook": "Overlap your quorums or lose your writes.",
+    "id": "sd-data-013",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Overlap forces every read set to include a fresh replica.",
+      "options": [
+        "Keep W plus R above N so read and write sets overlap",
+        "W equals one always",
+        "R equals one always",
+        "Skip quorums"
+      ],
+      "q": "What makes quorum reads see latest writes?"
+    },
+    "takeaway": "Keep write plus read counts above replica count for overlap.",
+    "trap": "Setting W plus R below N and claiming strong reads.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Vector clocks attach per-node counters to each write so replicas compare histories. Concurrent counters mean conflict to merge while dominated counters mean one version safely wins.",
+    "code": "// a:[2,1] vs b:[2,2] -> b dominates a\n// a:[2,1] vs c:[1,2] -> concurrent, merge needed",
+    "hook": "Counters that detect sibling writes honestly.",
+    "id": "sd-data-014",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Dominated histories resolve silently while concurrent ones merge.",
+      "options": [
+        "Wall clocks",
+        "Single counter",
+        "Per-node counters to separate causal from concurrent writes",
+        "No metadata"
+      ],
+      "q": "What do vector clocks capture?"
+    },
+    "takeaway": "Track per-node counters to tell causal order from true conflicts.",
+    "trap": "Using wall clock timestamps to order concurrent writes.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "PN-counter CRDT keeps one grow-only counter per replica for increments and one for decrements. Merge takes max per slot and value equals increments minus decrements, so replicas converge without coordination.",
+    "code": "struct Pn { inc: Vec<u64>, dec: Vec<u64> }\nfn value(&self) -> i64 { self.inc.sum() - self.dec.sum() }",
+    "hook": "Counters that merge without ever arguing.",
+    "id": "sd-data-015",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Per-replica grow-only slots merge by max and stay correct.",
+      "options": [
+        "Shared integer",
+        "Per-replica increment and decrement vectors merged by max",
+        "Leader lock",
+        "Last write wins"
+      ],
+      "q": "How does a PN-counter stay correct offline?"
+    },
+    "takeaway": "Split counters per replica and merge slots by maximum value.",
+    "trap": "Sharing one integer across replicas with concurrent writes.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Kafka exactly-once uses idempotent producers plus transactions across partitions. Wrap consume-transform-produce in one transaction so retries never duplicate downstream effects.",
+    "code": "producer.init_transactions();\nproducer.begin_transaction();\nproducer.send_offsets(offsets, &group);\nproducer.commit_transaction();",
+    "hook": "Exactly once is a transaction, not a hope.",
+    "id": "sd-data-016",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Transactional offsets plus idempotence make retries safe.",
+      "options": [
+        "Idempotent producer with transactional consume and produce",
+        "At-least-once only",
+        "No offsets",
+        "Duplicate topics"
+      ],
+      "q": "What gives Kafka exactly-once pipelines?"
+    },
+    "takeaway": "Combine idempotent producers with transactions spanning offsets and output.",
+    "trap": "Committing offsets before downstream writes succeed.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "CDC streams row changes from the WAL with Debezium into Kafka so caches and search stay fresh. Use outbox table plus connector to publish atomically with the local transaction.",
+    "code": "-- INSERT INTO outbox(event, payload) in same txn\n// debezium tails wal -> kafka topic -> consumers",
+    "hook": "Turn Postgres WAL into live event streams.",
+    "id": "sd-data-017",
+    "language": "sql",
+    "level": 3,
+    "quiz": {
+      "answer": 3,
+      "explain": "Outbox plus log tailing publishes only committed rows.",
+      "options": [
+        "Poll tables",
+        "Dual writes",
+        "Triggers to HTTP",
+        "Outbox table with WAL connector for atomic publish"
+      ],
+      "q": "Reliable way to publish Postgres changes?"
+    },
+    "takeaway": "Publish changes through an outbox table tailed from the log.",
+    "trap": "Writing to DB and Kafka as separate unguarded steps.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Redis eviction picks victims when memory fills. Use noeviction for billing writes, allkeys-lru for caches, volatile-ttl for sessions, and set maxmemory plus sampling to bound latency.",
+    "code": "maxmemory 2gb\nmaxmemory-policy allkeys-lru\n// volatile-lru only evicts keys with expire",
+    "hook": "Pick victims before memory picks your outage.",
+    "id": "sd-data-018",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Caches tolerate LRU loss while critical writes must error loudly.",
+      "options": [
+        "One policy everywhere",
+        "Match eviction policy to data criticality and TTLs",
+        "No limits",
+        "Evict manually"
+      ],
+      "q": "How do you choose a Redis eviction policy?"
+    },
+    "takeaway": "Match eviction policy to data value and expiry pattern.",
+    "trap": "Using allkeys-lru on data you cannot afford to lose.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Cache stampede hits when hot key expires and thousand threads recompute. Add jittered TTLs, stale-while-revalidate, and background refresh so only one worker rebuilds the value.",
+    "code": null,
+    "hook": "One expiry should not thundering-herd your DB.",
+    "id": "sd-data-019",
+    "language": null,
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Staggering expiry plus async refresh avoids synchronized misses.",
+      "options": [
+        "Same TTL all keys",
+        "No cache",
+        "Jitter TTLs with stale serve and single refresh",
+        "Bigger DB"
+      ],
+      "q": "How do you stop a cache stampede?"
+    },
+    "takeaway": "Jitter expiries and serve stale data during background refresh.",
+    "trap": "Expiring all hot keys on the same second.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Singleflight dedupes concurrent loads for one key so ten requests share one future. Wrap the fallible fetch in the call and clones receive the same result without hammering Postgres.",
+    "code": "let v = flight.do_work(\"user:42\", async {\n    db.load_user(42).await\n}).await?; // one fetch, many waiters",
+    "hook": "Ten requests in, one query out.",
+    "id": "sd-data-020",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Shared in-flight future collapses duplicate work safely.",
+      "options": [
+        "Share one in-flight fetch across duplicate concurrent keys",
+        "Lock globally",
+        "Retry harder",
+        "Cache forever"
+      ],
+      "q": "What does singleflight do in Rust?"
+    },
+    "takeaway": "Collapse duplicate concurrent loads into one shared future.",
+    "trap": "Caching errors from singleflight as if they were values.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Postgres MVCC keeps old row versions so long transactions bloat tables. Tune autovacuum, index HOT-friendly updates, and monitor dead tuples before sequential scans slow down.",
+    "code": "SELECT relname, n_dead_tup FROM pg_stat_all_tables\nORDER BY n_dead_tup DESC LIMIT 10;",
+    "hook": "Dead tuples are silent latency debt.",
+    "id": "sd-data-021",
+    "language": "sql",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Vacuum reclaims dead versions and refreshes planner stats.",
+      "options": [
+        "Disable vacuum",
+        "Vacuum aggressively and watch dead tuple counts",
+        "VACUUM FULL hourly",
+        "Ignore bloat"
+      ],
+      "q": "How do you control MVCC bloat?"
+    },
+    "takeaway": "Vacuum early and track dead tuples before scans suffer.",
+    "trap": "Holding day-long transactions on a hot write table.",
+    "track": "system-design"
+  }
+]

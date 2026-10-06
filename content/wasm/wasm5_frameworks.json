@@ -1,0 +1,222 @@
+[
+  {
+    "body_md": "Yew is React-like for Rust: function components, hooks like `use_state`, and html! macro. It compiles to WASM and updates DOM efficiently. Best when your team thinks in components.",
+    "code": "#[function_component(App)]\nfn app() -> Html {\n    let n = use_state(|| 0);\n    html! { <button>{ *n }</button> }\n}",
+    "hook": "React mental model, Rust guarantees.",
+    "id": "wasm-05-001",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Yew mirrors React component and hook patterns.",
+      "options": [
+        "Yew uses function components plus html! macro",
+        "Yew is a database",
+        "Yew is SQL",
+        "Yew runs only on server"
+      ],
+      "q": "What is Yew?"
+    },
+    "takeaway": "Choose Yew for component-style WASM UIs.",
+    "trap": "Cloning state handles in every closure without need.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Leptos uses fine-grained reactivity: signals update only dependent DOM nodes, no virtual DOM diff. `create_signal` plus `<Show>` keeps large pages fast with tiny binaries.",
+    "code": "let (count, set_count) = create_signal(0);\nview! { <button on:click=move |_| set_count(count()+1)>{count}</button> }",
+    "hook": "Signals beat diffing at scale.",
+    "id": "wasm-05-002",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Signals track dependencies and patch precisely.",
+      "options": [
+        "Virtual DOM always",
+        "Fine-grained signals with no VDOM",
+        "Server only",
+        "No reactivity"
+      ],
+      "q": "How does Leptos update the DOM?"
+    },
+    "takeaway": "Use signals for surgical DOM updates.",
+    "trap": "Nesting effects that trigger cascading updates.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Dioxus targets web, desktop, and mobile from one RSX codebase. Write `rsx!` once, run in browser WASM or native WebView. Ideal for FerrisFeed demos across platforms.",
+    "code": "fn app(cx: Scope) -> Element {\n    cx.render(rsx! { div { \"hello dioxus\" } })\n}",
+    "hook": "One UI, every screen.",
+    "id": "wasm-05-003",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Dioxus renders RSX to web/desktop/mobile backends.",
+      "options": [
+        "Web only",
+        "Desktop only",
+        "One RSX codebase for web/desktop/mobile",
+        "SQL only"
+      ],
+      "q": "What makes Dioxus distinctive?"
+    },
+    "takeaway": "Pick Dioxus for multi-target Rust UIs.",
+    "trap": "Assuming all native plugins exist on web target.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Hello app flow: `trunk serve` builds Yew/Leptos, bundles wasm, and hot-reloads. Point trunk at index.html, add `#[wasm_bindgen(start)]` or main, and iterate in milliseconds.",
+    "code": "cargo install trunk\ntrunk serve --open\n# edits rebuild wasm instantly",
+    "hook": "trunk serve is your dev loop.",
+    "id": "wasm-05-004",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Trunk is the WASM web bundler and dev server.",
+      "options": [
+        "Trunk builds and serves WASM web apps",
+        "Trunk is Postgres",
+        "Trunk edits images",
+        "Trunk is a JS test"
+      ],
+      "q": "How do you run Yew or Leptos locally?"
+    },
+    "takeaway": "Serve with trunk for fast rebuilds.",
+    "trap": "Forgetting trunk config for asset paths.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Embed live WASM demo in a WebView: load local `index.html` that inits pkg, expose a JS bridge for theme and data, and lazy-load on scroll into view. Keep bridge JSON-serializable.",
+    "code": "// Android/iOS WebView\nwebView.loadUrl(\"file:///android_asset/demo/index.html\");\n// JS bridge: postMessage({theme: \"dark\"})",
+    "hook": "Live demo inside the lesson itself.",
+    "id": "wasm-05-005",
+    "language": "javascript",
+    "level": 3,
+    "quiz": {
+      "answer": 3,
+      "explain": "Local assets plus message bridge enable offline interactive demos.",
+      "options": [
+        "Requires internet always",
+        "Needs Docker",
+        "Needs root",
+        "Load local bundle plus message bridge"
+      ],
+      "q": "How do you run a live WASM demo via WebView?"
+    },
+    "takeaway": "Bundle demo locally and message across the bridge.",
+    "trap": "Allowing remote URLs in demo WebView weakens sandbox.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "State patterns: Yew uses `use_reducer`, Leptos uses signals plus stores, Dioxus uses `use_state`. Lift shared state to context providers, not prop drilling, and derive UI from one source.",
+    "code": "let (items, set_items) = create_signal(vec![]);\n// update immutably, UI follows\nset_items.update(|v| v.push(\"a\"));",
+    "hook": "One source of truth, three flavors.",
+    "id": "wasm-05-006",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Central signals/stores prevent divergent UI copies.",
+      "options": [
+        "Duplicate state everywhere",
+        "Centralize in signals/store/context",
+        "Use global mutable statics",
+        "Store in CSS"
+      ],
+      "q": "How should framework state be managed?"
+    },
+    "takeaway": "Centralize state and derive views from it.",
+    "trap": "Mutating props directly breaks reactivity tracking.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Routing: `yew-router`, `leptos_router`, `dioxus-router` map URLs to components. Define routes as enums, link with components not anchors, and lazy-load heavy pages as separate wasm chunks.",
+    "code": "#[derive(Routable, Clone)]\nenum Route { #[at(\"/\")] Home, #[at(\"/demo\")] Demo }",
+    "hook": "Enums as URLs \u2014 routing without strings.",
+    "id": "wasm-05-007",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Typed routes prevent broken links at compile time.",
+      "options": [
+        "Hardcode hrefs",
+        "Use window.location only",
+        "Typed route enums with router components",
+        "No routing needed"
+      ],
+      "q": "How do Rust WASM frameworks route?"
+    },
+    "takeaway": "Model routes as types for safe navigation.",
+    "trap": "Full page reloads that discard WASM state.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Fetch in frameworks via async resources: Leptos `create_resource`, Yew `use_effect_with` plus fetch, Dioxus `use_future`. Show skeletons while pending and cache by key to avoid refetch storms.",
+    "code": "let data = create_resource(|| (), |_| async {\n    fetch(\"/api/feed\").await\n});",
+    "hook": "Async data as reactive resources.",
+    "id": "wasm-05-008",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Resources tie async fetch lifecycle to reactivity.",
+      "options": [
+        "Resources bind fetch to reactive lifecycle",
+        "Fetch in render loop",
+        "Block UI thread",
+        "Poll with setInterval only"
+      ],
+      "q": "How do you load server data in Leptos?"
+    },
+    "takeaway": "Use resources/futures for cancellable async UI.",
+    "trap": "Fetching on every render without memoization.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Test with `wasm-bindgen-test` in headless browsers. Unit-test logic natively, then run `--headless --chrome` for DOM tests. Mock fetch with stub responses to keep CI fast.",
+    "code": "cargo install wasm-pack\nwasm-pack test --headless --chrome\n# #[wasm_bindgen_test] marks tests",
+    "hook": "cargo test, but in Chrome.",
+    "id": "wasm-05-009",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "wasm-pack test drives real browser engines.",
+      "options": [
+        "No tests possible",
+        "Run wasm-bindgen tests headless in browsers",
+        "Only manual tests",
+        "Test via SQL"
+      ],
+      "q": "How do you test framework WASM apps?"
+    },
+    "takeaway": "Split pure logic tests from browser integration tests.",
+    "trap": "Only testing natively misses DOM glue bugs.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Choose: Yew for React teams, Leptos for speed and SSR, Dioxus for multi-platform. All interop with JS when needed. Prototype the same todo app in each before committing.",
+    "code": null,
+    "hook": "No best framework \u2014 only best fit.",
+    "id": "wasm-05-010",
+    "language": null,
+    "level": 3,
+    "quiz": {
+      "answer": 3,
+      "explain": "Team shape and targets decide the pick.",
+      "options": [
+        "Yew always wins",
+        "Leptos always wins",
+        "Dioxus always wins",
+        "Match framework to team and targets"
+      ],
+      "q": "How do you pick between Yew, Leptos, and Dioxus?"
+    },
+    "takeaway": "Evaluate against team skills and ship targets.",
+    "trap": "Rewriting mid-project for hype without measuring.",
+    "track": "wasm"
+  }
+]

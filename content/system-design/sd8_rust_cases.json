@@ -1,0 +1,464 @@
+[
+  {
+    "body_md": "Requirements 10k pastes daily with expiry. API POST /pastes and GET /:id in axum. Storage Postgres text plus Redis cache. Bottleneck random id guessing, snippet uses signed ids.",
+    "code": "let id: String = rand::thread_rng()\n    .sample_iter(&Alphanumeric).take(8).collect();",
+    "hook": "Pastebin on axum with expiry done right.",
+    "id": "sd-rcase-001",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Random ids plus cache plus expiry cover the load.",
+      "options": [
+        "Sequential ids",
+        "No expiry",
+        "Random ids with cache and TTL cleanup",
+        "Files only"
+      ],
+      "q": "Key pastebin design choices?"
+    },
+    "takeaway": "Use random identifiers with caching and expiry for paste storage.",
+    "trap": "Using sequential ids that leak volume and invite scraping.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements single-user todos with 5k writes daily. API CRUD /todos with validation in axum. Storage Postgres via sqlx with user index. Bottleneck N plus one lists, snippet pages by cursor.",
+    "code": "sqlx::query!(\"SELECT * FROM todos WHERE user_id=$1 AND id>$2 LIMIT 50\",\n    uid, cursor).fetch_all(&pool).await?",
+    "hook": "Todo API that skips the N plus one trap.",
+    "id": "sd-rcase-002",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Indexed cursor pages keep lists constant time.",
+      "options": [
+        "Load all rows",
+        "Cursor pages on indexed user plus id",
+        "Offset ten thousand",
+        "No indexes"
+      ],
+      "q": "How do you scale todo listing?"
+    },
+    "takeaway": "Page todos by indexed cursor instead of loading full lists.",
+    "trap": "Fetching all todos then filtering in application memory.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements 2k concurrent chatters with roster. API WebSocket /room/:id plus presence heartbeat. Storage Redis sets for members plus Postgres history. Bottleneck broadcast fan-out, snippet shards rooms.",
+    "code": "async fn broadcast(room: &str, msg: Bytes) {\n    for tx in presence.members(room) { tx.send(msg.clone()); }\n}",
+    "hook": "Chat rooms with presence that actually scales.",
+    "id": "sd-rcase-003",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Shard plus heartbeat keeps fan-out bounded and roster fresh.",
+      "options": [
+        "Shard rooms with heartbeat presence and bounded history",
+        "One global lock",
+        "Poll every second",
+        "No presence"
+      ],
+      "q": "How do you scale websocket presence?"
+    },
+    "takeaway": "Shard chat rooms and expire presence with steady heartbeats.",
+    "trap": "Broadcasting every message to every connection globally.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements 50k background jobs daily with retries. API enqueue plus workers polling. Storage Postgres queue table with status index. Bottleneck double pickup, snippet uses SKIP LOCKED.",
+    "code": "SELECT * FROM jobs WHERE status='queued'\nORDER BY id FOR UPDATE SKIP LOCKED LIMIT 10;",
+    "hook": "Postgres job queue without double delivery pain.",
+    "id": "sd-rcase-004",
+    "language": "sql",
+    "level": 3,
+    "quiz": {
+      "answer": 3,
+      "explain": "Locked skip lets workers claim without blocking peers.",
+      "options": [
+        "Sleep loops",
+        "Table lock",
+        "Single worker",
+        "SKIP LOCKED claims with status transitions"
+      ],
+      "q": "How do workers share a Postgres queue?"
+    },
+    "takeaway": "Claim queued jobs with row locks that skip locked rows.",
+    "trap": "Polling without locks and running jobs twice.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements fan-out webhooks to 5k endpoints fast. API register hook plus event publish. Storage Postgres outbox plus Redis retry queue. Bottleneck slow receivers, snippet retries with backoff.",
+    "code": "queue.push_with_delay(hook, attempt.backoff())\n    .await?; // 429 and 5xx only, cap attempts",
+    "hook": "Webhooks that survive slow receivers gracefully.",
+    "id": "sd-rcase-005",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Outbox plus bounded retry isolates slow endpoints.",
+      "options": [
+        "Sync calls",
+        "No retries",
+        "Outbox with signed posts and bounded retry queue",
+        "Spam forever"
+      ],
+      "q": "Reliable webhook fan-out pattern?"
+    },
+    "takeaway": "Isolate slow receivers with signed posts and bounded retries.",
+    "trap": "Blocking publishers while one receiver times out.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements 20k uploads daily up to 100MB. API presigned PUT plus complete callback. Storage S3-compatible bucket with multipart. Bottleneck proxying bytes, snippet uploads direct.",
+    "code": "let url = s3.presigned_put(key, Duration::mins(10))?;\n// browser PUTs bytes direct, server verifies callback",
+    "hook": "Uploads that never touch your axum bytes.",
+    "id": "sd-rcase-006",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Direct-to-object uploads remove proxy bandwidth cost.",
+      "options": [
+        "Proxy all bytes",
+        "Presigned direct upload with server-side verify",
+        "Base64 in JSON",
+        "FTP drop"
+      ],
+      "q": "How do you scale file uploads in Rust?"
+    },
+    "takeaway": "Use presigned direct uploads and verify completion server side.",
+    "trap": "Proxying huge files through axum memory.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements search 1M docs under 100ms. API GET /search?q with facets. Storage Tantivy index segments on disk. Bottleneck rebuild storms, snippet commits in batches.",
+    "code": "index_writer.add_document(doc!()); // batch\nindex_writer.commit()?; // scheduled, not per doc",
+    "hook": "Full text search in Rust without a cluster.",
+    "id": "sd-rcase-007",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Batched commits plus segment merge keep search fast.",
+      "options": [
+        "Batch commits with periodic merges for search freshness",
+        "Commit per doc",
+        "SQL LIKE all",
+        "No index"
+      ],
+      "q": "How do you keep Tantivy fast and fresh?"
+    },
+    "takeaway": "Batch index commits and merge segments for steady search speed.",
+    "trap": "Committing the index on every single document.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements per-route latency and saturation metrics. API scrape /metrics from sidecar. Storage Prometheus TSDB with labels. Bottleneck cardinality boom, snippet bounds labels.",
+    "code": "http_requests_total{route=\"/todos\",code=\"200\"} 421\n// low-cardinality route labels only",
+    "hook": "Metrics sidecar without cardinality bankruptcy.",
+    "id": "sd-rcase-008",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Bounded labels keep series count manageable.",
+      "options": [
+        "User id labels",
+        "No labels",
+        "Raw paths",
+        "Bounded route labels with histograms for latency"
+      ],
+      "q": "How do you avoid metrics cardinality death?"
+    },
+    "takeaway": "Bound metric labels and use histograms for latency detail.",
+    "trap": "Labeling metrics by user id and exploding series count.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements mobile plus web clients evolving fast. API REST for CRUD and GraphQL gateway for screens. Storage same Postgres via dataloaders. Bottleneck N plus one resolvers, snippet batches loads.",
+    "code": "let users = loader.load_many(ids).await?;\n// one batched query per field, not per row",
+    "hook": "REST for resources, GraphQL for screens that join.",
+    "id": "sd-rcase-009",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Batching plus depth limits tame resolver cost.",
+      "options": [
+        "GraphQL all",
+        "REST only",
+        "GraphQL screens with batched loaders and depth limits",
+        "No schema"
+      ],
+      "q": "GraphQL versus REST tradeoff in async Rust?"
+    },
+    "takeaway": "Serve screens with batched GraphQL and keep core CRUD restful.",
+    "trap": "Exposing unbounded nested resolvers without batching.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements internal RPC at 20k calls per second. API protobuf service with tonic. Storage Postgres plus Redis cache. Bottleneck missing deadlines, snippet layers tower timeouts.",
+    "code": "let svc = tower::ServiceBuilder::new()\n    .timeout(Duration::from_millis(200))\n    .rate_limit(1000, Duration::from_secs(1));",
+    "hook": "Tonic plus tower gives RPC with guardrails.",
+    "id": "sd-rcase-010",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Middleware bounds latency and load per method.",
+      "options": [
+        "Raw TCP",
+        "Tonic with tower timeouts and rate limits",
+        "No deadlines",
+        "JSON only"
+      ],
+      "q": "How do you harden a tonic service?"
+    },
+    "takeaway": "Wrap tonic handlers with timeouts and rate limits per method.",
+    "trap": "Shipping RPCs without deadlines and overloading slow handlers.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements 100k events daily with ordering choice. API produce and consume via client. Storage Kafka log or NATS JetStream. Bottleneck replay needs, snippet picks by retention.",
+    "code": "// need replay + transactions -> kafka\n// need light push + low ops -> nats",
+    "hook": "NATS for nimble, Kafka for durable replay power.",
+    "id": "sd-rcase-011",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Retention and ordering needs decide the log.",
+      "options": [
+        "Kafka for replay and transactions and NATS for light ops",
+        "Always Kafka",
+        "Always NATS",
+        "No log"
+      ],
+      "q": "NATS versus Kafka picker rule?"
+    },
+    "takeaway": "Pick Kafka for replay depth and NATS for light operations.",
+    "trap": "Choosing by hype instead of retention and ordering needs.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements email login with sessions for 20k users. API POST /login and middleware guard. Storage Postgres users plus Redis sessions. Bottleneck timing leaks, snippet hashes with Argon2.",
+    "code": "argon2.verify_password(hash, password)?;\nlet sid: String = random(32); // store in redis",
+    "hook": "Auth in axum without rolling your crypto.",
+    "id": "sd-rcase-012",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Slow hashes plus opaque sessions limit breach impact.",
+      "options": [
+        "Plain passwords",
+        "JWT secrets exposed",
+        "Argon2 hashes with opaque rotating sessions",
+        "No expiry"
+      ],
+      "q": "Safe auth blueprint for a Rust API?"
+    },
+    "takeaway": "Hash with Argon2 and serve opaque rotating session tokens.",
+    "trap": "Storing reversible passwords or endless tokens.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements list 2M rows smoothly on mobile. API GET /items?cursor with limit. Storage Postgres keyset on indexed column. Bottleneck offset drift, snippet pages by keyset.",
+    "code": "WHERE (created_at, id) < ($1, $2)\nORDER BY created_at DESC, id DESC LIMIT 50;",
+    "hook": "Pagination that survives inserts mid-scroll intact.",
+    "id": "sd-rcase-013",
+    "language": "sql",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Keyset keeps pages stable under concurrent writes.",
+      "options": [
+        "Big offsets",
+        "Keyset pages on indexed sort keys",
+        "Load all",
+        "Random pages"
+      ],
+      "q": "Why keyset over offset for big feeds?"
+    },
+    "takeaway": "Page by indexed sort keys to keep feeds stable and fast.",
+    "trap": "Using deep offsets that slow down and duplicate rows.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements safe payment retries without double charge. API POST /pay with Idempotency-Key. Storage Postgres keyed request log. Bottleneck replay races, snippet locks per key.",
+    "code": "INSERT INTO idem(key, resp) VALUES($1,$2)\nON CONFLICT DO NOTHING RETURNING *; // replay stored",
+    "hook": "Retries should never double-charge your users.",
+    "id": "sd-rcase-014",
+    "language": "sql",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Stored keyed responses make retries return same result.",
+      "options": [
+        "Keyed request log with stored responses on conflict",
+        "Retry blindly",
+        "No keys",
+        "Client dedupe only"
+      ],
+      "q": "How do idempotency keys prevent double effects?"
+    },
+    "takeaway": "Store keyed responses and replay them on conflicting retries.",
+    "trap": "Retrying payments without server-side idempotency keys.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements threaded comments at 10k per post. API POST /comments and tree fetch. Storage Postgres with path index. Bottleneck recursive queries, snippet uses materialized path.",
+    "code": "SELECT * FROM comments WHERE path <@ $1\nORDER BY path LIMIT 100; // ltree subtree fetch",
+    "hook": "Comment trees without recursive query meltdown.",
+    "id": "sd-rcase-015",
+    "language": "sql",
+    "level": 3,
+    "quiz": {
+      "answer": 3,
+      "explain": "Path indexes fetch subtrees in one range scan.",
+      "options": [
+        "Adjacency loops",
+        "No depth cap",
+        "Full scan",
+        "Materialized path with depth caps and paging"
+      ],
+      "q": "How do you scale threaded comments?"
+    },
+    "takeaway": "Store comment paths and fetch subtrees with paged range scans.",
+    "trap": "Recursing per comment without depth or page limits.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements inbox for 100k notifications daily. API POST /notify and GET /inbox. Storage Postgres per-user table plus Redis unread. Bottleneck fan-out spikes, snippet batches writes.",
+    "code": "COPY notifications(user_id, body) FROM STDIN;\n// batch insert, bump redis unread counter",
+    "hook": "Notification inbox that absorbs celebrity spikes.",
+    "id": "sd-rcase-016",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Batching plus counters smooth burst fan-out.",
+      "options": [
+        "Row per send sync",
+        "No inbox",
+        "Batch inserts with cached unread counters",
+        "Email only"
+      ],
+      "q": "How do you survive notification bursts?"
+    },
+    "takeaway": "Batch notification writes and cache unread counts per user.",
+    "trap": "Inserting fan-out rows one by one on the hot path.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements short links at 1M monthly with clicks. API POST /links and GET /:code. Storage Postgres mapping plus Redis hot cache. Bottleneck code collisions, snippet retries unique.",
+    "code": "loop { let c = base62(rand(6));\n  if insert(c).is_ok() { break c; } }",
+    "hook": "Short links with click counts that stay fast.",
+    "id": "sd-rcase-017",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Unique retry plus hot cache handles read skew.",
+      "options": [
+        "Sequential codes",
+        "Random codes with unique retry and hot cache",
+        "No cache",
+        "UUID in URL"
+      ],
+      "q": "Core short-link blueprint pieces?"
+    },
+    "takeaway": "Generate random codes with retry and cache hot redirects.",
+    "trap": "Using predictable ids that expose growth and invite enumeration.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements audit trail for money moves. API internal record() call. Storage Postgres append-only partitioned table. Bottleneck update temptation, snippet forbids edits.",
+    "code": "REVOKE UPDATE, DELETE ON audit FROM app;\n-- appends only, partition by month",
+    "hook": "Audit logs you can defend in a dispute.",
+    "id": "sd-rcase-018",
+    "language": "sql",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "Revoke plus partitioning keeps trail trustworthy and fast.",
+      "options": [
+        "Append-only partitioned log with revoked writes",
+        "Mutable logs",
+        "No audit",
+        "Log files only"
+      ],
+      "q": "How do you keep an audit log trustworthy?"
+    },
+    "takeaway": "Keep audit tables append-only and partition them by time.",
+    "trap": "Letting app roles update or delete audit rows.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements gateway cap 5k rps per tenant. API middleware check before handlers. Storage Redis counters with Lua. Bottleneck global contention, snippet shards by tenant.",
+    "code": "if !limiter.allow(&tenant).await {\n    return status(429); // with Retry-After header",
+    "hook": "Tenant rate limits that protect noisy neighbors.",
+    "id": "sd-rcase-019",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 3,
+      "explain": "Per-tenant atomic counters isolate noisy users.",
+      "options": [
+        "Global cap",
+        "No limits",
+        "Trust clients",
+        "Per-tenant atomic counters with clear headers"
+      ],
+      "q": "How do you isolate noisy tenants?"
+    },
+    "takeaway": "Enforce per-tenant atomic limits with clear retry headers.",
+    "trap": "Sharing one global bucket across all tenants.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements thumbnails for 30k images daily. API upload enqueue plus CDN serve. Storage object bucket plus Postgres meta. Bottleneck slow encodes, snippet queues with idempotent workers.",
+    "code": "queue.push(ImageJob { id, sizes: vec![256, 1024] })?;\n// worker converts, uploads variants, marks done",
+    "hook": "Thumbnails without blocking the upload path.",
+    "id": "sd-rcase-020",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Async encode plus CDN keeps uploads snappy.",
+      "options": [
+        "Encode inline",
+        "No variants",
+        "Async encode workers with CDN cached variants",
+        "Serve originals"
+      ],
+      "q": "How do you scale image variants?"
+    },
+    "takeaway": "Encode variants asynchronously and serve them from the edge.",
+    "trap": "Encoding images inline during user uploads.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Requirements export 500k chat rows on demand. API POST /exports with download link. Storage Postgres cursor scan to object file. Bottleneck memory blowup, snippet streams pages.",
+    "code": "for await page in history.stream_pages(1000) {\n    writer.write_all(&page.csv()).await?;\n}",
+    "hook": "Bulk exports that never OOM your server.",
+    "id": "sd-rcase-021",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Streaming pages bounds memory for huge exports.",
+      "options": [
+        "Load all rows",
+        "Stream paged scans to object store with link",
+        "Timeout fast",
+        "Email rows"
+      ],
+      "q": "How do you export huge histories safely?"
+    },
+    "takeaway": "Stream paged scans to object storage and share a link.",
+    "trap": "Loading full history into memory before responding.",
+    "track": "system-design"
+  }
+]

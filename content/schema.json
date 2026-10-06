@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ferrisfeed.app/schema/reel.json",
+  "title": "FerrisFeed Reel",
+  "description": "Bite-size 60-second reel: hook + body + code + takeaway + trap + quiz.",
+  "type": "object",
+  "required": ["id", "track", "level", "hook", "body_md", "takeaway", "trap", "quiz"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Kebab-case unique id, e.g. rust-own-014."
+    },
+    "track": {
+      "type": "string",
+      "enum": ["rust", "wasm", "system-design"]
+    },
+    "level": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4
+    },
+    "hook": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 140,
+      "description": "One line curiosity gap. No newlines."
+    },
+    "body_md": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Markdown-lite explainer, max 70 words (enforced by validator)."
+    },
+    "code": {
+      "type": ["string", "null"],
+      "description": "Runnable snippet, max 15 lines. Null/omitted when reel has no code."
+    },
+    "language": {
+      "type": "string",
+      "default": "rust",
+      "description": "Required when code is present."
+    },
+    "takeaway": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 200,
+      "description": "One-sentence rule the reader keeps."
+    },
+    "trap": {
+      "type": "string",
+      "minLength": 10,
+      "description": "One common mistake / compiler error."
+    },
+    "trap_compiler_message": {
+      "type": ["string", "null"],
+      "description": "Optional verbatim compiler error."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "path_order": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Position inside the learning path for fresh-card ordering."
+    },
+    "quiz": {
+      "type": "object",
+      "required": ["explanation"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["mcq", "tap_bug", "fill_blank"],
+          "default": "mcq"
+        },
+        "question": { "type": "string", "minLength": 5 },
+        "q": { "type": "string", "description": "Legacy alias for question." },
+        "explanation": { "type": "string", "minLength": 5 },
+        "explain": { "type": "string", "description": "Legacy alias for explanation." },
+        "options": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 2,
+          "maxItems": 5
+        },
+        "answer": { "type": "integer", "minimum": 0 },
+        "answerIndex": { "type": "integer", "minimum": 0 },
+        "lines": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "tap_bug: code lines to pick from."
+        },
+        "codeLines": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "buggyLineIndex": { "type": "integer", "minimum": 0 },
+        "buggy": { "type": "integer", "minimum": 0 },
+        "prefix": { "type": "string" },
+        "suffix": { "type": "string" },
+        "acceptedAnswers": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "answers": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "tap_bug" } } },
+          "then": { "required": ["question"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "fill_blank" } } },
+          "then": { "required": ["question"] }
+        }
+      ]
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,332 @@
+[
+  {
+    "body_md": "WebAssembly is a stack machine. Instructions push and pop values instead of using registers. `i32.const 2`, `i32.const 3`, `i.add` leaves 5 on top. Simple to verify and fast to execute in browsers and runtimes.",
+    "code": "(module\n  (func (export \"add\") (result i32)\n    i32.const 2\n    i32.const 3\n    i.add))",
+    "hook": "WASM has no registers \u2014 just a stack.",
+    "id": "wasm-01-001",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Values are pushed then consumed; add pops two and pushes one result.",
+      "options": [
+        "Values live in CPU registers",
+        "Values are pushed/popped on an operand stack",
+        "Values live in JS heap objects",
+        "Values are stored in SQL tables"
+      ],
+      "q": "How does the WASM execution model handle values?"
+    },
+    "takeaway": "WASM evaluates by pushing and popping values on an operand stack.",
+    "trap": "Assuming WASM has registers like x86; it only has locals plus the stack.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "WAT is the human-readable text form of WebAssembly. Each module has functions, memories, and exports. You can hand-write WAT to learn the model, then assemble it to `.wasm` binary for execution.",
+    "code": "(module\n  (func $double (param i32) (result i32)\n    local.get 0\n    local.get 0\n    i.add)\n  (export \"double\" (func $double)))",
+    "hook": "WAT is assembly you can actually read.",
+    "id": "wasm-01-002",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "WAT compiles one-to-one to the wasm binary format.",
+      "options": [
+        "WAT is the text format for wasm binaries",
+        "WAT is a JS bundler",
+        "WAT is a Rust macro",
+        "WAT is a WASI syscall"
+      ],
+      "q": "What is WAT?"
+    },
+    "takeaway": "WAT is the readable text encoding of a wasm binary.",
+    "trap": "Confusing WAT with JavaScript; it maps directly to bytecode.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "WASM memory is one flat byte array called linear memory, addressed from zero. Code cannot see host memory. It grows in 64KiB pages via `memory.grow`. All sharing happens through explicit reads and writes.",
+    "code": "(module\n  (memory 1)\n  (export \"mem\" (memory 0)))",
+    "hook": "One flat array is all the memory you get.",
+    "id": "wasm-01-003",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 2,
+      "explain": "Linear memory is a contiguous byte array starting at address 0.",
+      "options": [
+        "Linked list of JS objects",
+        "Tree of DOM nodes",
+        "Single flat byte array",
+        "Set of SQL rows"
+      ],
+      "q": "What is WASM linear memory?"
+    },
+    "takeaway": "WASM sees memory as one contiguous byte array.",
+    "trap": "Thinking pointers are stable across memory.grow that moves views; re-fetch buffers.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Loads and stores copy bytes between stack and linear memory. `i32.load` reads 4 bytes at an address. `i32.store` writes them. Alignment hints help speed but unaligned access still works.",
+    "code": "(module\n  (memory 1)\n  (func (export \"read0\") (result i32)\n    i32.const 0\n    i32.load))",
+    "hook": "Everything is load and store from byte zero.",
+    "id": "wasm-01-004",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "Only load/store move data between stack values and memory bytes.",
+      "options": [
+        "load/store move data between stack and memory",
+        "Memory is accessed via SQL",
+        "Memory is accessed via DOM",
+        "Memory needs no instructions"
+      ],
+      "q": "How does WASM code access linear memory?"
+    },
+    "takeaway": "Use load and store to move values between stack and memory.",
+    "trap": "Forgetting little-endian layout when decoding bytes in JS.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Browser WASM can touch DOM and fetch only through JS imports. WASI WASM runs outside the browser with files, clocks, and sockets granted as capabilities. Same binary model, different host APIs.",
+    "code": null,
+    "hook": "Browser vs server WASM: same core, different hosts.",
+    "id": "wasm-01-005",
+    "language": null,
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Browsers expose Web APIs; WASI exposes POSIX-like syscalls as capabilities.",
+      "options": [
+        "They use different instruction sets",
+        "They differ in host APIs: Web APIs vs WASI syscalls",
+        "WASI only runs in Chrome",
+        "Browser WASM cannot do math"
+      ],
+      "q": "What separates browser WASM from WASI?"
+    },
+    "takeaway": "Host environment decides what a WASM module can call.",
+    "trap": "Trying to open files from browser WASM without a JS bridge.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "wasm-bindgen generates the glue between Rust and JavaScript. Mark a Rust function with `#[wasm_bindgen]` and it becomes callable from JS with automatic type conversion for numbers, strings, and structs.",
+    "code": "use wasm_bindgen::prelude::*;\n#[wasm_bindgen]\npub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}",
+    "hook": "One attribute exposes Rust to JavaScript.",
+    "id": "wasm-01-006",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "The macro emits export wrappers plus TypeScript definitions.",
+      "options": [
+        "#[wasm_bindgen] exports Rust functions to JS",
+        "You must hand-write all glue",
+        "Bindgen only works for Python",
+        "Bindgen replaces rustc"
+      ],
+      "q": "What does wasm-bindgen do?"
+    },
+    "takeaway": "Annotate functions to export them safely to JavaScript.",
+    "trap": "Forgetting to rebuild pkg/ after changing exports.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "wasm-pack builds, tests, and publishes your crate as npm-ready glue. `wasm-pack build --target web` emits `.wasm` plus `.js` and `.d.ts`. It runs `wasm-bindgen` and optimizes for you.",
+    "code": "# build for browsers\nwasm-pack build --target web\n# output lands in ./pkg/\nls pkg",
+    "hook": "wasm-pack is cargo build for the web.",
+    "id": "wasm-01-007",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 2,
+      "explain": "wasm-pack wraps cargo, wasm-bindgen, and wasm-opt into one command.",
+      "options": [
+        "A Python linter",
+        "A Docker runtime",
+        "A build tool emitting wasm+JS+types",
+        "A SQL migration tool"
+      ],
+      "q": "What is wasm-pack?"
+    },
+    "takeaway": "Use wasm-pack to ship Rust as an npm-style package.",
+    "trap": "Using --target nodejs output in a browser without a bundler.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Toolchain flow: Rust compiles to `wasm32-unknown-unknown`, wasm-bindgen creates JS glue, wasm-pack bundles it. Install the target once with rustup, then build repeatedly during dev.",
+    "code": "rustup target add wasm32-unknown-unknown\ncargo install wasm-pack\nwasm-pack build --target web",
+    "hook": "Three commands from Rust to running WASM.",
+    "id": "wasm-01-008",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "rustc emits wasm, then bindgen/pack wrap it for JS.",
+      "options": [
+        "Only rustc is needed",
+        "Compile to wasm32 then bindgen then pack",
+        "Ship .rs files to browsers",
+        "Use gcc for wasm"
+      ],
+      "q": "What is the standard Rust-to-WASM pipeline order?"
+    },
+    "takeaway": "Target, build, bind \u2014 then load the pkg in JS.",
+    "trap": "Skipping the rustup target install and getting linker errors.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Imports are functions the host gives to WASM; exports are functions WASM gives to the host. JS passes imports at instantiation. WASM exposes memory and functions back via its export section.",
+    "code": "const mod = await WebAssembly.instantiateStreaming(\n  fetch(\"app.wasm\"),\n  { env: { log: (x) => console.log(x) } }\n);",
+    "hook": "Imports in, exports out \u2014 that is the whole boundary.",
+    "id": "wasm-01-009",
+    "language": "javascript",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "Host supplies imports; module returns exports including memory.",
+      "options": [
+        "Imports come from host, exports come from module",
+        "Both come from SQL",
+        "Both come from CSS",
+        "Exports cannot include memory"
+      ],
+      "q": "How do imports and exports differ?"
+    },
+    "takeaway": "Wire host functions as imports to unlock WASM modules.",
+    "trap": "Mismatched import object shape causing link errors.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "WASM is sandboxed and deterministic: no direct syscalls, no ambient I/O, bounded execution. A faulty module cannot escape linear memory. Hosts grant only what imports and WASI capabilities allow.",
+    "code": null,
+    "hook": "Sandboxed by default, fast by design.",
+    "id": "wasm-01-010",
+    "language": null,
+    "level": 1,
+    "quiz": {
+      "answer": 3,
+      "explain": "Isolation plus validation makes untrusted code safe to run.",
+      "options": [
+        "It has full OS access",
+        "It can read any host pointer",
+        "It bypasses same-origin policy",
+        "It is isolated with no ambient authority"
+      ],
+      "q": "Why is WASM considered sandboxed?"
+    },
+    "takeaway": "WASM gets least privilege unless the host grants more.",
+    "trap": "Assuming sandbox means no side channels; still validate inputs.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "WASM has four value types: i32, i64, f32, f64. No strings or objects at the core level. Higher types are encoded as bytes in memory or handled by bindgen glue on top.",
+    "code": "(module\n  (func (export \"mix\")\n    (param i32 i64 f32 f64)\n    (result i32)\n    local.get 0))",
+    "hook": "Only four numbers exist in core WASM.",
+    "id": "wasm-01-011",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Core wasm only defines those four numeric types.",
+      "options": [
+        "i8, i16, string, object",
+        "i32, i64, f32, f64",
+        "bool, char, array, map",
+        "u8, usize, String, Vec"
+      ],
+      "q": "Which value types does core WASM support?"
+    },
+    "takeaway": "Everything else is encoded over these four numerics.",
+    "trap": "Expecting native strings; pass pointers plus lengths instead.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Locals are function-scoped slots you declare up front. `local.get` pushes a copy, `local.set` pops into it. They are faster than memory and cleared per call, ideal for loop counters.",
+    "code": "(module\n  (func (export \"inc\") (param i32) (result i32)\n    local.get 0\n    i32.const 1\n    i.add))",
+    "hook": "Locals are your registers on the stack machine.",
+    "id": "wasm-01-012",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 2,
+      "explain": "Locals hold values within a single function activation.",
+      "options": [
+        "Globals shared across modules",
+        "Heap objects in JS",
+        "Function-scoped fast slots",
+        "Rows in Postgres"
+      ],
+      "q": "What are WASM locals?"
+    },
+    "takeaway": "Use locals for scratch values instead of memory round-trips.",
+    "trap": "Using locals across calls; they do not persist.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Inspect any binary with `wasm2wat` and `wasm-objdump`. They reveal functions, memories, and imports. Use them when bindgen output surprises you or a bundle bloats.",
+    "code": "wasm2wat app.wasm | head -n 40\nwasm-objdump -x app.wasm\nwasm-strip app.wasm",
+    "hook": "Read the binary when the glue confuses you.",
+    "id": "wasm-01-013",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "wabt tools disassemble and summarize wasm binaries.",
+      "options": [
+        "wasm2wat disassembles wasm to readable text",
+        "It minifies JavaScript",
+        "It runs SQL migrations",
+        "It deploys to CDN"
+      ],
+      "q": "What does wasm2wat do?"
+    },
+    "takeaway": "Disassemble first when debugging size or import errors.",
+    "trap": "Editing generated WAT and expecting source maps to follow.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "WASM is fast because it validates once, compiles ahead-of-time, and stays close to native. No parsing JS on each load, monomorphic math, and linear memory keeps bounds checks cheap and predictable.",
+    "code": null,
+    "hook": "Validate once, run near native speed.",
+    "id": "wasm-01-014",
+    "language": null,
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Ahead-of-time compilation plus simple semantics enables fast codegen.",
+      "options": [
+        "It skips validation",
+        "It compiles once to efficient machine code",
+        "It runs on a blockchain",
+        "It uses Python loops"
+      ],
+      "q": "Why does WASM often beat equivalent JS math loops?"
+    },
+    "takeaway": "Predictable types plus AOT compilation yield steady speed.",
+    "trap": "Assuming WASM always wins; DOM-bound code stays JS-limited.",
+    "track": "wasm"
+  },
+  {
+    "body_md": "Ship it: build with wasm-pack, serve `.wasm` as `application/wasm`, and import the JS glue. Use `instantiateStreaming` for fastest startup. Cache aggressively since builds are content-hashed.",
+    "code": "import init, { add } from \"./pkg/app.js\";\nawait init();\nconsole.log(add(2, 3)); // 5",
+    "hook": "From cargo to console in three lines.",
+    "id": "wasm-01-015",
+    "language": "javascript",
+    "level": 1,
+    "quiz": {
+      "answer": 3,
+      "explain": "Correct MIME plus streaming instantiation gives fastest startup.",
+      "options": [
+        "Serve wasm as text/html",
+        "Inline wasm as CSS",
+        "Load via <img> tag",
+        "Serve as application/wasm and init glue"
+      ],
+      "q": "How do you load wasm-pack output in a page?"
+    },
+    "takeaway": "Serve with the right MIME and initialize before calling exports.",
+    "trap": "Serving .wasm as octet-stream breaks streaming compile.",
+    "track": "wasm"
+  }
+]

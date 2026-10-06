@@ -1,0 +1,486 @@
+[
+  {
+    "body_md": "A **workspace** groups many crates in one repo with shared `Cargo.lock` and target dir. Add `[workspace] members = [\"app\", \"lib\"]` to the root manifest. Build all at once with `cargo build --workspace`.",
+    "code": "# Cargo.toml\n[workspace]\nmembers = [\"app\", \"lib\"]\nresolver = \"2\"",
+    "hook": "Managing five crates in five repos is pain — workspaces fix that.",
+    "id": "rust-b4-001",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Workspaces share one lockfile and target dir across member crates.",
+      "options": [
+        "A virtualenv folder",
+        "A multi-crate repo with shared lockfile",
+        "A cargo registry mirror",
+        "A build script output dir"
+      ],
+      "q": "What is a Cargo workspace?"
+    },
+    "takeaway": "Use a workspace to manage multiple related crates in one repository.",
+    "track": "rust",
+    "trap": "Nesting full projects without a workspace root duplicates deps and slows builds."
+  },
+  {
+    "body_md": "**Features** toggle optional code with `#[cfg(feature = \"serde\")]`. Enable them via `cargo build --features serde` or in dependents as `dep = { version = \"1\", features = [\"serde\"] }`. Keep defaults lean.",
+    "code": "# Cargo.toml\n[features]\ndefault = []\nserde = [\"dep:serde\"]\n\n$ cargo build --features serde",
+    "hook": "Your binary is bloated because every optional dep is always on.",
+    "id": "rust-b4-002",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Features gate optional code and are enabled with --features flag.",
+      "options": [
+        "Compiler lint levels",
+        "Test thread counts",
+        "Optional dependency toggles in Cargo",
+        "Rust edition names"
+      ],
+      "q": "What are Cargo features for?"
+    },
+    "takeaway": "Gate optional dependencies behind Cargo features to keep builds lean.",
+    "track": "rust",
+    "trap": "Enabling all features everywhere bloats compile times and binaries."
+  },
+  {
+    "body_md": "`cargo check` is the fastest feedback loop — it typechecks without codegen. Use `check` while iterating, `build` for artifacts, `run` to execute, and `clippy` before commit. Check runs in seconds on big projects.",
+    "code": "$ cargo check   # fast typecheck\n$ cargo build   # full codegen\n$ cargo run --bin app\n$ cargo test",
+    "hook": "Waiting 60 seconds for cargo build just to find a typo?",
+    "id": "rust-b4-003",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "cargo check skips codegen so it reports type errors much faster.",
+      "options": [
+        "cargo check for fast type errors",
+        "cargo package for fast type errors",
+        "cargo publish for fast type errors",
+        "cargo doc for fast type errors"
+      ],
+      "q": "Which command gives the fastest compile-error feedback?"
+    },
+    "takeaway": "Run cargo check while iterating because it skips codegen and stays fast.",
+    "track": "rust",
+    "trap": "Always running full cargo build while editing wastes minutes on codegen."
+  },
+  {
+    "body_md": "Sprinkle `println!` with labels to trace values: `println!(\"x={x:?}\")`. Print before and after a mutation to see what changed. Remove them after, or switch to `dbg!` so location prints too.",
+    "code": "let mut x = vec![1, 2];\nprintln!(\"before={x:?}\");\nx.push(3);\nprintln!(\"after={x:?}\");",
+    "hook": "Your value is wrong somewhere — print it in two places.",
+    "id": "rust-b4-004",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 3,
+      "explain": "Printing before and after narrows down where the value changed.",
+      "options": [
+        "Only at program exit",
+        "Only inside Drop impls",
+        "Only in test files",
+        "Before and after the suspect mutation"
+      ],
+      "q": "Where should quick println traces go?"
+    },
+    "takeaway": "Print labeled values before and after mutations to locate logic bugs.",
+    "track": "rust",
+    "trap": "Printing without labels makes it impossible to tell which line produced output."
+  },
+  {
+    "body_md": "`dbg!` prints file, line, and the value, then returns it. Wrap any expression: `let y = dbg!(x * 2);`. It takes ownership of the expression result and passes it through, so it fits inside chains.",
+    "code": "let x = 4;\nlet y = dbg!(x * 2);\nlet v = dbg!(vec![1, 2]);",
+    "hook": "println debugging hides where the print came from — dbg fixes that.",
+    "id": "rust-b4-005",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "dbg prints file and line plus the value and returns it.",
+      "options": [
+        "It writes to a log file",
+        "It prints location plus value and returns it",
+        "It pauses the debugger",
+        "It asserts the value is true"
+      ],
+      "q": "What does dbg!(expr) do?"
+    },
+    "takeaway": "Use the dbg macro when you need values plus source location while debugging.",
+    "track": "rust",
+    "trap": "Leaving dbg calls in committed code spams stderr in production."
+  },
+  {
+    "body_md": "Read errors bottom-up: the `error[E0308]` code is the summary, the `--> src/main.rs:4:9` span shows where, and `expected X found Y` tells the fix. Click the code like E0308 in docs for examples.",
+    "code": "let x: u32 = \"hi\";\n// error[E0308]: mismatched types\n// expected u32, found &str",
+    "hook": "Rust errors look scary until you read them backwards.",
+    "id": "rust-b4-006",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "The span points at the failing expression and expected versus found guides the fix.",
+      "options": [
+        "Read the span and expected-versus-found lines first",
+        "Read only the first warning line",
+        "Ignore spans and guess",
+        "Delete the whole function"
+      ],
+      "q": "How should you start reading a compiler error?"
+    },
+    "takeaway": "Read compiler errors from the span and expected type outward to find fixes.",
+    "track": "rust",
+    "trap": "Reading only the top line misses the span that pinpoints the real mistake."
+  },
+  {
+    "body_md": "Run `cargo fmt` before every commit to normalize whitespace and imports. Check in CI with `cargo fmt --check`. Never hand-format; let rustfmt own style so diffs stay clean.",
+    "code": "$ cargo fmt\n$ cargo fmt --check\n$ cargo fmt --all",
+    "hook": "Stop arguing about braces — let rustfmt decide in one second.",
+    "id": "rust-b4-007",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 2,
+      "explain": "cargo fmt --check fails CI when formatting drifts.",
+      "options": [
+        "cargo build --release",
+        "cargo test --doc",
+        "cargo fmt --check in CI",
+        "cargo update --dry-run"
+      ],
+      "q": "How do you enforce formatting in CI?"
+    },
+    "takeaway": "Run cargo fmt locally and enforce it in CI with the check flag.",
+    "track": "rust",
+    "trap": "Mixing hand formatting with rustfmt creates noisy diffs on every pull request."
+  },
+  {
+    "body_md": "Clippy catches logic bugs: `cargo clippy -- -D warnings` lints needless clones, wrong ranges, and perf traps. Fix lints as you go. Use `#[allow(...)]` rarely and only with a comment.",
+    "code": "$ cargo clippy --all-targets\n$ cargo clippy -- -D warnings",
+    "hook": "Your code compiles but Clippy knows it is still wrong.",
+    "id": "rust-b4-008",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Clippy lints for common mistakes and style bugs beyond rustc.",
+      "options": [
+        "A code formatter",
+        "A linter for bugs and style beyond the compiler",
+        "A package publisher",
+        "A debugger backend"
+      ],
+      "q": "What is Clippy?"
+    },
+    "takeaway": "Run Clippy often to catch logic and style bugs the compiler misses.",
+    "track": "rust",
+    "trap": "Silencing all Clippy lints globally hides real bugs like needless clones."
+  },
+  {
+    "body_md": "Every published crate gets API docs on **docs dot rs**. Search `crate_name` there, pick your version, and read signatures plus examples. Link docs in your manifest `documentation` field for discoverability.",
+    "code": "let v: Vec<i32> = vec![3, 1, 2];\n// docs show: pub fn sort(&mut self)\nv.clone().sort();",
+    "hook": "Guessing an API from its name? The docs already have an example.",
+    "id": "rust-b4-009",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 3,
+      "explain": "docs dot rs renders API docs for every published crate version.",
+      "options": [
+        "A playground theme",
+        "A lint rule list",
+        "A benchmark dashboard",
+        "Hosted API docs for published crates"
+      ],
+      "q": "What is docs dot rs?"
+    },
+    "takeaway": "Look up unfamiliar crates on the hosted docs site before guessing APIs.",
+    "track": "rust",
+    "trap": "Reading docs for the wrong major version leads to missing-function confusion."
+  },
+  {
+    "body_md": "The **playground** runs Rust in your browser with no install. Paste a failing snippet, pick stable or nightly, click Run, then Share for a link. Perfect for asking questions and testing ideas.",
+    "code": "fn main() {\n    println!(\"{:?}\", (1..5).sum::<i32>());\n}",
+    "hook": "Need to test three lines of Rust without installing anything?",
+    "id": "rust-b4-010",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "The playground compiles and runs snippets in the browser with share links.",
+      "options": [
+        "Browser tool to run and share small Rust snippets",
+        "Local package cache folder",
+        "Nightly-only profiler",
+        "Cargo plugin for releases"
+      ],
+      "q": "What is the Rust playground good for?"
+    },
+    "takeaway": "Prototype and share small Rust snippets using the browser playground.",
+    "track": "rust",
+    "trap": "Pasting secrets into a public playground share link leaks credentials."
+  },
+  {
+    "body_md": "**Editions** (2015, 2018, 2021) gate language changes without breaking old code. Set `edition = \"2021\"` in your manifest. New projects should use the latest edition for better imports and closures.",
+    "code": "# Cargo.toml\n[package]\nname = \"demo\"\nedition = \"2021\"",
+    "hook": "Same Rust, three dialects — your edition picks the rules.",
+    "id": "rust-b4-011",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 2,
+      "explain": "Editions opt into breaking language improvements without breaking old code.",
+      "options": [
+        "Compiler optimization levels",
+        "Package version numbers",
+        "Opt-in language generations like 2018 and 2021",
+        "Operating system targets"
+      ],
+      "q": "What is a Rust edition?"
+    },
+    "takeaway": "Set the latest edition in new projects to get modern language behavior.",
+    "track": "rust",
+    "trap": "Staying on edition 2015 silently disables modern import and closure rules."
+  },
+  {
+    "body_md": "**Shadowing** with `let x = x ...` creates a new binding, unlike `mut`. It can even change type: `let s = \"42\"; let s = s.len();`. Useful for transforms, but shadowing in nested scopes can hide bugs.",
+    "code": "let s = \"42\";\nlet s: usize = s.len();\nlet s = s + 1;\nprintln!(\"{s}\");",
+    "hook": "Same name, new variable — shadowing is not mutation.",
+    "id": "rust-b4-012",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Shadowing creates a fresh binding that can change type, unlike mut.",
+      "options": [
+        "It mutates in place",
+        "It creates a new binding that may change type",
+        "It borrows the old value",
+        "It frees the old value"
+      ],
+      "q": "How is shadowing different from mut?"
+    },
+    "takeaway": "Use shadowing for stepwise transforms but avoid hiding bindings accidentally.",
+    "track": "rust",
+    "trap": "Shadowing a variable in a nested block then using the outer one surprises beginners."
+  },
+  {
+    "body_md": "`const MAX: u32 = 10;` is inlined at compile time and has no address. `static COUNT: AtomicU32` lives at a fixed memory address and can be `mut` (unsafe) or sync-safe. Prefer `const` for pure values.",
+    "code": "const MAX: u32 = 100;\nstatic GREETING: &str = \"hi\";\nfn f() -> u32 { MAX + 1 }",
+    "hook": "const versus static: one is a value, one is a place.",
+    "id": "rust-b4-013",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 0,
+      "explain": "const values inline at each use while statics have one address.",
+      "options": [
+        "const inlines values while static has one fixed address",
+        "They are identical aliases",
+        "static is always faster",
+        "const allocates on the heap"
+      ],
+      "q": "What is the key const versus static difference?"
+    },
+    "takeaway": "Prefer const for pure values and static only when a fixed address matters.",
+    "track": "rust",
+    "trap": "Using mutable statics for counters causes data races without synchronization."
+  },
+  {
+    "body_md": "Rust **infers** types from usage, so `let x = vec![];` fails until you push or annotate: `let x: Vec<i32> = vec![];`. Add annotations at boundaries and let inference handle locals. Turbofish `collect::<Vec<_>>()` also pins types.",
+    "code": "let x: Vec<i32> = vec![];\nlet y = x.len();\nlet z = (1..5).collect::<Vec<i32>>();",
+    "hook": "Type annotations needed? The compiler tells you exactly where.",
+    "id": "rust-b4-014",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 2,
+      "explain": "Empty collections need annotations because inference has no clues yet.",
+      "options": [
+        "Every local needs full types",
+        "Inference works across crates",
+        "Empty collections need annotations to infer element types",
+        "Annotations are never needed"
+      ],
+      "q": "When does inference need your help?"
+    },
+    "takeaway": "Annotate empty collections and boundaries and let inference handle the rest.",
+    "track": "rust",
+    "trap": "Over-annotating every local adds noise; annotate boundaries and empty collections only."
+  },
+  {
+    "body_md": "In debug builds, `u8` overflow **panics** (`255 + 1` aborts), but release wraps silently by default. Use `checked_add`, `wrapping_add`, or `saturating_add` to state intent. Never rely on release wrapping.",
+    "code": "let a: u8 = 255;\nlet b = a.checked_add(1); // None\nlet c = a.saturating_add(1); // 255",
+    "hook": "This add works in release but panics in debug — why?",
+    "id": "rust-b4-015",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "Debug builds panic on overflow while release wraps by default.",
+      "options": [
+        "Both modes saturate",
+        "Debug panics while release wraps by default",
+        "Both modes wrap silently",
+        "Overflow is a compile error"
+      ],
+      "q": "How does integer overflow differ by profile?"
+    },
+    "takeaway": "Choose checked or saturating math explicitly instead of relying on overflow behavior.",
+    "track": "rust",
+    "trap": "Tests pass in release but panic in debug when overflow behavior differs."
+  },
+  {
+    "body_md": "`char` is a 4-byte Unicode scalar (`'a'`, `'🦀'`), not a byte. `bool` is `true` or `false` with `&&`, `||`, `!`. Compare chars directly and use `is_alphabetic()` helpers instead of manual ranges.",
+    "code": "let c: char = '🦀';\nlet ok: bool = c.is_alphanumeric();\nlet both = ok && true;",
+    "hook": "A char is four bytes, not one — and that matters.",
+    "id": "rust-b4-016",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 3,
+      "explain": "char holds a Unicode scalar value in four bytes.",
+      "options": [
+        "One ASCII byte",
+        "Two UTF-16 units",
+        "A grapheme cluster",
+        "A four-byte Unicode scalar value"
+      ],
+      "q": "What does a Rust char hold?"
+    },
+    "takeaway": "Treat char as Unicode text and use its helper methods for classification.",
+    "track": "rust",
+    "trap": "Indexing strings by byte position splits multibyte chars and panics."
+  },
+  {
+    "body_md": "**Tuples** bundle fixed mixed types: `let t = (1, \"hi\", true);`. **Destructure** with `let (a, b, c) = t;` or ignore parts with `_`. Access by index `t.0` when unpacking everything is overkill.",
+    "code": "let t = (1, \"hi\", true);\nlet (n, s, flag) = t;\nprintln!(\"{n} {s} {flag}\");",
+    "hook": "Three values, one variable — tuples plus destructuring.",
+    "id": "rust-b4-017",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "Destructuring binds each tuple element to its own variable.",
+      "options": [
+        "Destructuring binds each element to a variable",
+        "Indexing moves the tuple",
+        "Tuples must all share one type",
+        "Tuples always allocate on heap"
+      ],
+      "q": "What does let (a, b) = tuple do?"
+    },
+    "takeaway": "Destructure small tuples to name each part instead of indexing everywhere.",
+    "track": "rust",
+    "trap": "Deeply nested tuples hurt readability; switch to a struct with named fields."
+  },
+  {
+    "body_md": "**Arrays** `[T; N]` are fixed-size and stack-stored. **Slice** them with `&arr[1..3]` to borrow a view. Slicing checks bounds at runtime and panics if out of range — prefer `.get(i)` for safe access.",
+    "code": "let arr = [1, 2, 3, 4];\nlet mid: &[i32] = &arr[1..3];\nlet first = arr.get(10); // None",
+    "hook": "Arrays are fixed, slices are views — mix them up and panic.",
+    "id": "rust-b4-018",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 2,
+      "explain": "Slices borrow a ranged view into an array or vector with bounds checks.",
+      "options": [
+        "Slices resize arrays",
+        "Slices copy the whole array",
+        "Slices borrow a ranged view with bounds checks",
+        "Slices skip bounds checks"
+      ],
+      "q": "What does &arr[1..3] do?"
+    },
+    "takeaway": "Borrow array views with slices and use get for bounds-safe access.",
+    "track": "rust",
+    "trap": "Hard-coding slice endpoints from user input causes runtime panics."
+  },
+  {
+    "body_md": "Build strings with `format!` (`let s = format!(\"{x:.2}\")`), print with `println!`, and debug-print with `{:?}`. Named args `println!(\"{x}\")` beat positional `{}`. Precision like `{:.2}` rounds floats.",
+    "code": "let x = 3.14159;\nlet s = format!(\"pi={x:.2}\");\nprintln!(\"{s}\");",
+    "hook": "Stop concatenating with plus — format strings do it better.",
+    "id": "rust-b4-019",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 1,
+      "explain": "format returns a String while println writes to stdout.",
+      "options": [
+        "They are identical macros",
+        "format returns a String and println prints it",
+        "println returns a String",
+        "format prints to stderr"
+      ],
+      "q": "How do format and println differ?"
+    },
+    "takeaway": "Build text with format and print with println using named arguments.",
+    "track": "rust",
+    "trap": "Using plus-concat in a loop is quadratic; use format or push instead."
+  },
+  {
+    "body_md": "`//` comments explain why, `///` documents the next item for docs, and `//!` documents the whole module. Run `cargo doc --open` to preview. Good docs show an example that compiles as a test.",
+    "code": "/// Adds one to `x`.\n///\n/// # Example\n/// ```\n/// assert_eq!(add1(1), 2);\n/// ```\npub fn add1(x: i32) -> i32 { x + 1 }",
+    "hook": "Comments lie, doc tests do not — write docs that run.",
+    "id": "rust-b4-020",
+    "language": "rust",
+    "level": 1,
+    "quiz": {
+      "answer": 0,
+      "explain": "Triple-slash docs attach to the next item and render in cargo doc.",
+      "options": [
+        "Triple-slash docs describe the next item",
+        "Double-slash comments render in docs",
+        "Doc comments cannot contain code",
+        "cargo doc ignores all comments"
+      ],
+      "q": "What does /// document?"
+    },
+    "takeaway": "Document public items with triple-slash comments that include runnable examples.",
+    "track": "rust",
+    "trap": "Writing what-comments instead of why-comments clutters code without adding insight."
+  },
+  {
+    "body_md": "For single-file scripts, use the `cargo-script` style frontmatter or `cargo run --bin` with a tiny manifest. Keep scripts dependency-light and pin versions. Graduate to a real project once it grows past one file.",
+    "code": "#!/usr/bin/env cargo-script\n//! deps: serde = \"1\"\nfn main() { println!(\"hi\"); }",
+    "hook": "A whole Cargo project for a ten-line script? Try this instead.",
+    "id": "rust-b4-021",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 2,
+      "explain": "Script frontmatter declares inline deps for quick single-file programs.",
+      "options": [
+        "Scripts cannot use dependencies",
+        "Scripts must be nightly only",
+        "Single-file tools can declare inline dependencies",
+        "Scripts skip type checking"
+      ],
+      "q": "How do single-file Rust scripts handle deps?"
+    },
+    "takeaway": "Keep tiny tools as single-file scripts and graduate to projects when they grow.",
+    "track": "rust",
+    "trap": "Growing a script to hundreds of lines without a manifest makes deps unreproducible."
+  },
+  {
+    "body_md": "Compile for other platforms with `rustup target add` plus `cargo build --target aarch64-apple-darwin`. Targets bundle std for that OS and CPU. Use CI runners or Zig-linked toolchains for C compat.",
+    "code": "$ rustup target list\n$ rustup target add x86_64-unknown-linux-musl\n$ cargo build --target x86_64-unknown-linux-musl",
+    "hook": "Ship a Linux binary from your Mac with one flag.",
+    "id": "rust-b4-022",
+    "language": "rust",
+    "level": 2,
+    "quiz": {
+      "answer": 1,
+      "explain": "Targets add prebuilt std for another OS and CPU combo.",
+      "options": [
+        "Cross targets change editions",
+        "Cross targets build std for another OS and CPU",
+        "Cross targets only affect lints",
+        "Cross targets publish crates"
+      ],
+      "q": "What does --target select?"
+    },
+    "takeaway": "Add cross targets with rustup and build portable binaries from one machine.",
+    "track": "rust",
+    "trap": "Assuming cross builds handle C system libs leads to linker errors on other platforms."
+  }
+]

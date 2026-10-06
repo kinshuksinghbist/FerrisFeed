@@ -1,0 +1,266 @@
+[
+  {
+    "body_md": "2PC prepares then commits across shards with a coordinator. Strong atomicity but blocking if coordinator dies. Use for money moves; prefer Saga with compensations for long-lived flows.",
+    "code": null,
+    "hook": "All or nothing \u2014 unless the coordinator dies.",
+    "id": "sd-adv-001",
+    "language": null,
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Prepare locks resources; commit finalizes or aborts all.",
+      "options": [
+        "Best for long sagas",
+        "Prepare then commit atomically but blocking",
+        "No coordination needed",
+        "Eventual only"
+      ],
+      "q": "What is two-phase commit?"
+    },
+    "takeaway": "Use 2PC only for short atomic multi-shard writes.",
+    "trap": "2PC across regions stalling on one slow node.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Saga splits transactions into local steps with compensating actions. Choreography emits events; orchestration drives steps. On failure run compensations backwards. Design each step idempotent.",
+    "code": "// saga: book \u2192 pay \u2192 notify\n// on pay fail: cancel(book)",
+    "hook": "Long transactions as reversible steps.",
+    "id": "sd-adv-002",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Compensations undo partial progress without locks.",
+      "options": [
+        "Locks everywhere",
+        "No failure handling",
+        "Local steps plus compensations",
+        "2PC always"
+      ],
+      "q": "How does Saga handle failure?"
+    },
+    "takeaway": "Make every step retryable and compensatable.",
+    "trap": "Non-compensatable step like sent email.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Raft elects a leader, replicates log entries, commits on majority. Terms prevent split-brain; heartbeats detect failure. Use etcd or TikV rather than hand-rolling consensus.",
+    "code": null,
+    "hook": "Majority rules \u2014 literally.",
+    "id": "sd-adv-003",
+    "language": null,
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Leader plus majority quorum ensures single log order.",
+      "options": [
+        "Leader plus majority log replication",
+        "No leader needed",
+        "Minority wins",
+        "Single node suffices"
+      ],
+      "q": "How does Raft achieve consensus?"
+    },
+    "takeaway": "Rely on proven stores for leader election.",
+    "trap": "Even node counts increasing tie risk.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "G-Counter CRDT increments on any replica and merges by max per node. Sum gives total without coordination. Ideal for likes and distributed counters with eventual convergence.",
+    "code": "// merge: for each node take max\n// value = sum(counts)\nstate[node] += 1",
+    "hook": "Counters that never conflict.",
+    "id": "sd-adv-004",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 3,
+      "explain": "Monotonic merges commute so order does not matter.",
+      "options": [
+        "Last-write-wins",
+        "Central lock",
+        "2PC counter",
+        "Merge by max per replica then sum"
+      ],
+      "q": "How does a G-Counter work?"
+    },
+    "takeaway": "Use CRDTs for coordination-free merges.",
+    "trap": "Trying decrement on G-Counter; use PN-Counter.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Exactly-once is impossible alone; achieve effectively-once with idempotent consumers plus transactional offsets. Kafka transactions tie offset commit to output, deduped by key downstream.",
+    "code": "consumer.process(msg)\nstore.save(msg.id, result) // dedupe\nconsumer.commit()",
+    "hook": "Exactly-once is a team sport.",
+    "id": "sd-adv-005",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Dedupe plus atomic commit makes retries invisible.",
+      "options": [
+        "It just works",
+        "Idempotent consumer plus atomic offset commit",
+        "Send twice always",
+        "Skip commits"
+      ],
+      "q": "How do you get effectively-once delivery?"
+    },
+    "takeaway": "Pair at-least-once transport with dedupe.",
+    "trap": "Assuming producer acks alone guarantee once.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Backpressure signals overload upstream: bounded queues, `try_send` with drop or shed, and `429 + Retry-After`. In Rust use tokio mpsc with capacity plus tower concurrency limits.",
+    "code": "let (tx, rx) = tokio::sync::mpsc::channel(100);\n// tx.try_send(job).or(Err(Shed))",
+    "hook": "Say no fast instead of dying slow.",
+    "id": "sd-adv-006",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Bounded buffers plus shed protect tail latency.",
+      "options": [
+        "Bounded queues plus load shedding",
+        "Unbounded queues",
+        "Infinite retries",
+        "Block forever"
+      ],
+      "q": "How do you handle overload?"
+    },
+    "takeaway": "Bound, shed, and signal pressure upstream.",
+    "trap": "Unbounded channels OOMing under spike.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Fan-out: push writes to all followers (fast reads, hot celebrities) vs pull reads on demand (cheap writes). Hybrid: push for normal users, pull for celebrities with many followers.",
+    "code": "// push: on post, append to follower feeds\n// pull: celebrity posts read at request",
+    "hook": "Celebrities break naive fan-out.",
+    "id": "sd-adv-007",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Hybrid avoids million-write storms for famous accounts.",
+      "options": [
+        "Push always",
+        "Pull always",
+        "Hybrid push normal, pull celebrities",
+        "No feeds needed"
+      ],
+      "q": "How do you scale Twitter feeds?"
+    },
+    "takeaway": "Split fan-out strategy by follower count.",
+    "trap": "Pure push melting on a viral post.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Clock skew breaks ordering; use Hybrid Logical Clocks or Snowflake IDs (timestamp+node+seq). Sort by (ts, seq) and tolerate drift with bounded wait before serving reads.",
+    "code": "// snowflake id\n// 41b time | 10b node | 12b seq",
+    "hook": "Time lies \u2014 sequence anyway.",
+    "id": "sd-adv-008",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "Node-scoped sequences keep IDs ordered and unique.",
+      "options": [
+        "Wall clock alone",
+        "Hybrid timestamp plus node sequence",
+        "Random UUID sort",
+        "No ordering"
+      ],
+      "q": "How do you order events across machines?"
+    },
+    "takeaway": "Generate sortable unique IDs, not wall-clock reliance.",
+    "trap": "NTP jump reordering recent posts.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Lease vs lock: leases expire so crashes recover; locks need fencing tokens to avoid split-brain writes. Use short TTL leases in Redis/etcd for leader or job ownership.",
+    "code": "SET leader \"n1\" NX EX 10\n# refresh every 3s; fencing token++",
+    "hook": "Locks with expiry save you from zombies.",
+    "id": "sd-adv-009",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 0,
+      "explain": "Expiry plus fencing prevents stale owner writes.",
+      "options": [
+        "Leases expire with fencing against zombies",
+        "Locks never expire safely",
+        "No fencing needed",
+        "Leases are forever"
+      ],
+      "q": "Why prefer leases over locks?"
+    },
+    "takeaway": "Expire ownership and fence stale writers.",
+    "trap": "Long lease delaying failover for minutes.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Hot partitions kill scale: random prefix or split key spreads heat. Monitor partition throughput, add salt `hotkey#rand`, and pre-split ranges before launches.",
+    "code": "key = format!(\"{}#{}\", hot, rand(10))\n# aggregate 10 shards on read",
+    "hook": "Salt the hot key.",
+    "id": "sd-adv-010",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 3,
+      "explain": "Salting fans writes across physical partitions.",
+      "options": [
+        "Bigger instance only",
+        "Throttle users",
+        "More replicas of same key",
+        "Salt/split hot keys across partitions"
+      ],
+      "q": "How do you fix a hot partition?"
+    },
+    "takeaway": "Spread heat, aggregate on read.",
+    "trap": "Salting without read aggregation breaks counts.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Poison messages crash consumers in loops. Dead-letter after N retries with headers preserving error, alert on DLQ growth, and replay after fix with backoff. Never block partition forever.",
+    "code": "if retries > 5 { dlq.send(msg); ack(); }\nelse { retry_with_backoff(); }",
+    "hook": "Quarantine, do not crash-loop.",
+    "id": "sd-adv-011",
+    "language": "rust",
+    "level": 3,
+    "quiz": {
+      "answer": 1,
+      "explain": "DLQ isolates bad records for later replay.",
+      "options": [
+        "Retry forever",
+        "DLQ after retries then replay",
+        "Drop silently",
+        "Stop consumer"
+      ],
+      "q": "How do you handle poison messages?"
+    },
+    "takeaway": "Dead-letter and replay bad events safely.",
+    "trap": "No alerting so DLQ grows unnoticed.",
+    "track": "system-design"
+  },
+  {
+    "body_md": "Zero-downtime deploys: health gates, connection draining, rolling updates with two versions live. Migrations must be expand-contract: add column, dual-write, backfill, then contract.",
+    "code": "-- expand\nALTER TABLE posts ADD COLUMN slug TEXT;\n-- contract later after backfill",
+    "hook": "Deploy at noon without fear.",
+    "id": "sd-adv-012",
+    "language": "sql",
+    "level": 3,
+    "quiz": {
+      "answer": 2,
+      "explain": "Backward-compatible steps keep mixed versions working.",
+      "options": [
+        "Big-bang rewrite",
+        "Downtime window",
+        "Expand-contract migrations plus rolling deploy",
+        "Skip migrations"
+      ],
+      "q": "How do you ship schema changes safely?"
+    },
+    "takeaway": "Make every deploy compatible with previous version.",
+    "trap": "Dropping column before readers upgrade.",
+    "track": "system-design"
+  }
+]
