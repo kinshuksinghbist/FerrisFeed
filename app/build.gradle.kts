@@ -10,14 +10,14 @@ plugins {
 }
 
 /**
- * Mirrors repo-root `content/*.json` (minus the schema) into generated
+ * Mirrors repo-root curriculum JSON (minus the schema file) into generated
  * assets. Incremental: re-runs only when content changes.
+ *
+ * Comment style warning: never put a slash-star sequence such as a glob
+ * inside a block comment in this file. It corrupts script parsing and
+ * breaks configuration with phantom missing compileSdk errors.
  */
 val syncCurriculumAssets = tasks.register<Sync>("syncCurriculumAssets") {
-    // NB: exclude() must sit at task level, NOT nested inside from() { }.
-    // A from(...) { exclude(...) } closure mis-scopes its delegate and
-    // breaks :app configuration with phantom "compileSdk not specified" +
-    // "hilt-android not found" errors (bisected 2026-10-06).
     from(rootProject.file("content"))
     exclude("schema.json")
     into(layout.buildDirectory.dir("generated/curriculum"))
@@ -79,10 +79,10 @@ android {
         automaticGenerationDuringBuild = true
     }
     sourceSets {
-        // Single source of truth stays in repo-root content/ (validated JSON).
-        // This syncs it into generated assets every build so :data's
-        // CurriculumSeeder can populate Room on first launch. Do NOT check
-        // generated files in and do NOT hand-copy JSON into src/main/assets.
+        // Single source of truth stays in repo-root content (validated JSON).
+        // This syncs it into generated assets every build so the data
+        // module seeder can populate Room on first launch. Do NOT check
+        // generated files in and do NOT hand-copy JSON into src main assets.
         getByName("main").assets.srcDir(syncCurriculumAssets)
     }
 }

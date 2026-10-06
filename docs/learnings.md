@@ -231,7 +231,6 @@ per key. (`intOrNull` DOES exist — inconsistent, just memorize it.)
   duplicate `copilot/fix-build-and-test-job-again` branch if still open.
 
 ## 14. Machine / auth notes (local Mac)
-
 - `gh` CLI was authed as `kinshuk-bb`, invisible to the
   `kinshuksinghbist` private repo (API 404s). Fixed by granting access;
   if `gh run` 404s again, check `gh auth status` identity first.
@@ -259,3 +258,19 @@ per key. (`intOrNull` DOES exist — inconsistent, just memorize it.)
   `appwidget-provider` XML) still listed as TODO in `Widget.kt` KDoc.
 - `targetSdk` is still 34; Play Store now expects 35+ for new listings —
   product decision, flagged in `docs/play-listing.md` context.
+
+## 16. Never write a glob like star-slash inside a block comment in .kts
+
+Bisected 2026-10-06 across six variants: a `/** ... */` KDoc containing a
+slash-star sequence (e.g. documenting a glob as `content/*.json`) breaks
+`:app` configuration with phantom `compileSdk not specified` +
+`hilt-android dependency not found` errors. Six runs agree: any variant
+with the sequence fails, without it passes — including byte-identical code
+differing only in comments. Probable mechanism is Kotlin nested-comment
+handling swallowing subsequent script statements so the `android` block
+half-evaluates. Two consequences: (a) keep ALL build-script comments
+slash-star-free (spell out "star" or reword; `app/build.gradle.kts` carries
+this warning inline), (b) `exclude()` belongs at Copy-task level anyway —
+never nested inside `from(...) { }`. When a config error contradicts the
+file in front of you, suspect comment corruption before logic, and bisect
+with byte-exact variants (assert every test edit actually applied).
