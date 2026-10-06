@@ -6,6 +6,7 @@
     "id": "sd-rcase-001",
     "language": "rust",
     "level": 2,
+    "output": "id = 8 random alphanumerics, e.g. 'aZ3xQ9tB'\n// unguessable; Postgres + Redis TTL expire it",
     "quiz": {
       "answer": 2,
       "explain": "Random ids plus cache plus expiry cover the load.",
@@ -28,6 +29,7 @@
     "id": "sd-rcase-002",
     "language": "rust",
     "level": 2,
+    "output": "Ok(rows) // <= 50 todos via index (user_id, id) range scan\n// needs live DB; no N+1, no OFFSET drift",
     "quiz": {
       "answer": 1,
       "explain": "Indexed cursor pages keep lists constant time.",
@@ -50,6 +52,7 @@
     "id": "sd-rcase-003",
     "language": "rust",
     "level": 3,
+    "output": "msg cloned to each member tx in the room shard\n// presence via heartbeat expiry; history paged from Postgres",
     "quiz": {
       "answer": 0,
       "explain": "Shard plus heartbeat keeps fan-out bounded and roster fresh.",
@@ -72,6 +75,7 @@
     "id": "sd-rcase-004",
     "language": "sql",
     "level": 3,
+    "output": "| id | 10 queued rows claimed |\n| workers skip each other's locks; none picked twice |",
     "quiz": {
       "answer": 3,
       "explain": "Locked skip lets workers claim without blocking peers.",
@@ -94,6 +98,7 @@
     "id": "sd-rcase-005",
     "language": "rust",
     "level": 3,
+    "output": "fail (429/5xx) -> delayed retry with backoff, attempts capped\n// outbox + signed posts; publisher never blocks",
     "quiz": {
       "answer": 2,
       "explain": "Outbox plus bounded retry isolates slow endpoints.",
@@ -116,6 +121,7 @@
     "id": "sd-rcase-006",
     "language": "rust",
     "level": 2,
+    "output": "Ok(url) // 10-min PUT URL; browser uploads direct\n// server verifies callback; axum never proxies bytes",
     "quiz": {
       "answer": 1,
       "explain": "Direct-to-object uploads remove proxy bandwidth cost.",
@@ -138,6 +144,7 @@
     "id": "sd-rcase-007",
     "language": "rust",
     "level": 3,
+    "output": "docs buffered; commit on schedule, segments merged\n// queries <100ms; no per-doc commit storm",
     "quiz": {
       "answer": 0,
       "explain": "Batched commits plus segment merge keep search fast.",
@@ -160,6 +167,7 @@
     "id": "sd-rcase-008",
     "language": "rust",
     "level": 2,
+    "output": "http_requests_total{route=\"/todos\",code=\"200\"} 421\n// labels bounded to route+code; latency via histograms",
     "quiz": {
       "answer": 3,
       "explain": "Bounded labels keep series count manageable.",
@@ -182,6 +190,7 @@
     "id": "sd-rcase-009",
     "language": "rust",
     "level": 3,
+    "output": "one batched query for all ids (not one per row)\n// + depth limits; core CRUD stays REST",
     "quiz": {
       "answer": 2,
       "explain": "Batching plus depth limits tame resolver cost.",
@@ -204,6 +213,7 @@
     "id": "sd-rcase-010",
     "language": "rust",
     "level": 3,
+    "output": "calls over 200ms cut; over 1000/s per method shed\n// needs running RPC: timeout/429 instead of handler hang",
     "quiz": {
       "answer": 1,
       "explain": "Middleware bounds latency and load per method.",
@@ -226,6 +236,7 @@
     "id": "sd-rcase-011",
     "language": "rust",
     "level": 3,
+    "output": "replay + txn need -> kafka; light push + low ops -> nats\n// 100k/day ordered per the choice",
     "quiz": {
       "answer": 0,
       "explain": "Retention and ordering needs decide the log.",
@@ -248,6 +259,7 @@
     "id": "sd-rcase-012",
     "language": "rust",
     "level": 2,
+    "output": "right password -> Ok(()), sid (32 chars) stored in redis\nwrong -> Err; slow hash + rotation limit breach impact",
     "quiz": {
       "answer": 2,
       "explain": "Slow hashes plus opaque sessions limit breach impact.",
@@ -270,6 +282,7 @@
     "id": "sd-rcase-013",
     "language": "sql",
     "level": 2,
+    "output": "| 50 rows older than (ts, id), DESC |\n// stable under inserts; indexed scan, no offset drift",
     "quiz": {
       "answer": 1,
       "explain": "Keyset keeps pages stable under concurrent writes.",
@@ -292,6 +305,7 @@
     "id": "sd-rcase-014",
     "language": "sql",
     "level": 3,
+    "output": "1st insert -> row stored; conflict -> stored resp replayed\n// retries never double-charge",
     "quiz": {
       "answer": 0,
       "explain": "Stored keyed responses make retries return same result.",
@@ -314,6 +328,7 @@
     "id": "sd-rcase-015",
     "language": "sql",
     "level": 3,
+    "output": "| ~100 comments in subtree $1, path order |\n// one range scan; depth caps + paging",
     "quiz": {
       "answer": 3,
       "explain": "Path indexes fetch subtrees in one range scan.",
@@ -336,6 +351,7 @@
     "id": "sd-rcase-016",
     "language": "rust",
     "level": 2,
+    "output": "COPY batches rows; redis unread++ per user\n// bursts absorbed; no per-send round trips",
     "quiz": {
       "answer": 2,
       "explain": "Batching plus counters smooth burst fan-out.",
@@ -358,6 +374,7 @@
     "id": "sd-rcase-017",
     "language": "rust",
     "level": 2,
+    "output": "c = unique base62(6), e.g. 'aZ3xQ9'; collision -> regen\n// hot codes in Redis; clicks counted async",
     "quiz": {
       "answer": 1,
       "explain": "Unique retry plus hot cache handles read skew.",
@@ -380,6 +397,7 @@
     "id": "sd-rcase-018",
     "language": "sql",
     "level": 2,
+    "output": "REVOKE // app keeps INSERT/SELECT only\nUPDATE/DELETE -> permission denied; monthly partitions",
     "quiz": {
       "answer": 0,
       "explain": "Revoke plus partitioning keeps trail trustworthy and fast.",
@@ -402,6 +420,7 @@
     "id": "sd-rcase-019",
     "language": "rust",
     "level": 2,
+    "output": "allowed -> handler runs; over quota -> 429 + Retry-After\n// per-tenant atomic counters; noisy neighbor isolated",
     "quiz": {
       "answer": 3,
       "explain": "Per-tenant atomic counters isolate noisy users.",
@@ -424,6 +443,7 @@
     "id": "sd-rcase-020",
     "language": "rust",
     "level": 2,
+    "output": "Ok(job id) at once; worker encodes 256/1024 -> CDN\n// uploads never block on encode",
     "quiz": {
       "answer": 2,
       "explain": "Async encode plus CDN keeps uploads snappy.",
@@ -446,6 +466,7 @@
     "id": "sd-rcase-021",
     "language": "rust",
     "level": 3,
+    "output": "pages of 1000 -> CSV appended; download link when done\n// memory flat for 500k rows",
     "quiz": {
       "answer": 1,
       "explain": "Streaming pages bounds memory for huge exports.",

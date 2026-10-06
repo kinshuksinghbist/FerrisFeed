@@ -19,7 +19,8 @@
     },
     "takeaway": "Always install and update Rust with rustup.",
     "track": "rust",
-    "trap": "Installing via apt/brew alone gives stale toolchains that break tutorials."
+    "trap": "Installing via apt/brew alone gives stale toolchains that break tutorials.",
+    "output": "# rustup installer runs, then both print their versions:\nrustc <version> (e.g. rustc 1.82.0)\ncargo <matching version>"
   },
   {
     "body_md": "Use `rustup show` and `rustup update` to manage versions. Switch between **stable**, **beta**, and **nightly** per project with `rustup override`. No reinstalls needed.",
@@ -41,7 +42,8 @@
     },
     "takeaway": "rustup toolchains let you mix stable and nightly safely.",
     "track": "rust",
-    "trap": "Setting global nightly breaks stable builds; use directory override instead."
+    "trap": "Setting global nightly breaks stable builds; use directory override instead.",
+    "output": "# toolchain list shows installed toolchains, e.g.:\nstable-x86_64-unknown-linux-gnu (default)\nnightly-x86_64-unknown-linux-gnu\n# override pins nightly for the current directory only"
   },
   {
     "body_md": "`cargo new hello` scaffolds a runnable project with `Cargo.toml` and `src/main.rs`. Use `--bin` for apps (default) and `--lib` for libraries. Then `cd hello`.",
@@ -63,7 +65,8 @@
     },
     "takeaway": "cargo new scaffolds a complete buildable project.",
     "track": "rust",
-    "trap": "Creating files by hand misses Cargo.toml metadata and src layout."
+    "trap": "Creating files by hand misses Cargo.toml metadata and src layout.",
+    "output": "Created binary (application) `hello` package\nCargo.toml  src/main.rs\nfn main() {\n    println!(\"Hello, world!\");\n}"
   },
   {
     "body_md": "Four commands cover 90% of work: `run` builds and executes, `build` compiles, `check` type-checks fast, `clippy` lints. Use `check` while iterating to save compile time.",
@@ -85,7 +88,8 @@
     },
     "takeaway": "Use cargo check for fast iteration, build for artifacts.",
     "track": "rust",
-    "trap": "Running cargo build every save wastes minutes; check is enough."
+    "trap": "Running cargo build every save wastes minutes; check is enough.",
+    "output": "# run: builds and executes the binary\n# check: type-checks only \u2014 fastest feedback, no codegen\n# build --release: optimized artifact in target/release/\n# clippy: lints pass with no warnings on clean code"
   },
   {
     "body_md": "`Cargo.toml` is your manifest: package name, version, edition, and dependencies. Run `cargo add serde` to add deps. `Cargo.lock` pins exact versions for reproducible builds.",
@@ -107,7 +111,8 @@
     },
     "takeaway": "Declare deps in the Cargo manifest and let the lockfile pin versions.",
     "track": "rust",
-    "trap": "Editing Cargo.lock by hand causes conflicts; let cargo update it."
+    "trap": "Editing Cargo.lock by hand causes conflicts; let cargo update it.",
+    "output": "# manifest declares hello 0.1.0, edition 2021, serde 1.0\n# cargo build fetches serde and pins it in Cargo.lock"
   },
   {
     "body_md": "Variables are **immutable by default** with `let`. The compiler stops accidental mutation. This default prevents whole classes of bugs other languages allow silently.",
@@ -129,7 +134,8 @@
     },
     "takeaway": "Variables are immutable unless you opt into mutability.",
     "track": "rust",
-    "trap": "Forgetting mut gives `cannot assign twice` error; add `mut` deliberately."
+    "trap": "Forgetting mut gives `cannot assign twice` error; add `mut` deliberately.",
+    "output": "5"
   },
   {
     "body_md": "Add `mut` when you truly need change. The compiler then allows assignment but still checks borrows. Prefer immutable; reach for `mut` only with a reason.",
@@ -151,7 +157,8 @@
     },
     "takeaway": "Use mut only when mutation is actually needed.",
     "track": "rust",
-    "trap": "Marking everything mut silences the safety net; keep immutable default."
+    "trap": "Marking everything mut silences the safety net; keep immutable default.",
+    "output": "2"
   },
   {
     "body_md": "**Shadowing** redeclares with `let` to transform a value, even changing type. Unlike `mut`, the old binding is replaced. Great for parsing and cleanup pipelines.",
@@ -173,7 +180,8 @@
     },
     "takeaway": "Shadow with let to transform values and types cleanly.",
     "track": "rust",
-    "trap": "Confusing shadowing with mut: mut keeps type, shadowing can change it."
+    "trap": "Confusing shadowing with mut: mut keeps type, shadowing can change it.",
+    "output": "42"
   },
   {
     "body_md": "Rust integers are explicit: `i8`\u2013`i128`, `u8`\u2013`u128`, plus `isize`/`usize` for indexing. Overflow **panics in debug**, wraps in release. Use `checked_add` when overflow matters.",
@@ -195,7 +203,8 @@
     },
     "takeaway": "Pick sized ints deliberately; check overflow explicitly.",
     "track": "rust",
-    "trap": "Assuming wrapping everywhere; debug panics expose hidden overflow bugs."
+    "trap": "Assuming wrapping everywhere; debug panics expose hidden overflow bugs.",
+    "output": "None"
   },
   {
     "body_md": "`f64` is the default float, `bool` is true/false, `char` is a full **Unicode scalar** (4 bytes), not one byte. Single quotes for char, double for strings.",
@@ -217,7 +226,8 @@
     },
     "takeaway": "char is Unicode; f64 and bool do what you expect.",
     "track": "rust",
-    "trap": "Using 'a' vs \"a\" wrong: single quotes are char, double are string."
+    "trap": "Using 'a' vs \"a\" wrong: single quotes are char, double are string.",
+    "output": "3.14159 true \ud83e\udd80"
   },
   {
     "body_md": "**Tuples** group mixed types with fixed size; **arrays** hold one type with fixed length. Index tuples with `.0`, arrays with `[0]`. Slices borrow arrays dynamically.",
@@ -239,7 +249,8 @@
     },
     "takeaway": "Tuples mix types; arrays repeat one type.",
     "track": "rust",
-    "trap": "Indexing array out of bounds panics at runtime; length is fixed."
+    "trap": "Indexing array out of bounds panics at runtime; length is fixed.",
+    "output": "42 2"
   },
   {
     "body_md": "Define functions with `fn name(args: Type) -> Ret`. Last expression without `;` is the return. No `return` needed for tail values \u2014 idiomatic Rust omits it.",
@@ -261,7 +272,8 @@
     },
     "takeaway": "End functions with a bare expression as the return.",
     "track": "rust",
-    "trap": "Adding `;` to tail turns value into `()` and breaks return type."
+    "trap": "Adding `;` to tail turns value into `()` and breaks return type.",
+    "output": "5"
   },
   {
     "body_md": "`if` needs no parens and each branch must return the same type. Use `else if` chains for multiple cases. Condition must be a real `bool` \u2014 no truthy integers.",
@@ -283,7 +295,8 @@
     },
     "takeaway": "if conditions must be bool, no implicit truthiness.",
     "track": "rust",
-    "trap": "Writing `if x = 5` assigns and errors; use `==` for comparison."
+    "trap": "Writing `if x = 5` assigns and errors; use `==` for comparison.",
+    "output": "odd"
   },
   {
     "body_md": "`if` is an **expression**: assign its result with `let`. Both arms must have the same type. This replaces ternaries and keeps logic as values, not statements.",
@@ -305,7 +318,8 @@
     },
     "takeaway": "Use let with if expression instead of ternaries.",
     "track": "rust",
-    "trap": "Mismatched arm types like `if c { 1 } else { \"x\" }` fail to compile."
+    "trap": "Mismatched arm types like `if c { 1 } else { \"x\" }` fail to compile.",
+    "output": "odd"
   },
   {
     "body_md": "`loop` runs forever until `break`. It can **return a value**: `break 42`. Bind it with `let x = loop { ... }`. Perfect for retries and input prompts.",
@@ -327,7 +341,8 @@
     },
     "takeaway": "loop plus break with value acts as an expression.",
     "track": "rust",
-    "trap": "Forgetting break creates a true infinite loop that hangs run."
+    "trap": "Forgetting break creates a true infinite loop that hangs run.",
+    "output": "30"
   },
   {
     "body_md": "`while` checks a condition each iteration. Great for countdowns and polling. Prefer `for` over manual index while loops \u2014 iterators prevent off-by-one errors.",
@@ -349,7 +364,8 @@
     },
     "takeaway": "Use while for condition-driven repetition.",
     "track": "rust",
-    "trap": "Forgetting to update the condition variable loops forever."
+    "trap": "Forgetting to update the condition variable loops forever.",
+    "output": "3\n2\n1"
   },
   {
     "body_md": "`for x in 0..3` iterates ranges; `0..3` excludes end, `0..=3` includes it. Works over arrays, iterators, anything `IntoIterator`. No manual indexing needed.",
@@ -371,7 +387,8 @@
     },
     "takeaway": "Exclusive ranges omit the end while inclusive ranges keep it.",
     "track": "rust",
-    "trap": "Using 0..len+1 or ..=len wrong causes off-by-one panics."
+    "trap": "Using 0..len+1 or ..=len wrong causes off-by-one panics.",
+    "output": "0\n1\n2\n0\n1\n2\n3"
   },
   {
     "body_md": "`break` exits, `continue` skips to next iteration. Labeled loops like `'outer: loop` let you break from nested loops. Labels start with a tick `'`.",
@@ -393,7 +410,8 @@
     },
     "takeaway": "Use loop labels to control nested loops precisely.",
     "track": "rust",
-    "trap": "Plain break only exits inner loop; logic silently continues outer."
+    "trap": "Plain break only exits inner loop; logic silently continues outer.",
+    "output": "// compiles clean, no output \u2014 'outer break exits both loops silently"
   },
   {
     "body_md": "Print with `println!` (`!` means macro). Use `{var}` inline formatting, `{var:?}` with Debug. `dbg!` prints plus returns value \u2014 handy for quick debugging.",
@@ -415,7 +433,8 @@
     },
     "takeaway": "println! is a macro with inline format args.",
     "track": "rust",
-    "trap": "Forgetting :? for structs without Display gives a formatting error."
+    "trap": "Forgetting :? for structs without Display gives a formatting error.",
+    "output": "n=42\n42"
   },
   {
     "body_md": "Editions (`2015`, `2018`, `2021`) gate language changes without breaking old code. Set `edition = \"2021\"` in Cargo.toml. New projects should always use the latest.",
@@ -437,6 +456,7 @@
     },
     "takeaway": "Set the latest edition to unlock modern idioms.",
     "track": "rust",
-    "trap": "Staying on 2015 edition disables async/await and modern syntax."
+    "trap": "Staying on 2015 edition disables async/await and modern syntax.",
+    "output": "# edition 2021 enabled; cargo run builds with modern syntax"
   }
 ]

@@ -6,6 +6,7 @@
     "id": "sd-beg-001",
     "language": "rust",
     "level": 1,
+    "output": "HTTP/1.1 200 OK\nContent-Type: application/json\n\n{\"posts\": [...page 2...]}\n// GET is cacheable + idempotent; safe to retry",
     "quiz": {
       "answer": 1,
       "explain": "Each request carries full context; servers need not remember.",
@@ -28,6 +29,7 @@
     "id": "sd-beg-002",
     "language": "rust",
     "level": 1,
+    "output": "HTTP/1.1 201 Created\nLocation: /v1/posts/42\n\n{\"id\": 42, \"title\": \"hi\"}",
     "quiz": {
       "answer": 0,
       "explain": "REST maps CRUD to HTTP verbs on noun URLs.",
@@ -50,6 +52,7 @@
     "id": "sd-beg-003",
     "language": "rust",
     "level": 1,
+    "output": "protoc emits typed Feed client + server stubs (any language)\nListPosts: unary RPC; StreamPosts: server-streaming RPC",
     "quiz": {
       "answer": 2,
       "explain": "Protobuf plus HTTP/2 gives compact binary streaming.",
@@ -72,6 +75,7 @@
     "id": "sd-beg-004",
     "language": "rust",
     "level": 1,
+    "output": "{\"data\": {\"post\": {\"title\": \"...\", \"author\": {\"name\": \"...\"}}}}\n// exactly the requested fields, one round trip",
     "quiz": {
       "answer": 3,
       "explain": "Client-specified selection reduces round trips.",
@@ -94,6 +98,7 @@
     "id": "sd-beg-005",
     "language": "javascript",
     "level": 1,
+    "output": "101 Switching Protocols -> socket open\nsend({\"t\":\"hi\"}); each inbound frame -> render(data)",
     "quiz": {
       "answer": 1,
       "explain": "After upgrade, frames flow both directions without polling.",
@@ -116,6 +121,7 @@
     "id": "sd-beg-006",
     "language": "sql",
     "level": 1,
+    "output": "CREATE TABLE\n// posts(id, author_id, body) ready; writes ACID, PK-indexed",
     "quiz": {
       "answer": 0,
       "explain": "Joins and transactions favor SQL; huge KV favors NoSQL.",
@@ -138,6 +144,7 @@
     "id": "sd-beg-007",
     "language": "rust",
     "level": 1,
+    "output": "OK (post:42 cached 3600s)\n(integer) 1 (leaderboard member added)\n\"1\" (GET hit)",
     "quiz": {
       "answer": 2,
       "explain": "Rich types plus expiry enable cache and realtime patterns.",
@@ -182,6 +189,7 @@
     "id": "sd-beg-009",
     "language": "rust",
     "level": 1,
+    "output": "Edge HIT: app.abc123.js served from PoP in ms\nimmutable -> no revalidation for 1 year",
     "quiz": {
       "answer": 3,
       "explain": "Edge caching cuts latency and origin load.",
@@ -226,6 +234,7 @@
     "id": "sd-beg-011",
     "language": "javascript",
     "level": 1,
+    "output": "HTTP 200 text/event-stream held open\n// each server event -> console.log(data); one-way push, no polling",
     "quiz": {
       "answer": 2,
       "explain": "SSE suits server-to-client streams; WebSocket suits duplex.",
@@ -248,6 +257,7 @@
     "id": "sd-beg-012",
     "language": "sql",
     "level": 1,
+    "output": "| id | ... |\n| newest 20 with id < $1, DESC |\n// stable under inserts; no skipped rows",
     "quiz": {
       "answer": 1,
       "explain": "Keyset pagination avoids skipped rows during writes.",
@@ -270,6 +280,7 @@
     "id": "sd-beg-013",
     "language": "python",
     "level": 1,
+    "output": "1st call: miss -> db.load(k), SETEX k 300\nlater calls: Redis hit in ms, zero DB load",
     "quiz": {
       "answer": 0,
       "explain": "Cache-aside keeps app in control of fill and expiry.",
@@ -292,6 +303,7 @@
     "id": "sd-beg-014",
     "language": "rust",
     "level": 1,
+    "output": "Client waits 2s (Retry-After), retries with backoff\n// retry 429/5xx only; 400-class means fix the request",
     "quiz": {
       "answer": 3,
       "explain": "Codes tell clients whether to fix, retry, or wait.",

@@ -6,6 +6,7 @@
     "id": "rust-i4-001",
     "language": "rust",
     "level": 2,
+    "output": "Port(8080)",
     "quiz": {
       "answer": 0,
       "explain": "A From impl gives you Into automatically through the blanket impl.",
@@ -28,6 +29,7 @@
     "id": "rust-i4-002",
     "language": "rust",
     "level": 2,
+    "output": "{} → (1, 2)\n{:?} → Point { x: 1, y: 2 }",
     "quiz": {
       "answer": 2,
       "explain": "Debug is developer-facing and derivable while Display is user-facing and manual.",
@@ -50,6 +52,7 @@
     "id": "rust-i4-003",
     "language": "rust",
     "level": 2,
+    "output": "2\n",
     "quiz": {
       "answer": 1,
       "explain": "Deref coercion auto-converts smart pointers to their inner borrow.",
@@ -72,6 +75,7 @@
     "id": "rust-i4-004",
     "language": "rust",
     "level": 2,
+    "output": "greet(\"\") → Owned(\"guest\")\ngreet(\"ann\") → Borrowed(\"ann\")",
     "quiz": {
       "answer": 3,
       "explain": "Cow avoids allocation on the common borrowed path and owns only when needed.",
@@ -94,6 +98,7 @@
     "id": "rust-i4-005",
     "language": "rust",
     "level": 2,
+    "output": "HI\nYO\n",
     "quiz": {
       "answer": 0,
       "explain": "AsRef accepts many owned and borrowed forms of the same data.",
@@ -116,6 +121,7 @@
     "id": "rust-i4-006",
     "language": "rust",
     "level": 2,
+    "output": "OK — assertion passes, no output",
     "quiz": {
       "answer": 2,
       "explain": "Borrow lets owned map keys be queried with borrowed equivalents.",
@@ -138,6 +144,7 @@
     "id": "rust-i4-007",
     "language": "rust",
     "level": 2,
+    "output": "format!(\"{}\", DbErr::Missing(\"ann\")) → \"missing user ann\"",
     "quiz": {
       "answer": 1,
       "explain": "thiserror derives Error for enums with formatted messages per variant.",
@@ -160,6 +167,7 @@
     "id": "rust-i4-008",
     "language": "rust",
     "level": 2,
+    "output": "Err: loading app config (caused by: No such file or directory)",
     "quiz": {
       "answer": 0,
       "explain": "context attaches what-you-were-doing notes to propagated errors.",
@@ -182,6 +190,7 @@
     "id": "rust-i4-009",
     "language": "rust",
     "level": 2,
+    "output": "[4, 16, 36, 64]",
     "quiz": {
       "answer": 3,
       "explain": "Adapters are lazy and fuse into one pass when consumed.",
@@ -204,6 +213,7 @@
     "id": "rust-i4-010",
     "language": "rust",
     "level": 2,
+    "output": "sum → 10, prod → 24",
     "quiz": {
       "answer": 1,
       "explain": "fold threads an accumulator through every element to one result.",
@@ -226,6 +236,7 @@
     "id": "rust-i4-011",
     "language": "rust",
     "level": 2,
+    "output": "0: 10-1\n1: 20-2\n",
     "quiz": {
       "answer": 2,
       "explain": "zip stops at the shorter iterator while enumerate adds indices.",
@@ -248,6 +259,7 @@
     "id": "rust-i4-012",
     "language": "rust",
     "level": 2,
+    "output": "Err(ParseIntError { kind: InvalidDigit })",
     "quiz": {
       "answer": 0,
       "explain": "Collecting to Result short-circuits on the first error.",
@@ -270,6 +282,7 @@
     "id": "rust-i4-013",
     "language": "rust",
     "level": 2,
+    "output": "first(\"x\") → \"x\", pick(\"a\", \"b\") → \"a\"",
     "quiz": {
       "answer": 1,
       "explain": "With two input borrows the compiler cannot guess which flows to output.",
@@ -292,6 +305,7 @@
     "id": "rust-i4-014",
     "language": "rust",
     "level": 2,
+    "output": "apply(|s| s.len()) → 2",
     "quiz": {
       "answer": 3,
       "explain": "HRTB expresses bounds that must hold for every possible lifetime.",
@@ -314,6 +328,7 @@
     "id": "rust-i4-015",
     "language": "rust",
     "level": 2,
+    "output": "shapes.len() → 0 (each element may differ in type)",
     "quiz": {
       "answer": 0,
       "explain": "dyn Trait uses dynamic dispatch through a vtable per object.",
@@ -336,6 +351,7 @@
     "id": "rust-i4-016",
     "language": "rust",
     "level": 2,
+    "output": "OK — thread returns 3 via join; no output",
     "quiz": {
       "answer": 2,
       "explain": "Send allows moving ownership across threads while Sync allows sharing refs.",
@@ -358,6 +374,7 @@
     "id": "rust-i4-017",
     "language": "rust",
     "level": 2,
+    "output": "h.join().unwrap() → 2 (nothing printed)",
     "quiz": {
       "answer": 1,
       "explain": "Arc clone bumps the atomic count without copying inner data.",
@@ -380,6 +397,7 @@
     "id": "rust-i4-018",
     "language": "rust",
     "level": 2,
+    "output": "0\n",
     "quiz": {
       "answer": 0,
       "explain": "Poisoning signals a panic while holding the lock and lock returns Err.",
@@ -402,6 +420,7 @@
     "id": "rust-i4-019",
     "language": "rust",
     "level": 2,
+    "output": "v = 42 (recv succeeds; nothing printed)",
     "quiz": {
       "answer": 2,
       "explain": "Cloned senders allow many producers feeding one receiver.",
@@ -424,6 +443,7 @@
     "id": "rust-i4-020",
     "language": "rust",
     "level": 2,
+    "output": "error[E0502]: cannot borrow `v` as immutable because it is also borrowed as mutable",
     "quiz": {
       "answer": 1,
       "explain": "Scopes guarantee children join before borrows expire.",
@@ -446,6 +466,7 @@
     "id": "rust-i4-021",
     "language": "rust",
     "level": 2,
+    "output": "10\n",
     "quiz": {
       "answer": 0,
       "explain": "DerefMut powers mutable access through smart pointer wrappers.",
@@ -468,6 +489,7 @@
     "id": "rust-i4-022",
     "language": "rust",
     "level": 2,
+    "output": "Port::try_from(8080) → Ok\nPort::try_from(-1) → Err",
     "quiz": {
       "answer": 2,
       "explain": "TryFrom signals failure with Result instead of panicking.",

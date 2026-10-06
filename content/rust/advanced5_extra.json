@@ -6,6 +6,7 @@
     "id": "rust-a5-001",
     "language": "rust",
     "level": 3,
+    "output": "// needs futures crate: block_on polls fut to completion → n == 42",
     "quiz": {
       "answer": 1,
       "explain": "Pin guarantees the future memory stays stable across polls.",
@@ -28,6 +29,7 @@
     "id": "rust-a5-002",
     "language": "rust",
     "level": 3,
+    "output": "// compiles with pin_project: Pin<&mut Wrapper<F>> → Pin<&mut F>",
     "quiz": {
       "answer": 0,
       "explain": "Projection converts outer pin to inner field pins without moving.",
@@ -50,6 +52,7 @@
     "id": "rust-a5-003",
     "language": "rust",
     "level": 3,
+    "output": "// compiles: 'a: 'b lets &'a str shrink to &'b str (covariance)",
     "quiz": {
       "answer": 2,
       "explain": "Covariant types allow lifetime shortening while invariant ones forbid it.",
@@ -72,6 +75,7 @@
     "id": "rust-a5-004",
     "language": "rust",
     "level": 3,
+    "output": "// compiles: Owner<'a> cannot outlive the String it borrows",
     "quiz": {
       "answer": 1,
       "explain": "Drop check rejects owners whose destructor could outlive borrowed fields.",
@@ -94,6 +98,7 @@
     "id": "rust-a5-005",
     "language": "rust",
     "level": 3,
+    "output": "// v == 7: write() fully initializes; assume_init() is sound here",
     "quiz": {
       "answer": 0,
       "explain": "MaybeUninit must be written before assume_init reads it.",
@@ -116,6 +121,7 @@
     "id": "rust-a5-006",
     "language": "rust",
     "level": 3,
+    "output": "// b == [0u8; 64]: whole array written before assume_init()",
     "quiz": {
       "answer": 3,
       "explain": "zeroed requires all-zero to be a valid value for that type.",
@@ -138,6 +144,7 @@
     "id": "rust-a5-007",
     "language": "rust",
     "level": 3,
+    "output": "// passes: size_of::<Header>() == 8 (1 tag + 3 pad + 4 len)",
     "quiz": {
       "answer": 1,
       "explain": "repr C fixes layout for FFI while default Rust layout is unspecified.",
@@ -160,6 +167,7 @@
     "id": "rust-a5-008",
     "language": "rust",
     "level": 3,
+    "output": "// passes: Release store pairs with the Acquire load",
     "quiz": {
       "answer": 0,
       "explain": "Release store pairs with acquire load to hand off data safely.",
@@ -182,6 +190,7 @@
     "id": "rust-a5-009",
     "language": "rust",
     "level": 3,
+    "output": "// fetch_add returns 0, counter becomes 1 (AcqRel for R-M-W)",
     "quiz": {
       "answer": 2,
       "explain": "Lock-free code retries compare_exchange until the expected value matches.",
@@ -204,6 +213,7 @@
     "id": "rust-a5-010",
     "language": "rust",
     "level": 3,
+    "output": "// compiles: Node { next: *mut Node, value: u32 } (unsafe links)",
     "quiz": {
       "answer": 1,
       "explain": "Intrusive lists embed links in nodes to avoid extra allocation.",
@@ -226,6 +236,7 @@
     "id": "rust-a5-011",
     "language": "rust",
     "level": 3,
+    "output": "// compiles: Mine delegates to System; set as #[global_allocator] to use",
     "quiz": {
       "answer": 0,
       "explain": "GlobalAlloc lets you replace the default allocator program-wide.",
@@ -248,6 +259,7 @@
     "id": "rust-a5-012",
     "language": "rust",
     "level": 3,
+    "output": "// with tikv-jemallocator: #[global_allocator] static ALLOC: Jemalloc",
     "quiz": {
       "answer": 2,
       "explain": "jemalloc often helps threaded servers but needs tuning and measurement.",
@@ -270,6 +282,7 @@
     "id": "rust-a5-013",
     "language": "rust",
     "level": 3,
+    "output": "// compiles: sum(&[f32]) via iterators (autovectorizable)",
     "quiz": {
       "answer": 1,
       "explain": "Simple contiguous iterator loops vectorize best under LLVM.",
@@ -292,6 +305,7 @@
     "id": "rust-a5-014",
     "language": "rust",
     "level": 3,
+    "output": "// with criterion: benches sum(); statistics, not single timings",
     "quiz": {
       "answer": 0,
       "explain": "Criterion uses statistics to separate real gains from noise.",
@@ -314,6 +328,7 @@
     "id": "rust-a5-015",
     "language": "rust",
     "level": 3,
+    "output": "// cargo flamegraph --bench mybench\n// → flamegraph.svg: optimize the widest plateau first",
     "quiz": {
       "answer": 3,
       "explain": "Width shows CPU share so the widest plateau is the bottleneck.",
@@ -336,6 +351,7 @@
     "id": "rust-a5-016",
     "language": "rust",
     "level": 3,
+    "output": "// perf stat -d: cycles plus cache-misses and branch-misses per run",
     "quiz": {
       "answer": 1,
       "explain": "perf stat reveals hardware counters like misses behind slowdowns.",
@@ -358,6 +374,7 @@
     "id": "rust-a5-017",
     "language": "rust",
     "level": 3,
+    "output": "# release: LTO + one codegen unit + stripped\n# → faster binary, much slower builds (release only)",
     "quiz": {
       "answer": 2,
       "explain": "LTO plus single codegen unit improves optimization at higher build cost.",
@@ -380,6 +397,7 @@
     "id": "rust-a5-018",
     "language": "rust",
     "level": 3,
+    "output": "// sccache --show-stats: hit rates climb; misses on new toolchains are normal",
     "quiz": {
       "answer": 1,
       "explain": "sccache caches compiled crates across builds and machines.",
@@ -402,6 +420,7 @@
     "id": "rust-a5-019",
     "language": "rust",
     "level": 3,
+    "output": "// cargo audit + deny: scan advisories/licenses; treat hits as failures",
     "quiz": {
       "answer": 0,
       "explain": "Audit tools scan advisories and licenses to block risky dependencies.",
@@ -424,6 +443,7 @@
     "id": "rust-a5-020",
     "language": "rust",
     "level": 3,
+    "output": "# rust-toolchain pins channel 1.78 with rustfmt + clippy",
     "quiz": {
       "answer": 2,
       "explain": "Pinned toolchains plus locked deps remove common nondeterminism sources.",
@@ -446,6 +466,7 @@
     "id": "rust-a5-021",
     "language": "rust",
     "level": 3,
+    "output": "// PGO: build with -Cprofile-generate, run workload, rebuild with -Cprofile-use",
     "quiz": {
       "answer": 1,
       "explain": "PGO uses runtime profiles to guide inlining and layout in rebuilds.",
@@ -468,6 +489,7 @@
     "id": "rust-a5-022",
     "language": "rust",
     "level": 3,
+    "output": "// valgrind --tool=dhat: peak heap bytes plus hot allocation sites",
     "quiz": {
       "answer": 0,
       "explain": "Heap profilers show peak usage and hot allocation sites to fix.",

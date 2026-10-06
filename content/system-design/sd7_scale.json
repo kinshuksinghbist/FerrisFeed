@@ -6,6 +6,7 @@
     "id": "sd-scale-001",
     "language": "rust",
     "level": 2,
+    "output": "req -> nodes[i], i cycles 0..n-1\n// even split on equal boxes; eject sick hosts fast",
     "quiz": {
       "answer": 2,
       "explain": "Equality plus health awareness keeps rotation fair and safe.",
@@ -28,6 +29,7 @@
     "id": "sd-scale-002",
     "language": "rust",
     "level": 2,
+    "output": "req -> node with min inflight (emptiest)\n// slow nodes get less; slow-start fresh hosts",
     "quiz": {
       "answer": 1,
       "explain": "Live counts steer around slow and busy backends.",
@@ -72,6 +74,7 @@
     "id": "sd-scale-004",
     "language": "rust",
     "level": 2,
+    "output": "db ok -> 200 ready (gets traffic)\ndb down -> 503, ejected fast, damped vs flaps",
     "quiz": {
       "answer": 3,
       "explain": "Dependency-aware readiness plus damping avoids flapping traffic.",
@@ -116,6 +119,7 @@
     "id": "sd-scale-006",
     "language": "rust",
     "level": 2,
+    "output": "GET /feed?user=7&xjunk=1 -> key drops junk + user\n// shared hits stay high; private never under a public key",
     "quiz": {
       "answer": 2,
       "explain": "Minimal varying key with normalization boosts hits safely.",
@@ -138,6 +142,7 @@
     "id": "sd-scale-007",
     "language": "rust",
     "level": 2,
+    "output": "tokens refill elapsed*rate (cap); >= 1.0 -> allow + deduct\n// bursts to cap, average to rate",
     "quiz": {
       "answer": 0,
       "explain": "Bucket depth sets burst while refill sets sustained rate.",
@@ -160,6 +165,7 @@
     "id": "sd-scale-008",
     "language": "rust",
     "level": 3,
+    "output": "now added; entries older than window trimmed\ncount = members inside window (no edge doubling)",
     "quiz": {
       "answer": 1,
       "explain": "Continuous windows remove fixed-boundary quota doubling.",
@@ -182,6 +188,7 @@
     "id": "sd-scale-009",
     "language": "rust",
     "level": 2,
+    "output": "d = min(cap, base*2^n) + jitter(0..250ms); sleep, retry\n// idempotent errors only; attempts capped",
     "quiz": {
       "answer": 3,
       "explain": "Jitter desynchronizes clients while caps bound worst latency.",
@@ -204,6 +211,7 @@
     "id": "sd-scale-010",
     "language": "rust",
     "level": 2,
+    "output": "open -> fallback() at once, zero doomed calls\n// half-open probe closes the breaker on success",
     "quiz": {
       "answer": 2,
       "explain": "Open circuits shed doomed work and let dependencies recover.",
@@ -226,6 +234,7 @@
     "id": "sd-scale-011",
     "language": "rust",
     "level": 2,
+    "output": "payments pool(20) full -> only payments shed\nsearch pool(50) unaffected (blast radius contained)",
     "quiz": {
       "answer": 1,
       "explain": "Per-lane caps contain blast radius across tenants.",
@@ -248,6 +257,7 @@
     "id": "sd-scale-012",
     "language": "rust",
     "level": 3,
+    "output": "left = deadline - now; call gets left/2\n// deep chain still meets the edge budget",
     "quiz": {
       "answer": 0,
       "explain": "Propagated deadlines bound tail latency across the chain.",
@@ -270,6 +280,7 @@
     "id": "sd-scale-013",
     "language": "rust",
     "level": 3,
+    "output": "len > max -> 429 + Retry-After, low priority shed\n// queue depth drives autoscale",
     "quiz": {
       "answer": 2,
       "explain": "Bounded queues plus explicit shedding keep latency stable.",
@@ -314,6 +325,7 @@
     "id": "sd-scale-015",
     "language": "rust",
     "level": 2,
+    "output": "live(): 200 always (cheap); ready(): 200 iff deps ok\n// K8s: unready stops traffic, live failure restarts",
     "quiz": {
       "answer": 0,
       "explain": "Separating them avoids restart loops during outages.",
@@ -358,6 +370,7 @@
     "id": "sd-scale-017",
     "language": "rust",
     "level": 2,
+    "output": "1% -> 10% -> 50% while deltas stay green\nerror_delta > limit -> rollback() at once",
     "quiz": {
       "answer": 1,
       "explain": "Gradual exposure with auto rollback limits blast radius.",
@@ -380,6 +393,7 @@
     "id": "sd-scale-018",
     "language": "rust",
     "level": 2,
+    "output": "cohort in -> rank_v2; rest -> rank_v1\n// kill switch flips everyone back instantly",
     "quiz": {
       "answer": 2,
       "explain": "Cohort targeting plus expiry keeps flags safe and clean.",
@@ -424,6 +438,7 @@
     "id": "sd-scale-020",
     "language": "rust",
     "level": 3,
+    "output": "slow/error traces kept; 1% baseline kept\n// tails stay visible; storage stays bounded",
     "quiz": {
       "answer": 3,
       "explain": "Adaptive sampling keeps signal while bounding storage cost.",
@@ -446,6 +461,7 @@
     "id": "sd-scale-021",
     "language": "rust",
     "level": 3,
+    "output": "fast burn (14x/1h) -> page; slow burn (1x/3d) -> ticket\n// budget-aware; short spikes alone stay quiet",
     "quiz": {
       "answer": 1,
       "explain": "Dual windows separate urgent outages from slow leaks.",

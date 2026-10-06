@@ -6,6 +6,7 @@
     "id": "sd-rust-001",
     "language": "rust",
     "level": 2,
+    "output": "routes: GET /posts/:id -> get_post; POST /posts -> create_post\n// pool shared via state; server listening",
     "quiz": {
       "answer": 0,
       "explain": "Routes map method+path to handlers with typed extractors.",
@@ -28,6 +29,7 @@
     "id": "sd-rust-002",
     "language": "rust",
     "level": 2,
+    "output": "stack: TraceLayer (outer) -> Timeout 200ms (inner)\n// every request traced; slow handlers cut at 200ms",
     "quiz": {
       "answer": 1,
       "explain": "Layers wrap service to add cross-cutting behavior.",
@@ -50,6 +52,7 @@
     "id": "sd-rust-003",
     "language": "rust",
     "level": 2,
+    "output": "pool of 20 conns ready; checkout per request\n// over max -> wait/timeout (saturation signal)",
     "quiz": {
       "answer": 2,
       "explain": "Bounded pools cap concurrent DB load.",
@@ -72,6 +75,7 @@
     "id": "sd-rust-004",
     "language": "rust",
     "level": 2,
+    "output": "Ok(row) with SQL checked at compile time\n// needs DATABASE_URL at build + live Postgres at run",
     "quiz": {
       "answer": 0,
       "explain": "Macros validate SQL against live schema.",
@@ -94,6 +98,7 @@
     "id": "sd-rust-005",
     "language": "rust",
     "level": 2,
+    "output": "hit: Some(value) from Redis, no DB trip\nmiss: sqlx row -> SETEX; singleflight coalesces stampedes",
     "quiz": {
       "answer": 3,
       "explain": "Read-through with TTL shields the database.",
@@ -116,6 +121,7 @@
     "id": "sd-rust-006",
     "language": "rust",
     "level": 2,
+    "output": "one span per request with trace_id, into DB + Kafka calls\n// joined in Jaeger; no PII inside spans",
     "quiz": {
       "answer": 1,
       "explain": "Spans link logs across service boundaries.",
@@ -138,6 +144,7 @@
     "id": "sd-rust-007",
     "language": "rust",
     "level": 2,
+    "output": "SIGTERM -> stop accept, drain ~30s in-flight\n// then pools close; deploys drop nothing",
     "quiz": {
       "answer": 2,
       "explain": "Draining lets in-flight requests finish cleanly.",
@@ -160,6 +167,7 @@
     "id": "sd-rust-008",
     "language": "rust",
     "level": 2,
+    "output": "Cfg { db_url } loaded; APP__DB_URL beats file value\n// missing secret -> fail fast at boot",
     "quiz": {
       "answer": 0,
       "explain": "Layered files plus env allow per-env overrides.",
@@ -182,6 +190,7 @@
     "id": "sd-rust-009",
     "language": "rust",
     "level": 2,
+    "output": "image: ~<50MB (binary only, nonroot, :8080)\n// RUST_LOG set; cargo-chef caches the build layer",
     "quiz": {
       "answer": 3,
       "explain": "Build stage compiles; runtime stage ships only binary.",
@@ -204,6 +213,7 @@
     "id": "sd-rust-010",
     "language": "rust",
     "level": 2,
+    "output": "pool open -> 200 OK; degraded -> 503 SERVICE_UNAVAILABLE\n// /healthz = live, /readyz gates K8s traffic",
     "quiz": {
       "answer": 1,
       "explain": "Readiness gates traffic; liveness gates restarts.",
@@ -226,6 +236,7 @@
     "id": "sd-rust-011",
     "language": "rust",
     "level": 2,
+    "output": "Err(NotFound) -> 404 response\n// 400 validation, 503 downstream; logged with trace id",
     "quiz": {
       "answer": 2,
       "explain": "Typed errors map cleanly to status codes.",
@@ -248,6 +259,7 @@
     "id": "sd-rust-012",
     "language": "rust",
     "level": 2,
+    "output": "valid bearer -> claims inserted, handler runs\ninvalid/expired -> 401 before the handler",
     "quiz": {
       "answer": 0,
       "explain": "Middleware verifies signature then handlers authorize.",
@@ -270,6 +282,7 @@
     "id": "sd-rust-013",
     "language": "rust",
     "level": 2,
+    "output": "res.status() == 200 (oneshot, no socket)\n// same tower stack as prod; containers for DB tests",
     "quiz": {
       "answer": 1,
       "explain": "In-memory service calls test stack without sockets.",
@@ -292,6 +305,7 @@
     "id": "sd-rust-014",
     "language": "rust",
     "level": 2,
+    "output": "first 10/s per peer pass; excess -> 429 + Retry-After\n// health checks exempt from the quota",
     "quiz": {
       "answer": 3,
       "explain": "Edge limiting shields expensive handlers.",
@@ -314,6 +328,7 @@
     "id": "sd-rust-015",
     "language": "rust",
     "level": 2,
+    "output": "cargo test ok -> image app:$SHA -> canary 5%\n// error-budget burn -> automatic rollback",
     "quiz": {
       "answer": 0,
       "explain": "Progressive rollout plus migration safety enables noon deploys.",

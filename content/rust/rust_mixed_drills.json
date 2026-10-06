@@ -6,6 +6,7 @@
     "id": "rust-drill-001",
     "language": "rust",
     "level": 1,
+    "output": "error[E0382]: borrow of moved value: `s1`\n// uncommenting println!(\"{s1}\") fails; clone to keep both",
     "quiz": {
       "answer": 2,
       "explain": "Assignment moves heap ownership so s1 is invalid after.",
@@ -28,6 +29,7 @@
     "id": "rust-drill-002",
     "language": "rust",
     "level": 1,
+    "output": "[1, 2]\n",
     "quiz": {
       "answer": 1,
       "explain": "Mutable and immutable borrows cannot overlap while both are live.",
@@ -50,6 +52,7 @@
     "id": "rust-drill-003",
     "language": "rust",
     "level": 1,
+    "output": "empty\n",
     "quiz": {
       "answer": 3,
       "explain": "match requires exhaustive arms so missing cases fail to compile.",
@@ -72,6 +75,7 @@
     "id": "rust-drill-004",
     "language": "rust",
     "level": 1,
+    "output": "// passes: b == Some(20)",
     "quiz": {
       "answer": 0,
       "explain": "map applies only on Some and passes None through.",
@@ -94,6 +98,7 @@
     "id": "rust-drill-005",
     "language": "rust",
     "level": 2,
+    "output": "// evaluates to Some(42); and_then keeps it flat (map would nest)",
     "quiz": {
       "answer": 2,
       "explain": "and_then flattens while map would nest another Option layer.",
@@ -116,6 +121,7 @@
     "id": "rust-drill-006",
     "language": "rust",
     "level": 1,
+    "output": "// s == \"anon\"; closure runs lazily, only on None",
     "quiz": {
       "answer": 1,
       "explain": "unwrap_or evaluates eagerly while unwrap_or_else is lazy on None.",
@@ -138,6 +144,7 @@
     "id": "rust-drill-007",
     "language": "rust",
     "level": 2,
+    "output": "// ok == Ok(4); Err half untouched (use map_err for that side)",
     "quiz": {
       "answer": 0,
       "explain": "map touches Ok values while map_err touches Err values.",
@@ -160,6 +167,7 @@
     "id": "rust-drill-008",
     "language": "rust",
     "level": 2,
+    "output": "// compiles: sum(\"1\", \"2\") == Ok(3); ? returns Err early",
     "quiz": {
       "answer": 3,
       "explain": "? unwraps Ok or returns Err early with From conversion.",
@@ -182,6 +190,7 @@
     "id": "rust-drill-009",
     "language": "rust",
     "level": 1,
+    "output": "// passes: get(9) == None (indexing v[9] would panic)",
     "quiz": {
       "answer": 2,
       "explain": "Indexing panics out of bounds while get returns None safely.",
@@ -204,6 +213,7 @@
     "id": "rust-drill-010",
     "language": "rust",
     "level": 2,
+    "output": "// m == {\"a\": 1}: entry combined lookup + insert",
     "quiz": {
       "answer": 1,
       "explain": "entry performs one lookup for insert-or-update logic.",
@@ -226,6 +236,7 @@
     "id": "rust-drill-011",
     "language": "rust",
     "level": 2,
+    "output": "error[E0505]: cannot move out of `v` because it is borrowed\n// fix: call read() (or drop it) before the move closure takes v",
     "quiz": {
       "answer": 0,
       "explain": "Closures auto-pick shared, mutable, or owned captures by usage.",
@@ -248,6 +259,7 @@
     "id": "rust-drill-012",
     "language": "rust",
     "level": 2,
+    "output": "3\n",
     "quiz": {
       "answer": 2,
       "explain": "Spawned threads need owned data because borrows might outlive the parent.",
@@ -270,6 +282,7 @@
     "id": "rust-drill-013",
     "language": "rust",
     "level": 1,
+    "output": "// out == [2, 4, 6]; nothing ran until collect()",
     "quiz": {
       "answer": 1,
       "explain": "Adapters stay lazy until a consumer like collect runs them.",
@@ -292,6 +305,7 @@
     "id": "rust-drill-014",
     "language": "rust",
     "level": 2,
+    "output": "// passes: upgrade() == Some(clone of a) while Rc is alive",
     "quiz": {
       "answer": 0,
       "explain": "Weak does not bump the strong count so cycles can deallocate.",
@@ -314,6 +328,7 @@
     "id": "rust-drill-015",
     "language": "rust",
     "level": 2,
+    "output": "// compiles: Arc moves into the thread; handle unjoined, result discarded",
     "quiz": {
       "answer": 3,
       "explain": "Threads require static owned data so borrows cannot dangle.",
@@ -336,6 +351,7 @@
     "id": "rust-drill-016",
     "language": "rust",
     "level": 3,
+    "output": "// inside async: inner.await; block_on only from sync main",
     "quiz": {
       "answer": 1,
       "explain": "Nested block_on parks the executor thread that must drive the inner future.",
@@ -358,6 +374,7 @@
     "id": "rust-drill-017",
     "language": "rust",
     "level": 3,
+    "output": "// passes: double!(21) == 42 (hygienic temp, no clash)",
     "quiz": {
       "answer": 2,
       "explain": "Hygiene scopes macro locals so they cannot capture caller bindings.",
@@ -380,6 +397,7 @@
     "id": "rust-drill-018",
     "language": "rust",
     "level": 2,
+    "output": "pos 5\n",
     "quiz": {
       "answer": 0,
       "explain": "Guards test values without changing move semantics so borrow explicitly.",
@@ -402,6 +420,7 @@
     "id": "rust-drill-019",
     "language": "rust",
     "level": 1,
+    "output": "// v == w == [1, 2, 3]; turbofish pins the container type",
     "quiz": {
       "answer": 1,
       "explain": "collect is generic over containers so the target must be known.",
@@ -424,6 +443,7 @@
     "id": "rust-drill-020",
     "language": "rust",
     "level": 2,
+    "output": "// a=2, b=1: one entry lookup per word",
     "quiz": {
       "answer": 0,
       "explain": "entry reuses one lookup for get-or-insert plus mutation.",
@@ -446,6 +466,7 @@
     "id": "rust-drill-021",
     "language": "rust",
     "level": 2,
+    "output": "// compiles: unbounded send succeeds; recv must still run to observe 1",
     "quiz": {
       "answer": 2,
       "explain": "Symmetric blocking sends can wait on each other forever.",
@@ -468,6 +489,7 @@
     "id": "rust-drill-022",
     "language": "rust",
     "level": 2,
+    "output": "// compiles: Arc<i32> is Send; the Rc version would be rejected",
     "quiz": {
       "answer": 1,
       "explain": "Rc lacks atomic counts so only Arc may cross threads.",

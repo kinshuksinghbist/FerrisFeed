@@ -28,6 +28,7 @@
     "id": "sd-adv-002",
     "language": "rust",
     "level": 3,
+    "output": "book ok -> pay fails -> cancel(book) runs\n// net effect: nothing booked, nothing charged",
     "quiz": {
       "answer": 2,
       "explain": "Compensations undo partial progress without locks.",
@@ -72,6 +73,7 @@
     "id": "sd-adv-004",
     "language": "rust",
     "level": 3,
+    "output": "state[node] += 1; value = sum(max per node)\n// replicas converge with zero coordination",
     "quiz": {
       "answer": 3,
       "explain": "Monotonic merges commute so order does not matter.",
@@ -94,6 +96,7 @@
     "id": "sd-adv-005",
     "language": "rust",
     "level": 3,
+    "output": "first sight: save(msg.id, result); dupe: stored result replayed\ncommit offset -> retries invisible (effectively-once)",
     "quiz": {
       "answer": 1,
       "explain": "Dedupe plus atomic commit makes retries invisible.",
@@ -116,6 +119,7 @@
     "id": "sd-adv-006",
     "language": "rust",
     "level": 3,
+    "output": "channel(100) open; try_send ok while len < 100\n// full -> Err(Shed): shed load + answer 429 + Retry-After",
     "quiz": {
       "answer": 0,
       "explain": "Bounded buffers plus shed protect tail latency.",
@@ -138,6 +142,7 @@
     "id": "sd-adv-007",
     "language": "rust",
     "level": 3,
+    "output": "normal author: N timeline appends (fast reads)\ncelebrity: no fan-out; followers pull at request time",
     "quiz": {
       "answer": 2,
       "explain": "Hybrid avoids million-write storms for famous accounts.",
@@ -160,6 +165,7 @@
     "id": "sd-adv-008",
     "language": "rust",
     "level": 3,
+    "output": "e.g. id = (ts << 22) | (node << 12) | seq\n// sortable + unique per node; no wall-clock trust",
     "quiz": {
       "answer": 1,
       "explain": "Node-scoped sequences keep IDs ordered and unique.",
@@ -182,6 +188,7 @@
     "id": "sd-adv-009",
     "language": "rust",
     "level": 3,
+    "output": "OK (leader=n1, TTL 10s) iff no live lease\n// holder refreshes every 3s; fencing token++ blocks zombies",
     "quiz": {
       "answer": 0,
       "explain": "Expiry plus fencing prevents stale owner writes.",
@@ -204,6 +211,7 @@
     "id": "sd-adv-010",
     "language": "rust",
     "level": 3,
+    "output": "writes spread over hot#0..hot#9\nread aggregates 10 shards -> true count",
     "quiz": {
       "answer": 3,
       "explain": "Salting fans writes across physical partitions.",
@@ -226,6 +234,7 @@
     "id": "sd-adv-011",
     "language": "rust",
     "level": 3,
+    "output": "retries <= 5: backoff; else dlq.send + ack\n// partition keeps moving; replay DLQ after the fix",
     "quiz": {
       "answer": 1,
       "explain": "DLQ isolates bad records for later replay.",
@@ -248,6 +257,7 @@
     "id": "sd-adv-012",
     "language": "sql",
     "level": 3,
+    "output": "ALTER TABLE // posts.slug added NULL\n// old + new code both run; backfill, then contract later",
     "quiz": {
       "answer": 2,
       "explain": "Backward-compatible steps keep mixed versions working.",
