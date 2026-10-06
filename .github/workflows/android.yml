@@ -22,12 +22,12 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Install Android SDK packages (API 34 to match compileSdk)
+      - name: Install Android SDK packages (API 36 to match compileSdk)
         run: |
           sdkmanager --sdk_root="${ANDROID_SDK_ROOT:-$ANDROID_HOME}" \
             "platform-tools" \
-            "platforms;android-34" \
-            "build-tools;34.0.0"
+            "platforms;android-36" \
+            "build-tools;36.0.0"
 
       - name: Gradle wrapper validation
         continue-on-error: true

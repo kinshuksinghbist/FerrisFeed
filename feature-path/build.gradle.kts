@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.ferrisfeed.feature.path"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26

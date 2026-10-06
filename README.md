@@ -8,7 +8,7 @@ powered by a shared Rust core.
 
 - Android Studio Ladybug (2024.2.1) or newer
 - JDK 17 (bundled with Studio is fine)
-- Android SDK 34, NDK not required for the Android scaffold
+- Android SDK 36 (compileSdk; targetSdk stays 34, minSdk 26), NDK not required for the Android scaffold
 - Rust toolchain only if you touch `rust-core/` (see that dir)
 
 ## Open in Android Studio
