@@ -327,6 +327,7 @@ private fun Reel.toQuizUi(): QuizUiModel = when (quiz.type) {
 }
 
 // Keep SheetValue import referenced for predictive-back customization hook.
+@OptIn(ExperimentalMaterial3Api::class)
 @Suppress("unused")
 private fun isSheetExpandedHack(v: SheetValue): Boolean = v == SheetValue.Expanded
 
