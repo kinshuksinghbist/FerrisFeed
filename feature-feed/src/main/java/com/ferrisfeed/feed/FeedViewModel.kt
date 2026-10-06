@@ -39,6 +39,21 @@ data class ImpressionEvent(
     val skipped: Boolean,
 )
 
+/** Split of [FeedUiState] carried by the first inner combine (4-arity). */
+private data class FeedPartialMain(
+    val reels: List<Reel>,
+    val currentIndex: Int,
+    val isLoading: Boolean,
+    val savedIds: Set<String>,
+)
+
+/** Split of [FeedUiState] carried by the second inner combine (3-arity). */
+private data class FeedPartialOverlays(
+    val likedIds: Set<String>,
+    val peekReelId: String?,
+    val deepDiveReelId: String?,
+)
+
 /**
  * Feed view model.
  *
@@ -63,17 +78,34 @@ class FeedViewModel(
     private val queue: StateFlow<List<Reel>> = repository.observeQueue()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    // NB: nested 4+3+2 combines instead of one 7-flow combine. The 7-arity
+    // heterogeneous overload does not resolve on our coroutines version, so
+    // keep every combine at an arity that has existed forever.
     val uiState: StateFlow<FeedUiState> = combine(
-        queue, index, loading, savedIds, likedIds, peekId, deepDiveId,
-    ) { q, i, load, s, l, p, d ->
+        combine(queue, index, loading, savedIds) { q, i, load, s ->
+            FeedPartialMain(
+                reels = q,
+                currentIndex = i.coerceIn(0, max(0, q.size - 1)),
+                isLoading = load,
+                savedIds = s,
+            )
+        },
+        combine(likedIds, peekId, deepDiveId) { l, p, d ->
+            FeedPartialOverlays(
+                likedIds = l,
+                peekReelId = p,
+                deepDiveReelId = d,
+            )
+        },
+    ) { main, overlays ->
         FeedUiState(
-            reels = q,
-            currentIndex = i.coerceIn(0, max(0, q.size - 1)),
-            isLoading = load,
-            savedIds = s,
-            likedIds = l,
-            peekReelId = p,
-            deepDiveReelId = d,
+            reels = main.reels,
+            currentIndex = main.currentIndex,
+            isLoading = main.isLoading,
+            savedIds = main.savedIds,
+            likedIds = overlays.likedIds,
+            peekReelId = overlays.peekReelId,
+            deepDiveReelId = overlays.deepDiveReelId,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, FeedUiState())
 

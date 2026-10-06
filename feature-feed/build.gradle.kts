@@ -49,6 +49,8 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.datastore.preferences)
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
