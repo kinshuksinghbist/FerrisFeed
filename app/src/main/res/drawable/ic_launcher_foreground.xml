@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Ferris orange crab-shell mark on transparent foreground layer.
+         minSdk 26, so adaptive icons cover every supported device. -->
+    <path
+        android:fillColor="#FF6B35"
+        android:pathData="M54,18C34,18 20,34 20,56C20,78 34,92 54,92C74,92 88,78 88,56C88,34 74,18 54,18Z" />
+    <path
+        android:fillColor="#0B0E14"
+        android:pathData="M44,44L64,44L64,50L50,50L50,66L44,66L44,44Z M58,58L72,58L72,64L58,64L58,58Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.9"
+        android:pathData="M38,72L70,72L70,76L38,76L38,72Z" />
+</vector>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launcher theme only: the real theme is Material 3 Expressive in
+         Compose (core-ui Theme.kt). This just covers the window before
+         Compose draws first frame. Framework parent keeps us free of the
+         material-components dependency. -->
+    <style name="Theme.FerrisFeed" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ferris_splash_bg</item>
+        <item name="android:statusBarColor">@color/ferris_splash_bg</item>
+        <item name="android:navigationBarColor">@color/ferris_splash_bg</item>
+    </style>
+</resources>
