@@ -60,5 +60,23 @@
       `defaultPathNodes` (grep-clean; only KDoc mentions remain).
 - [x] 18. Previews refreshed (unified card, difficulty labels, path with search section);
       `feed-ux.md` + `offline.md` rewritten for Spec v2; learnings §18–§22 added.
-- [ ] 19. CI green + APK smoke check (asset count + first-launch seed + topic feed) on the
-      Spec v2 commits.
+- [x] 19. CI green + APK smoke check. Run `37459559073` on `main`: `assembleDebug` + all four
+      `testDebugUnitTest` tasks succeeded. APK downloaded and listed (`unzip -l`): 22 curriculum
+      assets (14 rust + 8 system-design), **0 wasm**, no `schema.json`. 21 MB, inside the 25 MB
+      budget.
+- [x] 20. Seed path checked against the shipped assets: `CurriculumSeeder`'s two track
+      directories exactly match the two asset directories present, and the 22 files hold 376
+      reels (498 total minus the 116 dormant WASM reels). 19 topics result, so the Path screen
+      has real nodes with real counts.
+
+## Limitations / next session
+
+- **Runtime smoke was not executed**: there is no JDK, Android SDK, or emulator in this
+  workspace, so "first-launch seed" and "topic feed" are verified statically (asset listing +
+  seeder input matching + compile), not by launching the APK. Run the app once on a device to
+  confirm the seed count and tap through a topic node.
+- Roadmap node titles come from the seeded topic key, which is derived from the content file
+  name, so they read coarse (`Extra`, `Drills`, `Beginner`). Finer nodes need a `topic` field in
+  the reel schema + a richer filename/label mapping — out of scope for this pass.
+- `targetSdk` is still 34 (Play expects 35+ for new listings) and the widget receiver + refresh
+  worker are still unregistered — both pre-existing, tracked in `docs/play-listing.md`.
