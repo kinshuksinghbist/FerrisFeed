@@ -83,8 +83,21 @@ android {
         // This syncs it into generated assets every build so the data
         // module seeder can populate Room on first launch. Do NOT check
         // generated files in and do NOT hand-copy JSON into src main assets.
-        getByName("main").assets.srcDir(syncCurriculumAssets)
+        getByName("main").assets.srcDir(
+            layout.buildDirectory.dir("generated/curriculum")
+        )
     }
+}
+
+/**
+ * AGP does not infer a task dependency from assets.srcDir(provider), so the
+ * merge task must depend on the sync explicitly. Without this,
+ * mergeDebugAssets silently runs first and the APK ships zero curriculum
+ * files (seen 2026-10-06: 0 assets in a green-build APK). Covers all
+ * variants, including instrumented-test assets tasks.
+ */
+tasks.matching { it.name.matches(Regex("merge.*Assets")) }.configureEach {
+    dependsOn(syncCurriculumAssets)
 }
 
 room {

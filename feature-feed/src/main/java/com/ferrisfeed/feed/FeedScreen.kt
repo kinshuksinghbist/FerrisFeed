@@ -1,6 +1,7 @@
 package com.ferrisfeed.feed
 
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +14,7 @@ import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -71,6 +73,14 @@ fun FeedScreen(
                 CircularProgressIndicator()
             }
         }
+        return
+    }
+
+    // Loaded but the database yielded nothing (seeding failed or was wiped).
+    // A dedicated empty state beats a blank pager: it names the cause and
+    // offers a retry instead of stranding the user.
+    if (state.reels.isEmpty()) {
+        EmptyFeed(onRetry = { viewModel.retryLoad() }, modifier = modifier)
         return
     }
 
@@ -336,6 +346,33 @@ private fun Reel.toQuizUi(): QuizUiModel = when (quiz.type) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Suppress("unused")
 private fun isSheetExpandedHack(v: SheetValue): Boolean = v == SheetValue.Expanded
+
+/** Shown when loading finished but Room returned zero reels. */
+@Composable
+private fun EmptyFeed(onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = "No reels yet",
+            style = MaterialTheme.typography.titleLarge,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "The curriculum is still seeding into the local database, " +
+                "or seeding failed. Wait a moment and retry.",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text("Retry")
+        }
+    }
+}
 
 @Preview(name = "Feed explainer", showBackground = true, backgroundColor = 0xFF0B0E14)
 @Composable

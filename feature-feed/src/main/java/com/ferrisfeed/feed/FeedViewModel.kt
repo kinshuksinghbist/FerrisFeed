@@ -237,6 +237,20 @@ class FeedViewModel @Inject constructor(
         onSave(reelId, !savedIds.value.contains(reelId))
     }
 
+    /** Re-attempt a load after an empty feed (see EmptyFeed retry). */
+    fun retryLoad() {
+        viewModelScope.launch {
+            loading.value = true
+            val all = withTimeoutOrNull(30_000) {
+                repository.observeAllReels().first { it.isNotEmpty() }
+            }.orEmpty()
+            if (all.isNotEmpty()) {
+                repository.refreshQueue(buildQueue(all, clock()))
+            }
+            loading.value = false
+        }
+    }
+
     /** Jump to a reel by id (deep links, search results). No-op if unknown. */
     fun focusReel(id: String) {
         viewModelScope.launch {
