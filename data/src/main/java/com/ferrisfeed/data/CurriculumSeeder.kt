@@ -10,8 +10,9 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * First-launch seeder: populates Room from the validated curriculum JSON
- * bundled under `assets/curriculum/` (synced from repo-root `content/` by
- * the `:app:syncCurriculumAssets` task — never hand-copy files there).
+ * bundled in APK assets (synced from repo-root `content/` by the
+ * `:app:syncCurriculumAssets` task into generated assets, merged at the APK
+ * root as `rust/`, `wasm/`, `system-design/` — never hand-copy files there).
  *
  * This replaces a prepackaged SQLite asset (`createFromAsset`), which would
  * crash on every launch until a release pipeline generates a Room-valid DB
@@ -31,7 +32,7 @@ class CurriculumSeeder(
         var total = 0
         for ((dir, track) in TRACK_DIRS) {
             val files = runCatching {
-                context.assets.list("curriculum/$dir").orEmpty()
+                context.assets.list(dir).orEmpty()
             }.getOrDefault(emptyArray())
             for (file in files.filter { it.endsWith(".json") }) {
                 total += seedFile(dir, track, file)
@@ -45,7 +46,7 @@ class CurriculumSeeder(
         val topic = topicForFile(file)
         return runCatching {
             val raw = context.assets
-                .open("curriculum/$dir/$file")
+                .open("$dir/$file")
                 .bufferedReader()
                 .use { it.readText() }
             val rows = json.parseToJsonElement(raw).jsonArray
