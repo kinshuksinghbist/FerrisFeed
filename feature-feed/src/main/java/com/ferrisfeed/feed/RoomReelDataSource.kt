@@ -135,7 +135,10 @@ class RoomReelDataSource(
             val obj = json.parseToJsonElement(raw).jsonObject
             fun text(vararg keys: String): String? =
                 keys.firstNotNullOfOrNull { key ->
-                    obj[key]?.jsonPrimitive?.contentOrNull()
+                    // NB: JsonPrimitive.contentOrNull does not exist on our
+                    // kotlinx.serialization; content throws on null/non-primitives,
+                    // so guard per key instead of failing the whole parse.
+                    runCatching { obj[key]?.jsonPrimitive?.content }.getOrNull()
                 }
             fun int(vararg keys: String): Int? =
                 keys.firstNotNullOfOrNull { key ->
