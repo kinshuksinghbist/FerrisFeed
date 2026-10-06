@@ -112,7 +112,7 @@ fun SearchScreen(
                 onClick = { track = null; emit() },
                 label = { Text("All tracks") },
             )
-            listOf(Tracks.RUST, Tracks.WASM, Tracks.SYSTEM_DESIGN).forEach { t ->
+            listOf(Tracks.RUST, Tracks.SYSTEM_DESIGN).forEach { t ->
                 FilterChip(
                     selected = track == t,
                     onClick = { track = if (track == t) null else t; emit() },
@@ -191,7 +191,7 @@ private fun SearchRow(
 
 private fun previewResults() = listOf(
     SearchResult("rust-own-014", Tracks.RUST, 1, "Why does this function not compile?", "Move by default.", true, true),
-    SearchResult("wasm-bind-003", Tracks.WASM, 1, "wasm-bindgen hello in 60 seconds", "Export with #[wasm_bindgen].", true, true),
+    SearchResult("rust-own-014", Tracks.RUST, 1, "Why does this function not compile?", "Move by default; borrow to keep.", true, true),
     SearchResult("sys-cache-007", Tracks.SYSTEM_DESIGN, 2, "Cache-aside done right", "Invalidate on write.", false, true),
 )
 

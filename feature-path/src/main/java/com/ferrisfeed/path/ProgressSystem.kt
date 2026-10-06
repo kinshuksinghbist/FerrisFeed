@@ -104,12 +104,6 @@ object ProgressSystem {
             unlocks = { s -> (s.mastery["ownership"] ?: 0f) >= 0.8f && (s.mastery["borrowing"] ?: 0f) >= 0.8f },
         ),
         Achievement(
-            id = "wasm_summoner",
-            title = "WASM Summoner",
-            description = "Complete your first wasm-bindgen reel quiz correctly.",
-            unlocks = { s -> s.wasmQuizzesCorrect >= 1 },
-        ),
-        Achievement(
             id = "p99_slayer",
             title = "P99 Slayer",
             description = "Reach 70% mastery in Rate Limiter + answer its quiz correctly 3 times.",
@@ -162,7 +156,6 @@ data class Achievement(
 data class AchievementStats(
     val mastery: Map<String, Float> = emptyMap(),
     val streakDays: Int = 0,
-    val wasmQuizzesCorrect: Int = 0,
     val rateLimiterCorrect: Int = 0,
     val dailyMixesCompleted: Int = 0,
     val unlocked: Set<Achievement> = emptySet(),

@@ -13,7 +13,7 @@ import androidx.room.PrimaryKey
  * takeaway, trap, quiz JSON. Extra columns support SRS scheduling,
  * feed ordering, and offline search without joining other tables.
  *
- * track: "rust" | "wasm" | "system-design"
+ * track: "rust" | "system-design" ("wasm" content exists in repo but is dormant)
  * level: 1 = beginner, 2 = intermediate, 3 = advanced
  */
 @Entity(tableName = "reels")
@@ -63,7 +63,6 @@ data class ReelEntity(
 ) {
     companion object {
         const val TRACK_RUST = "rust"
-        const val TRACK_WASM = "wasm"
         const val TRACK_SYSTEM_DESIGN = "system-design"
 
         fun tagsOf(csv: String): List<String> =

@@ -9,7 +9,7 @@ import kotlin.math.min
  *
  * The canonical chain for the backend-rust spine is:
  * Ownership -> Lifetimes -> Async -> Axum -> RateLimiter.
- * The full graph ([TOPIC_GRAPH]) adds parallel WASM and system-design
+ * The full graph ([TOPIC_GRAPH]) adds the parallel system-design branch
  * branches; [unlockedTopics] gates a topic until every prerequisite has
  * mastery >= [MASTERY_UNLOCK_THRESHOLD].
  *
@@ -157,12 +157,6 @@ class LearningPathEngine {
             TopicNode("async", "rust", 2, listOf("lifetimes", "smart-pointers"), spineOrder = 9),
             TopicNode("axum", "rust", 2, listOf("async"), spineOrder = 10),
             TopicNode("rate-limiter", "system-design", 2, listOf("axum"), spineOrder = 11),
-            // WASM branch (needs ownership + toolchain only).
-            TopicNode("wasm-basics", "wasm", 1, listOf("ownership"), spineOrder = 50),
-            TopicNode("wasm-bindgen", "wasm", 2, listOf("wasm-basics"), spineOrder = 51),
-            TopicNode("wasi", "wasm", 2, listOf("wasm-bindgen"), spineOrder = 52),
-            TopicNode("wasm-bundling", "wasm", 3, listOf("wasi"), spineOrder = 53),
-            TopicNode("yew-leptos", "wasm", 3, listOf("wasm-bundling"), spineOrder = 54),
             // System-design branch (needs axum for the Rust-flavored reels).
             TopicNode("http-caching", "system-design", 1, listOf("toolchain"), spineOrder = 60),
             TopicNode("hashing-cap", "system-design", 2, listOf("http-caching"), spineOrder = 61),

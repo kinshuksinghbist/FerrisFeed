@@ -21,15 +21,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
-/** Canonical track identifiers used across feed, path, and search. */
+/** Canonical track identifiers used across feed, path, and search.
+ * WASM content is dormant in repo; do not re-add without a spec change. */
 object Tracks {
     const val RUST = "rust"
-    const val WASM = "wasm"
     const val SYSTEM_DESIGN = "system-design"
 
     fun label(track: String): String = when (track) {
         RUST -> "Rust"
-        WASM -> "WASM"
         SYSTEM_DESIGN -> "SysDesign"
         else -> track
     }
@@ -40,7 +39,6 @@ fun trackColor(track: String): Color {
     val tracks = LocalTrackColors.current
     return when (track) {
         Tracks.RUST -> tracks.rust
-        Tracks.WASM -> tracks.wasm
         Tracks.SYSTEM_DESIGN -> tracks.systemDesign
         else -> MaterialTheme.colorScheme.primary
     }
@@ -109,8 +107,6 @@ private fun TrackPillPreview() {
     FerrisFeedTheme(darkTheme = true) {
         Row(Modifier.padding(16.dp)) {
             TrackPill(Tracks.RUST)
-            Spacer(Modifier.width(8.dp))
-            TrackPill(Tracks.WASM)
             Spacer(Modifier.width(8.dp))
             TrackPill(Tracks.SYSTEM_DESIGN)
         }

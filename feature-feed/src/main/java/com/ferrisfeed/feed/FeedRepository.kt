@@ -5,10 +5,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 
-/** Track mirrors core-ui Tracks + content schema tracks. */
+/** Track mirrors content schema tracks. WASM content is dormant in repo. */
 enum class Track(val id: String) {
     RUST("rust"),
-    WASM("wasm"),
     SYSTEM_DESIGN("system-design");
 
     companion object {

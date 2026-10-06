@@ -32,9 +32,8 @@ class RoomReelDataSource(
 
     override fun observeReels(): Flow<List<Reel>> = combine(
         dao.observeByTrack(ReelEntity.TRACK_RUST),
-        dao.observeByTrack(ReelEntity.TRACK_WASM),
         dao.observeByTrack(ReelEntity.TRACK_SYSTEM_DESIGN),
-    ) { rust, wasm, sd -> (rust + wasm + sd).map { it.toFeedReel() } }
+    ) { rust, sd -> (rust + sd).map { it.toFeedReel() } }
 
     override suspend fun allReels(): List<Reel> = observeReels().first()
 

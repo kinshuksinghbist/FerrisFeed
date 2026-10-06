@@ -68,7 +68,7 @@ class SearchRepository(private val dao: ReelDao) {
 
 /** Structured filters shown in the search UI. Null/empty = no constraint. */
 data class SearchFilters(
-    /** "rust" | "wasm" | "system-design" | null (all). */
+    /** "rust" | "system-design" | null (all). WASM is dormant. */
     val track: String? = null,
     val minLevel: Int = 1,
     val maxLevel: Int = 3,

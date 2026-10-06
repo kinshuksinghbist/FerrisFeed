@@ -1,5 +1,8 @@
 # FerrisFeed — Tech Stack
 
+> Spec v2: the app ships Rust + System Design only. WASM content stays
+> dormant in `content/wasm/` (not seeded, rendered, or tinted).
+
 Locked decisions for the MVP scaffold. Reasons are inline so future agents
 do not relitigate them without new evidence.
 

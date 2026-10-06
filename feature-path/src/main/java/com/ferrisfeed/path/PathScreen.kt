@@ -52,8 +52,6 @@ fun defaultPathNodes(): List<PathNode> = listOf(
     PathNode("async", "Async & Tokio", Tracks.RUST, 2, 0.18f, 35, requires = listOf("lifetimes")),
     PathNode("axum", "Axum Services", Tracks.SYSTEM_DESIGN, 3, 0.05f, 30, requires = listOf("async")),
     PathNode("rate-limit", "Rate Limiter Blueprint", Tracks.SYSTEM_DESIGN, 3, 0f, 8, requires = listOf("axum")),
-    PathNode("wasm-bindgen", "wasm-bindgen Hello", Tracks.WASM, 1, 0.71f, 25),
-    PathNode("wasm-dom", "DOM + Canvas", Tracks.WASM, 2, 0.22f, 30, requires = listOf("wasm-bindgen")),
     PathNode("hashing", "Consistent Hashing", Tracks.SYSTEM_DESIGN, 2, 0.48f, 12),
     PathNode("raft", "Raft in 60s", Tracks.SYSTEM_DESIGN, 3, 0.1f, 10, requires = listOf("hashing")),
 )

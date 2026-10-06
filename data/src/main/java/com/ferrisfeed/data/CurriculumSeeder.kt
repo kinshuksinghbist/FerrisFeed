@@ -12,7 +12,8 @@ import kotlinx.serialization.json.jsonPrimitive
  * First-launch seeder: populates Room from the validated curriculum JSON
  * bundled in APK assets (synced from repo-root `content/` by the
  * `:app:syncCurriculumAssets` task into generated assets, merged at the APK
- * root as `rust/`, `wasm/`, `system-design/` — never hand-copy files there).
+ * root as `rust/` and `system-design/` — never hand-copy files there).
+ * WASM content stays dormant in the repo and is deliberately NOT seeded.
  *
  * This replaces a prepackaged SQLite asset (`createFromAsset`), which would
  * crash on every launch until a release pipeline generates a Room-valid DB
@@ -94,7 +95,6 @@ class CurriculumSeeder(
 
         private val TRACK_DIRS = listOf(
             "rust" to ReelEntity.TRACK_RUST,
-            "wasm" to ReelEntity.TRACK_WASM,
             "system-design" to ReelEntity.TRACK_SYSTEM_DESIGN,
         )
 

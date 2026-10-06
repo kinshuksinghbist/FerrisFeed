@@ -1,8 +1,11 @@
 # FerrisFeed — Doomscroll, but you get hired.
 
-Offline-first Android feed of 60-second Rust / WASM / System Design reels
+Offline-first Android feed of 60-second Rust / System Design reels
 with quizzes, SRS, and streaks. Kotlin + Compose + Material 3 Expressive,
 powered by a shared Rust core.
+
+> WASM track dormant: `content/wasm/` stays in repo but is not seeded,
+> rendered, or tinted (Spec v2, TODO P0).
 
 ## Requirements
 
