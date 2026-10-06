@@ -31,8 +31,9 @@ do not relitigate them without new evidence.
 
 ## Libraries (see `gradle/libs.versions.toml`)
 
-- **Compose BOM 2024.10.01** — single source of truth for Compose +
-  Material3 versions. Prevents drift across feature modules.
+- **Compose BOM 2025.04.01** — single source of truth for Compose +
+  Material3 versions. Prevents drift across feature modules. Must stay on a
+  BOM shipping UI 1.8.0+ (`Reject` haptic used by `QuizCard`).
 - **Navigation3 (`androidx.navigation3`)** — type-safe backstack with
   `NavDisplay` + `@Serializable` routes. Chosen over Navigation2 because
   predictive back and adaptive layouts are first-class.

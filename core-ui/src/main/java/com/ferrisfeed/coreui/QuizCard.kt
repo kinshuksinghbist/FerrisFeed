@@ -61,7 +61,7 @@ sealed interface QuizUiModel {
 
 /**
  * Interactive quiz card. Shows [quiz], grades locally, then reveals the explanation.
- * Emits a haptic tick on correct (LongPress tick) vs incorrect (VirtualKey buzz).
+ * Emits a haptic tick on correct (LongPress tick) vs incorrect (Reject).
  * Calls [onResult] exactly once per question instance with (correct, selectedLabel).
  */
 @Composable
@@ -81,10 +81,9 @@ fun QuizCard(
         answered = true
         wasCorrect = correct
         haptics.performHapticFeedback(
-            // NB: HapticFeedbackType has no error/deny member across the
-            // Compose versions we resolve (BOM + transitive bumps), so the
-            // incorrect buzz uses VirtualKey, present since Compose 1.0.
-            if (correct) HapticFeedbackType.LongPress else HapticFeedbackType.VirtualKey,
+            // Requires Compose UI 1.8.0+ (BOM 2025.04.01), where Reject joined
+            // HapticFeedbackType. Do not downgrade the BOM below that.
+            if (correct) HapticFeedbackType.LongPress else HapticFeedbackType.Reject,
         )
         onResult(correct, label)
     }
