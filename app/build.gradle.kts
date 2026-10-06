@@ -14,9 +14,12 @@ plugins {
  * assets. Incremental: re-runs only when content changes.
  */
 val syncCurriculumAssets = tasks.register<Sync>("syncCurriculumAssets") {
-    from(rootProject.file("content")) {
-        exclude("schema.json")
-    }
+    // NB: exclude() must sit at task level, NOT nested inside from() { }.
+    // A from(...) { exclude(...) } closure mis-scopes its delegate and
+    // breaks :app configuration with phantom "compileSdk not specified" +
+    // "hilt-android not found" errors (bisected 2026-10-06).
+    from(rootProject.file("content"))
+    exclude("schema.json")
     into(layout.buildDirectory.dir("generated/curriculum"))
 }
 
