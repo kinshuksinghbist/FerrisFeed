@@ -51,7 +51,8 @@ vertically only when content exceeds the viewport.
 ## Haptics
 
 - Quiz correct: `HapticFeedbackType.LongPress` tick (the "yes" tick).
-- Quiz incorrect: `HapticFeedbackType.Reject` (the "no" buzz).
+- Quiz incorrect: `HapticFeedbackType.VirtualKey` buzz (no deny member exists
+  across our resolved Compose versions, so VirtualKey stands in).
 - Save via double-tap: light `TextHandleMove` tick is optional; no haptic on
   plain scroll to avoid fatigue.
 - All haptics go through `LocalHapticFeedback` so system settings are honored;
