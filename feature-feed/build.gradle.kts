@@ -37,6 +37,8 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.foundation)
     implementation(libs.compose.material3)
+    // Bookmark / BookmarkBorder live in the extended icon set, not core.
+    implementation(libs.compose.material.icons.extended)
     implementation(libs.compose.ui.tooling.preview)
 
     implementation(libs.androidx.lifecycle.viewmodel.compose)
