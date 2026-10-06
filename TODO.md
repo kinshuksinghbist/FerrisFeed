@@ -11,35 +11,54 @@
 - Every reel is ONE card: difficulty label → hook + body → code → quiz inline.
 - Smallest swipe advances; no inner vertical scroll; right action rail.
 
-## P0. WASM removal (app shows Rust + System Design only)
+## P0. WASM removal (app shows Rust + System Design only) — DONE
 
-- [ ] 1. Seeder skips `wasm/`; feed queue, path nodes, search filters show Rust + System Design only.
-- [ ] 2. Delete WASM from `Tracks`, `trackColor`, default path nodes, seed/track constants; fix all references.
-- [ ] 3. Update docs (`tech-stack.md`, `offline.md`, learnings) to mark WASM dormant-not-deleted.
+- [x] 1. Seeder skips `wasm/`; feed queue, path nodes, search filters show Rust + System Design only.
+- [x] 2. Delete WASM from `Tracks`, `trackColor`, default path nodes, seed/track constants; fix all references.
+- [x] 3. Update docs (`tech-stack.md`, `offline.md`, learnings) to mark WASM dormant-not-deleted.
 
-## P1. Output backfill + data plumbing (before any new UI)
+## P1. Output backfill + data plumbing (before any new UI) — DONE
 
-- [ ] 4. Schema: optional `output` field in `schema.json` + validator (<=15 lines) + docs.
-- [ ] 5. Backfill `output` for all 360 code-bearing Rust + System Design reels (Rust run-verified, rest reviewed; fragments get result/error block; unrunnable → null + log).
-- [ ] 6. `ReelEntity.output` column + DB v2 beta fallback; seeder mapping; `RoomReelDataSource` + feed `Reel` carry `output`.
-- [ ] 7. Re-run full validation (validator + Room compile + seeder dry-check).
+- [x] 4. Schema: optional `output` field in `schema.json` + validator (<=15 lines) + docs.
+- [x] 5. Backfill `output` for all 360 code-bearing Rust + System Design reels: 347 authored
+      expectations, 13 explicitly `output: null` (fragments/pseudo-code that cannot run — the
+      flip affordance is hidden for those). Rust snippets run-verified; SQL/JS reviewed.
+      WASM reels are untouched (dormant, not seeded).
+- [x] 6. `ReelEntity.output` column + DB v2 beta fallback; seeder mapping; `RoomReelDataSource` + feed `Reel` carry `output`.
+- [x] 7. Re-run full validation (validator + Room compile + seeder dry-check).
 
-## P2. Reel card + pager + rail (the visible overhaul)
+## P2. Reel card + pager + rail (the visible overhaul) — DONE
 
-- [ ] 8. Unified card: centered animated difficulty label (Easy breathing pulse / Medium shimmer / Hard ember flicker, from existing `level`), hook + body with takeaway as closing line, code below, `QuizCard` inline. Delete horizontal pager, Deep Dive sheet, takeaway box, `TrapCard` usage, Got-it/Fuzzy, Run, font slider, read-time, TrackPill/LevelBadge header, peek overlay, swipe hints.
-- [ ] 9. Track tint: orange wash Rust, sky-blue wash System Design; readable in both themes.
-- [ ] 10. Code card flip: copy + flip icons only; flip reveals `output`, hidden when null.
-- [ ] 11. Pager: no inner vertical scroll, low-threshold snap so small swipes advance; prefetch kept.
-- [ ] 12. Right rail: heart + bookmark vertical, 48dp targets; double-tap-save kept.
-- [ ] 13. Quiz answers remain the sole SRS/XP/streak signal via existing `onGrade` path — verify XP still accrues with buttons gone.
+- [x] 8. Unified card: centered animated difficulty label (`DifficultyLabel`), hook + body with
+      takeaway as closing line, code below, `QuizCard` inline. Horizontal pager, Deep Dive sheet,
+      takeaway box, `TrapCard`, Got-it/Fuzzy, Run, font slider, read-time, TrackPill/LevelBadge
+      header, peek overlay, swipe hints all deleted.
+- [x] 9. Track tint: orange wash Rust, sky-blue wash System Design; readable in both themes.
+- [x] 10. Code card flip: copy + flip icons only; flip reveals `output`, hidden when null.
+- [x] 11. Pager: no inner vertical scroll, 0.25 snap threshold so small swipes advance; prefetch kept.
+- [x] 12. Right rail: heart + bookmark vertical, 48dp targets; double-tap-save kept.
+- [x] 13. Quiz answers are the sole SRS/XP/streak signal via `onGrade`; XP/streak accrue there.
 
-## P3. Path + search rework
+## P3. Path + search rework — DONE
 
-- [ ] 14. Bottom nav to Feed + Path; search field + results move to top of Path screen; Search tab/route deleted.
-- [ ] 15. New `PathViewModel`: nodes from `topicsForTrack` + new `countByTopic` query (query-only, no migration) + `ProgressStore.getMastery` with decay; static demo nodes out of production path.
-- [ ] 16. Topic tap → `Route.TopicFeed(topicId)` filtered feed (quiz+info mixed) via `SavedStateHandle` filter in `FeedViewModel`.
+- [x] 14. Bottom nav is Feed + Path; search field + results moved to the top of the Path screen
+      (`SearchSection` + `SearchResultRow` inside the Path `LazyColumn`); Search tab/route deleted.
+- [x] 15. `PathViewModel` (Hilt): nodes from `ReelDao.countByTopic` (query-only projection:
+      topic + reel count + `MIN(level)`, no migration) + `ProgressStore.getAllMastery` (2%/day
+      decay); `defaultPathNodes()` is gone from production and lives on as the preview-only
+      `previewPathNodes()`.
+- [x] 16. Topic tap → `Route.TopicFeed(topicId)`; `FeedViewModel.setTopicFilter(topic)` narrows the
+      queue to that topic (quiz + info mixed, same card). The filter is passed from the route and
+      its rebuild `Job` is awaited before `focusReel`, because Navigation3 does not guarantee a
+      per-route ViewModel (see learnings §22).
 
-## P4. Close-out
+## P4. Close-out — DONE
 
-- [ ] 17. Deletion audit — every removed component verified unreferenced.
-- [ ] 18. Previews/screenshots refreshed; `feed-ux.md`, learnings updated; CI green + new APK smoke check (assets count + first-launch seed + topic feed).
+- [x] 17. Deletion audit per S8 list — every removed component verified unreferenced:
+      `TrapCard`, `DeepDive*`, Got-it/Fuzzy params, Run/font slider, read-time, peek/long-press,
+      `TrackPill`/`LevelBadge` composables, horizontal quiz pager, Search tab/route, production
+      `defaultPathNodes` (grep-clean; only KDoc mentions remain).
+- [x] 18. Previews refreshed (unified card, difficulty labels, path with search section);
+      `feed-ux.md` + `offline.md` rewritten for Spec v2; learnings §18–§22 added.
+- [ ] 19. CI green + APK smoke check (asset count + first-launch seed + topic feed) on the
+      Spec v2 commits.

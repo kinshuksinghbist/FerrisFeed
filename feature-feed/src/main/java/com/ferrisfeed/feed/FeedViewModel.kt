@@ -74,6 +74,12 @@ class FeedViewModel @Inject constructor(
     private val index = MutableStateFlow(0)
     private val loading = MutableStateFlow(true)
 
+    /** Topic-only feed filter (Route.TopicFeed); null = the full mixed queue. */
+    private val topicFilter = MutableStateFlow<String?>(null)
+
+    /** Last full (unfiltered) reel list, so a topic filter can be applied and reverted. */
+    private var allReels: List<Reel> = emptyList()
+
     private val queue: StateFlow<List<Reel>> = repository.observeQueue()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -116,8 +122,9 @@ class FeedViewModel @Inject constructor(
             val all = withTimeoutOrNull(30_000) {
                 repository.observeAllReels().first { it.isNotEmpty() }
             }.orEmpty()
+            allReels = all
             if (all.isNotEmpty()) {
-                repository.refreshQueue(buildQueue(all, clock()))
+                repository.refreshQueue(buildQueue(queueSource(all), clock()))
             }
             val restored = dataStore.data.first()
             val restoredIndex = restored[KEY_LAST_INDEX] ?: 0
@@ -227,11 +234,39 @@ class FeedViewModel @Inject constructor(
             val all = withTimeoutOrNull(30_000) {
                 repository.observeAllReels().first { it.isNotEmpty() }
             }.orEmpty()
+            allReels = all
             if (all.isNotEmpty()) {
-                repository.refreshQueue(buildQueue(all, clock()))
+                repository.refreshQueue(buildQueue(queueSource(all), clock()))
             }
             loading.value = false
         }
+    }
+
+    /**
+     * Narrows the feed to one roadmap topic (Spec v2, S7), or back to the full
+     * mix with null. Idempotent so the route can call it on every composition.
+     * Returns the rebuild job (null when nothing changed) so a caller that
+     * also wants to focus a specific reel can await the new queue first.
+     */
+    fun setTopicFilter(topic: String?): Job? {
+        if (topicFilter.value == topic) return null
+        topicFilter.value = topic
+        return viewModelScope.launch {
+            val source = if (allReels.isNotEmpty()) allReels else {
+                withTimeoutOrNull(15_000) {
+                    repository.observeAllReels().first { it.isNotEmpty() }
+                }.orEmpty().also { if (it.isNotEmpty()) allReels = it }
+            }
+            if (source.isEmpty()) return@launch
+            index.value = 0
+            repository.refreshQueue(buildQueue(queueSource(source), clock()))
+        }
+    }
+
+    /** Applies the active topic filter to a full reel list. */
+    private fun queueSource(all: List<Reel>): List<Reel> {
+        val topic = topicFilter.value ?: return all
+        return all.filter { it.topic == topic }
     }
 
     /** Jump to a reel by id (deep links, search results). No-op if unknown. */
@@ -243,10 +278,22 @@ class FeedViewModel @Inject constructor(
                     repository.observeAllReels().first { it.isNotEmpty() }
                 }.orEmpty()
                 if (all.isEmpty()) return@launch
-                repository.refreshQueue(all)
+                allReels = all
                 current = all
+                repository.refreshQueue(buildQueue(queueSource(all), clock()))
             }
-            val idx = current.indexOfFirst { it.id == id }
+            var idx = current.indexOfFirst { it.id == id }
+            if (idx < 0) {
+                // Not in the current (possibly topic-filtered) queue: fall back
+                // to the whole table, rebuild, and look again.
+                val all = allReels.ifEmpty { repository.allReels() }
+                if (all.isNotEmpty()) {
+                    allReels = all
+                    current = all
+                    repository.refreshQueue(buildQueue(queueSource(all), clock()))
+                    idx = current.indexOfFirst { it.id == id }
+                }
+            }
             if (idx >= 0) {
                 index.value = idx
                 persistPosition(idx, id)

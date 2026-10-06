@@ -6,7 +6,12 @@ network, no spinner: 400+ reels ship inside the APK.
 ## 1. First-launch seeding (current path)
 
 - `:app:syncCurriculumAssets` mirrors validated repo-root `content/**/*.json`
-  (minus `schema.json`) into generated APK assets under `curriculum/`.
+  (minus `schema.json`) into generated APK assets. The merge flattens to the
+  APK asset ROOT (`assets/rust/…`, `assets/system-design/…`), which is the
+  path `CurriculumSeeder` lists — never `assets/curriculum/`.
+- Only Rust and System Design ship (Spec v2): `content/wasm/**` stays in the
+  repo but is **dormant** — not synced into seeding, not seeded, not rendered,
+  not searchable. Do not re-add without a spec change.
 - On first DB creation, `FerrisDatabase` fires `CurriculumSeeder`, which
   parses the JSON on IO and inserts ~500 rows, then the feed observes the
   table. No prepackaged SQLite: a hand-built `.db` must carry Room's exact
@@ -53,9 +58,9 @@ and must survive curriculum DB swaps without migration coupling.
 - Weekly-pack images (V2 packs only) are warmed into the HTTP disk cache
   by the sync worker (`warmImageCache`) before the user can open them.
 - Code snippets are inline strings in the reel row — rendering never
-  needs the network. The "Run" playground for beginner snippets is a
-  bundled WASM interpreter; advanced "Open in Playground" links degrade
-  to a "You're offline" snackbar with a queued deep link.
+  needs the network. There is no in-app interpreter and no Run button
+  (Spec v2): `output` on the reel is the authored expected result and the
+  code card simply flips to reveal it offline.
 - Coil disk cache size: 100 MB, `CachePolicy.ENABLED` offline-first.
 
 ## 5. Offline behavior matrix

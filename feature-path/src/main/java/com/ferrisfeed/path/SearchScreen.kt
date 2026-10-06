@@ -6,12 +6,9 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
@@ -22,16 +19,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ferrisfeed.coreui.FerrisFeedTheme
-import com.ferrisfeed.coreui.TrackPill
 import com.ferrisfeed.coreui.Tracks
+import com.ferrisfeed.coreui.trackColor
 
 /** Searchable reel summary (projection of the full reel; Room FTS returns these). */
 data class SearchResult(
@@ -71,30 +64,35 @@ fun filterResults(
 }
 
 /**
- * Full-text search UI. Backed by Room FTS (`reels_fts`) in :data; this composable owns
- * only query + filter state and calls [onQueryChanged] so the caller can re-query.
- * Filters: track / level / has-code / has-quiz (per TODO 34).
+ * Search field + filter chips (Spec v2, S7).
+ *
+ * This used to be a full-screen tab; it is now a section at the top of the
+ * Path screen, so it deliberately renders no list of its own (a nested lazy
+ * list inside the Path list would fight the parent scroller). PathScreen
+ * renders [SearchResultRow] items lazily below this section.
+ *
+ * Query + filters are hoisted into [PathViewModel] so the text field and the
+ * result set can never disagree.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SearchScreen(
-    results: List<SearchResult>,
+fun SearchSection(
+    query: String,
+    filters: SearchFilters,
     onQueryChanged: (String, SearchFilters) -> Unit,
-    onResultClick: (SearchResult) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var query by remember { mutableStateOf("") }
-    var track by remember { mutableStateOf<String?>(null) }
-    var level by remember { mutableStateOf<Int?>(null) }
-    var hasCode by remember { mutableStateOf<Boolean?>(null) }
-    var hasQuiz by remember { mutableStateOf<Boolean?>(null) }
+    fun emit(
+        track: String? = filters.track,
+        level: Int? = filters.level,
+        hasCode: Boolean? = filters.hasCode,
+        hasQuiz: Boolean? = filters.hasQuiz,
+    ) = onQueryChanged(query, SearchFilters(track, level, hasCode, hasQuiz))
 
-    fun emit() = onQueryChanged(query, SearchFilters(track, level, hasCode, hasQuiz))
-
-    Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
+    Column(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = query,
-            onValueChange = { query = it; emit() },
+            onValueChange = { onQueryChanged(it, filters) },
             modifier = Modifier.fillMaxWidth(),
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             label = { Text("Search reels, traps, quizzes…") },
@@ -108,66 +106,62 @@ fun SearchScreen(
         ) {
             // Track filter
             FilterChip(
-                selected = track == null,
-                onClick = { track = null; emit() },
+                selected = filters.track == null,
+                onClick = { emit(track = null) },
                 label = { Text("All tracks") },
             )
             listOf(Tracks.RUST, Tracks.SYSTEM_DESIGN).forEach { t ->
                 FilterChip(
-                    selected = track == t,
-                    onClick = { track = if (track == t) null else t; emit() },
+                    selected = filters.track == t,
+                    onClick = { emit(track = if (filters.track == t) null else t) },
                     label = { Text(Tracks.label(t)) },
                 )
             }
             // Level filter
             (1..4).forEach { lv ->
                 FilterChip(
-                    selected = level == lv,
-                    onClick = { level = if (level == lv) null else lv; emit() },
+                    selected = filters.level == lv,
+                    onClick = { emit(level = if (filters.level == lv) null else lv) },
                     label = { Text("L$lv") },
                 )
             }
             FilterChip(
-                selected = hasCode == true,
-                onClick = { hasCode = if (hasCode == true) null else true; emit() },
+                selected = filters.hasCode == true,
+                onClick = { emit(hasCode = if (filters.hasCode == true) null else true) },
                 label = { Text("Has code") },
             )
             FilterChip(
-                selected = hasQuiz == true,
-                onClick = { hasQuiz = if (hasQuiz == true) null else true; emit() },
+                selected = filters.hasQuiz == true,
+                onClick = { emit(hasQuiz = if (filters.hasQuiz == true) null else true) },
                 label = { Text("Has quiz") },
             )
-        }
-
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = "${results.size} results",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(8.dp))
-
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(results, key = { it.id }) { r ->
-                SearchRow(result = r, onClick = { onResultClick(r) })
-            }
         }
     }
 }
 
+/**
+ * One search hit. Rendered as a lazy item by PathScreen so results and the
+ * roadmap share a single scroller.
+ */
 @Composable
-private fun SearchRow(
+fun SearchResultRow(
     result: SearchResult,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Card(
         onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TrackPill(result.track)
+                Text(
+                    text = Tracks.label(result.track),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = trackColor(result.track),
+                )
                 Text(
                     text = "L${result.level}",
                     style = MaterialTheme.typography.labelMedium,
@@ -191,14 +185,20 @@ private fun SearchRow(
 
 private fun previewResults() = listOf(
     SearchResult("rust-own-014", Tracks.RUST, 1, "Why does this function not compile?", "Move by default.", true, true),
-    SearchResult("rust-own-014", Tracks.RUST, 1, "Why does this function not compile?", "Move by default; borrow to keep.", true, true),
     SearchResult("sys-cache-007", Tracks.SYSTEM_DESIGN, 2, "Cache-aside done right", "Invalidate on write.", false, true),
 )
 
-@Preview(name = "Search dark", showBackground = true, backgroundColor = 0xFF0B0E14)
+@Preview(name = "Search section dark", showBackground = true, backgroundColor = 0xFF0B0E14)
 @Composable
-private fun SearchScreenPreview() {
+private fun SearchSectionPreview() {
     FerrisFeedTheme(darkTheme = true) {
-        SearchScreen(results = previewResults(), onQueryChanged = { _, _ -> }, onResultClick = {})
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            SearchSection(
+                query = "borrow",
+                filters = SearchFilters(track = Tracks.RUST, hasCode = true),
+                onQueryChanged = { _, _ -> },
+            )
+            SearchResultRow(result = previewResults().first(), onClick = {})
+        }
     }
 }

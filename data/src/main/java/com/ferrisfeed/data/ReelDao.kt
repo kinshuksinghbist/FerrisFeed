@@ -39,6 +39,17 @@ interface ReelDao {
     @Query("SELECT DISTINCT topic FROM reels WHERE track = :track ORDER BY topic ASC")
     suspend fun topicsForTrack(track: String): List<String>
 
+    /**
+     * Per-topic reel counts for the path roadmap. Query-only projection (both
+     * tables are in `reels`), so no schema change and no migration: the path
+     * screen groups these into roadmap nodes instead of the old demo list.
+     */
+    @Query(
+        "SELECT topic, COUNT(*) AS reelCount, MIN(level) AS minLevel FROM reels " +
+            "WHERE track = :track GROUP BY topic ORDER BY topic ASC",
+    )
+    suspend fun countByTopic(track: String): List<TopicCount>
+
     @Query("SELECT COUNT(*) FROM reels")
     suspend fun countAll(): Int
 
@@ -162,6 +173,13 @@ interface ReelDao {
         }
     }
 }
+
+/** Per-topic projection for the path roadmap ([ReelDao.countByTopic]). */
+data class TopicCount(
+    val topic: String,
+    val reelCount: Int,
+    val minLevel: Int,
+)
 
 /** Value object for batch SRS updates computed by the FSRS scheduler. */
 data class SrsUpdate(

@@ -24,8 +24,9 @@ import javax.inject.Singleton
  * App-level bindings. Only references types that actually exist:
  * Room + DataStore live in :data, the feed repository + its Room bridge
  * live in :feature-feed. There is no ProgressDao (SRS columns live on the
- * reel rows and are updated through [ReelDao]) and no PathRepository (the
- * path screen renders [defaultPathNodes] until the engine is wired).
+ * reel rows and are updated through [ReelDao]) and no PathRepository: the
+ * path screen builds its roadmap from [ReelDao.countByTopic] + [ProgressStore]
+ * inside the feature module's PathViewModel.
  */
 @Module
 @InstallIn(SingletonComponent::class)

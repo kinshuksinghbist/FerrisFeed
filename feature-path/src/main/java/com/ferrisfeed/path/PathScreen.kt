@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,8 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -45,70 +47,113 @@ data class PathNode(
     val requires: List<String> = emptyList(),
 )
 
-/** DAG from TODO item 32: Ownership -> Lifetimes -> Async -> Axum -> Rate Limiter. */
-fun defaultPathNodes(): List<PathNode> = listOf(
-    PathNode("ownership", "Ownership & Borrowing", Tracks.RUST, 1, 0.62f, 45),
-    PathNode("lifetimes", "Lifetimes", Tracks.RUST, 2, 0.34f, 22, requires = listOf("ownership")),
-    PathNode("async", "Async & Tokio", Tracks.RUST, 2, 0.18f, 35, requires = listOf("lifetimes")),
-    PathNode("axum", "Axum Services", Tracks.SYSTEM_DESIGN, 3, 0.05f, 30, requires = listOf("async")),
-    PathNode("rate-limit", "Rate Limiter Blueprint", Tracks.SYSTEM_DESIGN, 3, 0f, 8, requires = listOf("axum")),
-    PathNode("hashing", "Consistent Hashing", Tracks.SYSTEM_DESIGN, 2, 0.48f, 12),
-    PathNode("raft", "Raft in 60s", Tracks.SYSTEM_DESIGN, 3, 0.1f, 10, requires = listOf("hashing")),
-)
-
 /**
- * Roadmap graph UI. Nodes are grouped into columns by DAG depth; edges are drawn
- * on a [Canvas] behind the nodes. Mastery lights the node: dim outline when locked
- * (< all prereqs started), track color when in progress, mint ring when >= 80%.
+ * Roadmap tab (Spec v2, S7).
+ *
+ * One [LazyColumn] owns everything: the search section on top (query + filter
+ * chips, with results rendered as lazy items right below it), then the live
+ * roadmap. Nothing here nests a scroller, so results and the DAG share one
+ * fling without fighting.
+ *
+ * Nodes come from [PathUiState.nodes] (real Room topics + persisted mastery —
+ * see [PathViewModel]); [previewPathNodes] exists only for @Preview.
+ * Mastery lights a node: track color in progress, mint ring when >= 80%,
+ * dimmed and non-clickable while every prerequisite is still unstarted.
  */
 @Composable
 fun PathScreen(
-    nodes: List<PathNode>,
-    onNodeClick: (PathNode) -> Unit,
+    state: PathUiState,
+    onQueryChanged: (String, SearchFilters) -> Unit,
+    onResultClick: (SearchResult) -> Unit,
+    onTopicClick: (PathNode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val nodes = state.nodes
     val columns = remember(nodes) { layoutByDepth(nodes) }
-    // Node center positions are approximated from column/row for edge drawing.
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+    val overall = if (nodes.isEmpty()) 0f else nodes.map { it.mastery }.average().toFloat()
+    val continueNode = nodes.maxByOrNull { it.mastery }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(
-            text = "Your path",
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Text(
-            text = "Nodes light up as you master prerequisites.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(8.dp))
+        item(key = "header") {
+            Column {
+                Text(
+                    text = "Your path",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Text(
+                    text = "Nodes light up as you master prerequisites.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
 
-        // Overall resume bar
-        val overall = if (nodes.isEmpty()) 0f else nodes.map { it.mastery }.average().toFloat()
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "Continue ${nodes.maxByOrNull { it.mastery }?.title ?: "—"} ${(overall * 100).toInt()}%",
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.weight(1f),
+        item(key = "resume") {
+            // Resume bar: overall mastery + the node most worth continuing.
+            Column {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Continue ${continueNode?.title ?: "—"} ${(overall * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                Spacer(Modifier.height(6.dp))
+                LinearProgressIndicator(
+                    progress = { overall },
+                    modifier = Modifier.fillMaxWidth().height(8.dp),
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+        }
+
+        item(key = "search") {
+            SearchSection(
+                query = state.query,
+                filters = state.filters,
+                onQueryChanged = onQueryChanged,
             )
         }
-        LinearProgressIndicator(
-            progress = { overall },
-            modifier = Modifier.fillMaxWidth().height(8.dp),
-        )
-        Spacer(Modifier.height(16.dp))
 
-        columns.forEachIndexed { depth, col ->
+        if (state.query.isNotBlank()) {
+            item(key = "results-header") {
+                Column {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = if (state.isSearching) "Searching…" else "${state.results.size} results",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+            items(items = state.results, key = { result -> "result-${result.id}" }) { result ->
+                SearchResultRow(result = result, onClick = { onResultClick(result) })
+            }
+        }
+
+        if (state.isLoading) {
+            item(key = "loading") {
+                Text(
+                    text = "Loading your path…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 16.dp),
+                )
+            }
+        }
+
+        item(key = "roadmap-spacer") { Spacer(Modifier.height(12.dp)) }
+
+        itemsIndexed(items = columns, key = { depth, _ -> "stage-$depth" }) { depth, col ->
             DepthColumn(
                 depth = depth,
                 nodes = col,
                 all = nodes,
-                onNodeClick = onNodeClick,
+                onNodeClick = onTopicClick,
             )
             if (depth < columns.lastIndex) {
                 ConnectorLine()
@@ -191,15 +236,7 @@ private fun PathNodeRow(
                 )
             }
             // Status dot
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .then(
-                        Modifier.let {
-                            it // keep chain readable
-                        },
-                    ),
-            ) {
+            Box(modifier = Modifier.size(12.dp)) {
                 Canvas(Modifier.fillMaxSize()) {
                     drawCircle(
                         color = when {
@@ -232,11 +269,39 @@ private fun ConnectorLine() {
     }
 }
 
+/**
+ * Sample roadmap for @Preview only. Production nodes are built from Room by
+ * [PathViewModel]; the old `defaultPathNodes()` demo list is gone so a fresh
+ * install honestly shows 0% everywhere instead of fake mastery.
+ */
+private fun previewPathNodes(): List<PathNode> = listOf(
+    PathNode("ownership", "Ownership", Tracks.RUST, 1, 0.62f, 45),
+    PathNode("lifetimes", "Lifetimes", Tracks.RUST, 2, 0.34f, 22, requires = listOf("ownership")),
+    PathNode("async", "Async", Tracks.RUST, 2, 0.18f, 35, requires = listOf("lifetimes")),
+    PathNode("axum", "Axum", Tracks.RUST, 3, 0.05f, 30, requires = listOf("async")),
+    PathNode("rate-limiter", "Rate Limiter", Tracks.SYSTEM_DESIGN, 3, 0f, 8, requires = listOf("axum")),
+)
+
+private fun previewPathState(): PathUiState = PathUiState(
+    nodes = previewPathNodes(),
+    isLoading = false,
+    query = "borrow",
+    filters = SearchFilters(track = Tracks.RUST),
+    results = listOf(
+        SearchResult("rust-own-014", Tracks.RUST, 1, "Why does this function not compile?", "Move by default.", true, true),
+    ),
+)
+
 @Preview(name = "Path dark", showBackground = true, backgroundColor = 0xFF0B0E14)
 @Composable
 private fun PathScreenPreview() {
     FerrisFeedTheme(darkTheme = true) {
-        PathScreen(nodes = defaultPathNodes(), onNodeClick = {})
+        PathScreen(
+            state = previewPathState(),
+            onQueryChanged = { _, _ -> },
+            onResultClick = {},
+            onTopicClick = {},
+        )
     }
 }
 
@@ -244,6 +309,11 @@ private fun PathScreenPreview() {
 @Composable
 private fun PathScreenLightPreview() {
     FerrisFeedTheme(darkTheme = false) {
-        PathScreen(nodes = defaultPathNodes(), onNodeClick = {})
+        PathScreen(
+            state = previewPathState().copy(query = "", results = emptyList()),
+            onQueryChanged = { _, _ -> },
+            onResultClick = {},
+            onTopicClick = {},
+        )
     }
 }

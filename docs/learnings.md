@@ -291,3 +291,60 @@ with byte-exact variants (assert every test edit actually applied).
   pager (blank) while a stuck load rendered skeletons forever, and the user
   could not tell them apart. `FeedScreen` now has a dedicated empty state
   with retry, and `FeedViewModel.retryLoad()` re-attempts the wait.
+
+## 18. Fused import lines are the recurring self-inflicted break (Spec v2 session)
+
+**Failures:** two red CI runs, same shape:
+`FeedViewModel.kt:14:55 Expecting a top level declaration` and
+`CodeCard.kt:7:56 …` plus `imports are only allowed in the beginning of file`.
+
+**Root cause:** an edit that replaced one import line glued the next one onto
+it (`…MutableStateFlowimport kotlinx.coroutines.flow.SharingStarted`,
+`…layout.Columnimport androidx.compose.foundation.layout.Row`). The column
+numbers in the error are the giveaway: a single line producing a cascade of
+"Expecting a top level declaration" errors.
+
+**Fix:** split the line. **Rule:** after ANY edit that touches an import
+block, re-read lines 1–30 of that file and assert them; when the compiler
+points at one line with 6+ cascading errors, look for a fused line before
+doubting anything else.
+
+## 19. Compose 1.8 `LocalClipboard` is not a drop-in for the old manager
+
+**Failure:** `CodeCard.kt:117:35 Unresolved reference 'setText'.`
+`LocalClipboardManager.setText` is deprecated in UI 1.8, but
+`LocalClipboard.current` (the replacement) has no `setText` — its `ClipEntry`
+API is host-version sensitive.
+
+**Fix:** use the platform clipboard, which has no deprecation and no
+Compose-internal types:
+`LocalContext.current.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager`
++ `setPrimaryClip(ClipData.newPlainText("code", code))`. Both deprecation
+warnings from §15 are now gone as a side effect.
+
+## 20. Room projections from `@Query` need matching property names
+
+`ReelDao.countByTopic` returns `List<TopicCount>`: the SQL alias must match the
+Kotlin property (`COUNT(*) AS reelCount` → `val reelCount: Int`) and the class
+must be a top-level POJO. Query-only projections like this give the path screen
+real data (topic + reel count + `MIN(level)`) with **zero migration** — no new
+column, no schema bump.
+
+## 21. Never nest a `LazyColumn` inside a `verticalScroll` column
+
+The Path screen now hosts search results above the roadmap. A `LazyColumn` of
+results inside the old `verticalScroll(rememberScrollState())` column crashes at
+measure time (infinite max height). **Fix:** the screen is ONE `LazyColumn` —
+search section as an `item`, results as `items`, roadmap stages as
+`itemsIndexed`. Same rule applies to any future "section above a list" work.
+
+## 22. Navigation3 routes do not guarantee a per-route ViewModel
+
+`hiltViewModel()` inside a `NavEntry` can resolve to a coarser
+`ViewModelStoreOwner`, so ViewModel state may survive across routes and a
+`SavedStateHandle`-based route argument cannot be relied on. **Pattern used
+everywhere instead:** pass the route argument explicitly
+(`FeedEntry(topicFilter = key.topicId)`) into an idempotent setter, and have the
+setter return its rebuild `Job` so the caller can `join()` before doing
+order-dependent work (`setTopicFilter(topic)?.join()` then `focusReel(id)` —
+the new queue must exist before the focus lookup).

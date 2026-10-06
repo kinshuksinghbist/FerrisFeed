@@ -1,5 +1,8 @@
 package com.ferrisfeed.coreui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.horizontalScroll
@@ -23,13 +26,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -38,7 +40,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.launch
 
 private val RustKeywords = setOf(
     "fn", "let", "mut", "const", "struct", "enum", "impl", "trait", "for", "in",
@@ -68,8 +69,11 @@ fun CodeCard(
     output: String?,
     modifier: Modifier = Modifier,
 ) {
-    val clipboard = LocalClipboard.current
-    val scope = rememberCoroutineScope()
+    // Platform clipboard (android.content.ClipboardManager): Compose's own
+    // ClipboardManager.setText API is deprecated, and LocalClipboard's
+    // ClipEntry plumbing is host-version sensitive. The framework API here is
+    // available on every supported API level with no deprecation warning.
+    val context = LocalContext.current
     var copied by remember { mutableStateOf(false) }
     var flipped by remember { mutableStateOf(false) }
     val flipRotation by animateFloatAsState(
@@ -113,10 +117,10 @@ fun CodeCard(
                     }
                 }
                 IconButton(onClick = {
-                    scope.launch {
-                        clipboard.setText(AnnotatedString(code))
-                        copied = true
-                    }
+                    context.getSystemService(Context.CLIPBOARD_SERVICE)
+                        ?.let { it as? ClipboardManager }
+                        ?.setPrimaryClip(ClipData.newPlainText("code", code))
+                    copied = true
                 }) {
                     Icon(
                         imageVector = Icons.Filled.ContentCopy,

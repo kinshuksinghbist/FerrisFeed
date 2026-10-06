@@ -1,59 +1,70 @@
-# FerrisFeed Feed UX — Doomscroll Spec
+# FerrisFeed Feed UX — Spec v2 (locked)
 
-Covers TODO items 6 (feed UX) and 8 (feed engine behavior). The Compose
-implementation is `FeedScreen.kt` + `FeedViewModel.kt`; the visuals are
-`core-ui` cards. This doc is the interaction contract QA tests against.
+The Compose implementation is `FeedScreen.kt` + `FeedViewModel.kt`; the visuals
+are the `core-ui` cards. This doc is the interaction contract QA tests against.
+It replaces the v1 doomscroll spec: **one reel is ONE card**, the quiz is inline,
+and quiz answers are the only grading signal.
 
-## Layout — one reel, one screen
+## Layout — one reel, one vertically-swipeable screen
 
-A full-screen `VerticalPager` shows exactly one reel per page:
+A full-screen `VerticalPager` shows exactly one reel per page. The page is a
+single `Column`, top to bottom, **with no inner vertical scroll**:
 
-1. **Header** — `TrackPill` + `LevelBadge` + read-time label (`55s read`).
-   Read time = body words at 200 wpm + 3s per code line, minimum 20s.
-2. **Explainer** — `ReelCard` (hook → body → takeaway), then `CodeCard` when the
-   reel has code, then `TrapCard` (collapsed by default).
-3. **Actions** — Like / Save icon buttons, `Deep Dive` outlined button,
-   `Got it ✓` / `Still fuzzy` SRS buttons.
-4. **Quiz variant** — swiping **left** on a reel flips an inner `HorizontalPager`
-   to the `QuizCard` (MCQ / Tap-the-bug / Fill-blank). Swiping right returns.
-   The quiz never replaces the explainer; it is a second face of the same page.
+1. **Unified info card** (`ReelCard`) — centered animated difficulty label →
+   hook (headline) → body → takeaway as the closing line (track-colored, no
+   boxed callout). The card's container is washed with the track color
+   (orange Rust, sky-blue System Design) instead of carrying a pill/badge.
+2. **Code card** (`CodeCard`) when the reel has code — header is language label
+   + copy icon + flip icon (flip appears only when `output` is non-null).
+   Fixed 12.5sp mono; horizontal scroll for long lines is allowed, vertical is
+   not.
+3. **Quiz inline** (`QuizCard`) — MCQ / tap-the-bug / fill-blank. Answering is
+   the sole SRS/XP/streak signal (`FeedViewModel.onGrade`).
 
-While the next pages compose, `ReelSkeleton` shimmer placeholders hold the exact
-`ReelCard` proportions so there is no layout shift when content arrives.
+Like/save live on a right-edge action rail, vertically centered, 48dp targets.
+There are no action rows inside the card, no bottom sheet, no peek overlay.
+
+## Difficulty label
+
+One small centered label replaces the old `TrackPill` + `LevelBadge` +
+read-time header, mapped from the existing content `level`:
+
+| Level | Label | Motion |
+|---|---|---|
+| 1 | easy | slow breathing scale pulse (~2s cycle) |
+| 2 | medium | horizontal gradient shimmer sweep (~1.6s cycle) |
+| 3+ | hard | ember flicker — fast small alpha jitter (~0.9s cycle) |
+
+TalkBack reads "Difficulty: Medium" (semantics `contentDescription`).
 
 ## Gestures
 
 | Gesture | Location | Effect |
 |---|---|---|
-| Vertical swipe | anywhere | Next / previous reel (`VerticalPager`). |
-| Horizontal swipe left | reel page | Reveal quiz variant (inner pager page 1). |
-| Horizontal swipe right | quiz page | Back to explainer (inner pager page 0). |
-| Double-tap | reel body | Toggle **Save** (bookmark). Fires `FeedViewModel.onToggleSave`. |
-| Long-press | reel body | **Peek** the quiz answer as an overlay. Shown while held, never graded. Release dismisses. |
-| Tap `Deep Dive` | actions row | Open `ModalBottomSheet` with full body + code + trap + quiz. Predictive back returns to the same pager index. |
-| Tap `Got it` / `Still fuzzy` | actions row | Grade the card for SRS (`recordGrade`). Advances the scheduler in `rust-core`. |
+| Vertical swipe | anywhere | Next / previous reel. Low positional threshold (`snapPositionalThreshold = 0.25`) so even a small swipe commits. |
+| Double-tap | reel page | Toggle **Save** (bookmark). Invisible — no hints, no chrome. |
+| Tap heart | right rail | Toggle **Like**. |
+| Tap bookmark | right rail | Toggle **Save**. |
+| Tap copy | code card header | Copy the code snippet to the clipboard. |
+| Tap flip | code card header | Swap the card body between highlighted code and expected `output`. Hidden when `output` is null. |
 
-Nested scrolling rule: the inner horizontal pager only claims horizontal drags;
-vertical drags always belong to the outer `VerticalPager`. Reel bodies scroll
-vertically only when content exceeds the viewport.
+There is no horizontal pager and no inner vertical scroll, so a vertical drag
+always means "change reel" — the old nested-scroll fight is structurally gone.
 
-## Motion — 300ms spring
+## Motion — 300ms budget
 
-- Pager snap: `spring(stiffness = Medium, damping = MediumBouncy)` targeting
-  ~300ms settle. No custom fling velocity — stock pager physics.
-- `ProgressRing` mastery sweep: `animateFloatAsState` to the new value on grade.
+- Pager snap: stock `PagerDefaults.flingBehavior` with a 0.25 positional
+  threshold; `beyondViewportPageCount = 5` keeps the next 5 pages composed.
+- Code flip: `animateFloatAsState(tween(300))` rotates the flip icon 180°.
+- `ProgressRing` mastery sweep: `animateFloatAsState` to the new value.
 - `StreakFlame` pop: 1.0 → 1.25 scale spring when the streak increments.
-- `TrapCard` expand: `AnimatedVisibility` expand/shrink, 300ms.
-- Shimmer: 1200ms infinite linear sweep, shown only during prefetch.
-- Target: 120 Hz scrolling on mid-range devices; `beyondViewportPageCount = 5`
-  keeps the next 5 reels composed without overdraw.
+- Shimmer: 1200ms infinite linear sweep, shown only during prefetch/skeletons.
 
 ## Haptics
 
 - Quiz correct: `HapticFeedbackType.LongPress` tick (the "yes" tick).
 - Quiz incorrect: `HapticFeedbackType.Reject` (the "no" buzz).
-- Save via double-tap: light `TextHandleMove` tick is optional; no haptic on
-  plain scroll to avoid fatigue.
+- Save via double-tap: no haptic on plain scroll to avoid fatigue.
 - All haptics go through `LocalHapticFeedback` so system settings are honored;
   no custom vibrator calls.
 
@@ -62,18 +73,37 @@ vertically only when content exceeds the viewport.
 - **Shuffle**: 70% due SRS cards (sorted by `dueAt`, oldest first), 20% new in
   `path_order`, 10% random review. At least one fresh card when any exist.
   Interleaved due/other so two due cards rarely sit back-to-back.
+- **Topic filter**: `setTopicFilter(topic)` narrows the whole queue to one
+  roadmap topic (`Route.TopicFeed`); `null` restores the full mix. Called from
+  the route, and `focusReel` still searches the full table as a fallback.
 - **Prefetch**: on every page change the ViewModel resolves the next 5 reel ids
   (`getReel`) so code highlight + images are warm. UI keeps 5 offscreen pages.
 - **Tracking**: page enter stamps `pageStartMs`; page exit logs
   `(reelId, dwellMs, skipped = dwell < 1500ms && !interacted)`.
 - **Position**: current index + reel id hash debounced (400ms) into DataStore
-  (`feed_last_index`, `feed_last_id_hash`); restored on cold start before the
-  first frame where possible.
+  (`feed_last_index`, `feed_last_id_hash`); restored on cold start.
+- **Empty vs loading**: seeding failures render an explicit empty state with a
+  Retry button (`retryLoad()`), never an infinite skeleton.
+
+## Path tab + search (S7)
+
+- Bottom nav is Feed + Path only. The Search tab and `Route.Search` are gone.
+- Search is a section at the top of the Path screen: query field + track/level/
+  has-code/has-quiz chips + result rows. Results render as items of the same
+  `LazyColumn` as the roadmap (one scroller; nothing nestable).
+- Roadmap nodes are real: one per topic with reels in Room
+  (`ReelDao.countByTopic` → count + lowest level) with mastery from
+  `ProgressStore` (2%/idle-day decay). A fresh install honestly shows 0%.
+- Tapping a node opens `Route.TopicFeed(topicId)` — that topic's reels only,
+  quiz + info mixed, same card as the main feed.
 
 ## Accessibility
 
-- Every icon button has a content description (`Like`, `Save`, `Copy code`…).
+- Every icon button has a content description (`Like`, `Save`, `Copy code`,
+  `Show output`…).
 - Quiz options are full-width 48dp+ tap targets with answer state announced via
   the explanation card, not color alone.
-- Code font size slider (10–20sp) supports low-vision readers; TalkBack reads
-  code line-by-line from the raw string, not the highlighted spans.
+- Difficulty is announced via semantics; track identity is not color-only
+  because the label spells out difficulty and the row text names the track.
+- Code is read by TalkBack line-by-line from the raw string, not the highlighted
+  spans.
