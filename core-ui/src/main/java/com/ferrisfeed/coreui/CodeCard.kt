@@ -1,38 +1,34 @@
 package com.ferrisfeed.coreui
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Columnimport androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -41,6 +37,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 private val RustKeywords = setOf(
     "fn", "let", "mut", "const", "struct", "enum", "impl", "trait", "for", "in",
@@ -55,27 +52,30 @@ private val SysDesignKeywords = setOf(
 )
 
 /**
- * Code snippet card with lightweight syntax highlighting (regex/token based, no tree-sitter
- * on device), copy button, font-size slider, and a Run stub.
+ * Code snippet card (Spec v2): header has language label + copy + flip, and
+ * nothing else. No Run button, no font slider (fixed 12.5sp mono), no second
+ * copy row.
  *
- * The Run button invokes [onRun] with the raw code. The default playground wiring
- * (embedded WASM interpreter for beginner snippets, Rust Playground link for advanced)
- * is implemented by the caller in :feature-feed — this card only provides the affordance
- * and the [runLabel]/[runEnabled] states.
+ * The flip button appears only when [output] is non-null and swaps the body
+ * between the highlighted code and the expected result, with a small icon
+ * rotation for affordance. Copy always copies the code.
  */
 @Composable
 fun CodeCard(
     code: String,
     language: String,
-    onRun: (String) -> Unit,
+    output: String?,
     modifier: Modifier = Modifier,
-    runLabel: String = "Run",
-    runEnabled: Boolean = true,
-    initialFontSizeSp: Float = 13f,
 ) {
-    val clipboard = LocalClipboardManager.current
-    var fontSizeSp by remember { mutableFloatStateOf(initialFontSizeSp) }
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     var copied by remember { mutableStateOf(false) }
+    var flipped by remember { mutableStateOf(false) }
+    val flipRotation by animateFloatAsState(
+        targetValue = if (flipped) 180f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "flip-rotation",
+    )
     val highlighted = remember(code, language) { highlightCode(code, language) }
 
     Card(
@@ -85,13 +85,13 @@ fun CodeCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            // Header: language + copy
+            // Header: language + copy + flip (flip only when output exists).
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = language.lowercase(),
+                    text = if (flipped) "output" else language.lowercase(),
                     style = MaterialTheme.typography.labelMedium.copy(fontFamily = CodeFontFamily),
                     color = Color(0xFF8B949E),
                 )
@@ -101,9 +101,21 @@ fun CodeCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = if (copied) FerrisColors.MintCorrect else Color(0xFF8B949E),
                 )
+                if (output != null) {
+                    IconButton(onClick = { flipped = !flipped }) {
+                        Icon(
+                            imageVector = Icons.Filled.SwapVert,
+                            contentDescription = if (flipped) "Show code" else "Show output",
+                            tint = Color(0xFFC9D1D9),
+                            modifier = Modifier.rotate(flipRotation),
+                        )
+                    }
+                }
                 IconButton(onClick = {
-                    clipboard.setText(androidx.compose.ui.text.AnnotatedString(code))
-                    copied = true
+                    scope.launch {
+                        clipboard.setText(AnnotatedString(code))
+                        copied = true
+                    }
                 }) {
                     Icon(
                         imageVector = Icons.Filled.ContentCopy,
@@ -115,57 +127,29 @@ fun CodeCard(
 
             Spacer(Modifier.height(4.dp))
 
-            // Code body with horizontal scroll for long lines.
-            Text(
-                text = highlighted,
-                fontFamily = CodeFontFamily,
-                fontSize = fontSizeSp.sp,
-                lineHeight = (fontSizeSp + 6).sp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .background(Color.Transparent)
-                    .padding(vertical = 6.dp),
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            // Font-size slider
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("A-", color = Color(0xFF8B949E), style = MaterialTheme.typography.labelMedium)
-                Slider(
-                    value = fontSizeSp,
-                    onValueChange = { fontSizeSp = it },
-                    valueRange = 10f..20f,
-                    steps = 5,
+            if (flipped && output != null) {
+                Text(
+                    text = output,
+                    fontFamily = CodeFontFamily,
+                    fontSize = 12.5.sp,
+                    lineHeight = 18.5.sp,
+                    color = Color(0xFFA5D6FF),
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 8.dp),
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(vertical = 6.dp),
                 )
-                Text("A+", color = Color(0xFF8B949E), style = MaterialTheme.typography.labelMedium)
-            }
-
-            Spacer(Modifier.height(4.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    onClick = { onRun(code) },
-                    enabled = runEnabled,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                    Spacer(Modifier.width(6.dp))
-                    Text(runLabel)
-                }
-                OutlinedButton(
-                    onClick = {
-                        clipboard.setText(androidx.compose.ui.text.AnnotatedString(code))
-                        copied = true
-                    },
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(if (copied) "Copied ✓" else "Copy")
-                }
+            } else {
+                Text(
+                    text = highlighted,
+                    fontFamily = CodeFontFamily,
+                    fontSize = 12.5.sp,
+                    lineHeight = 18.5.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(vertical = 6.dp),
+                )
             }
         }
     }
@@ -244,7 +228,7 @@ private fun CodeCardPreview() {
         CodeCard(
             code = "fn main() {\n    let mut s = String::from(\"hi\");\n    takes(&s); // borrow, no move\n    println!(\"{s}\");\n}\n",
             language = "rust",
-            onRun = {},
+            output = "hi\n",
             modifier = Modifier.padding(16.dp),
         )
     }

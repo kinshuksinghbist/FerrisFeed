@@ -45,6 +45,8 @@ data class Reel(
     val takeaway: String,
     val trap: String,
     val trapCompilerMessage: String?,
+    /** Fine-grained topic key (ownership, lifetimes, axum...). Drives mastery. */
+    val topic: String = "",
     val quiz: QuizModel,
     val tags: List<String> = emptyList(),
     // SRS state (mirrors rust-core FSRS-lite fields)

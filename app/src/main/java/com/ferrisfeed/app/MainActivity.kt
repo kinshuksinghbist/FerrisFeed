@@ -1,8 +1,5 @@
 package com.ferrisfeed.app
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
@@ -182,15 +178,13 @@ fun FerrisFeedNavHost(initialReelId: String?, reelDao: ReelDao) {
     }
 }
 
-/** Feed tab fragment: Hilt-provided ViewModel, playground runner for code. */
+/** Feed tab fragment: Hilt-provided ViewModel. */
 @Composable
 private fun FeedEntry(focusedReelId: String?) {
     val viewModel: FeedViewModel = hiltViewModel()
-    val context = LocalContext.current
     FeedScreen(
         viewModel = viewModel,
         focusedReelId = focusedReelId,
-        onRunCode = { _, code -> openRustPlayground(context, code) },
     )
 }
 
@@ -230,13 +224,6 @@ private fun ReelEntity.toSearchResult(): SearchResult = SearchResult(
     hasQuiz = hasQuiz,
     snippet = bodyMd.take(140),
 )
-
-private fun openRustPlayground(context: Context, code: String) {
-    val uri = Uri.parse(
-        "https://play.rust-lang.org/?code=" + Uri.encode(code)
-    )
-    context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-}
 
 private fun <T> MutableList<T>.clear() {
     while (isNotEmpty()) removeAt(0)

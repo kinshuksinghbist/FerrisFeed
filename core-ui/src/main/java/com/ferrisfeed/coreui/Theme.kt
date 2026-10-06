@@ -37,8 +37,11 @@ object FerrisColors {
     val MintContainerDark = Color(0xFF0B332A)
 
     val LavenderSysDesign = Color(0xFFB8A6FF)
+    // Dormant with the WASM track (Spec v2): kept so TrackColors stays stable.
     val WasmBlue = Color(0xFF4CC9F0)
     val RustOrange = Color(0xFFFF6B35)
+    // Spec v2 card tint: orange Rust, sky-blue System Design.
+    val SkyBlueSysDesign = Color(0xFF4CC9F0)
 
     val Error = Color(0xFFFF5470)
     val ErrorContainerDark = Color(0xFF3A1420)
@@ -145,7 +148,7 @@ val LocalTrackColors = staticCompositionLocalOf {
     TrackColors(
         rust = FerrisColors.RustOrange,
         wasm = FerrisColors.WasmBlue,
-        systemDesign = FerrisColors.LavenderSysDesign,
+        systemDesign = FerrisColors.SkyBlueSysDesign,
     )
 }
 

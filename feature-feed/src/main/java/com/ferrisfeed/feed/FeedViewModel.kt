@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ferrisfeed.data.ProgressStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -31,9 +32,6 @@ data class FeedUiState(
     val isLoading: Boolean = true,
     val savedIds: Set<String> = emptySet(),
     val likedIds: Set<String> = emptySet(),
-    /** Peek reveals the quiz answer without grading (long-press). */
-    val peekReelId: String? = null,
-    val deepDiveReelId: String? = null,
 )
 
 data class ImpressionEvent(
@@ -42,19 +40,13 @@ data class ImpressionEvent(
     val skipped: Boolean,
 )
 
-/** Split of [FeedUiState] carried by the first inner combine (4-arity). */
+/** Split of [FeedUiState] carried by the inner combine (4-arity). */
 private data class FeedPartialMain(
     val reels: List<Reel>,
     val currentIndex: Int,
     val isLoading: Boolean,
     val savedIds: Set<String>,
-)
-
-/** Split of [FeedUiState] carried by the second inner combine (3-arity). */
-private data class FeedPartialOverlays(
     val likedIds: Set<String>,
-    val peekReelId: String?,
-    val deepDiveReelId: String?,
 )
 
 /**
@@ -68,6 +60,7 @@ private data class FeedPartialOverlays(
 class FeedViewModel @Inject constructor(
     private val repository: FeedRepository,
     private val dataStore: DataStore<Preferences>,
+    private val progressStore: ProgressStore,
 ) : ViewModel() {
 
     /** Overridable clock for tests. */
@@ -78,16 +71,14 @@ class FeedViewModel @Inject constructor(
 
     private val savedIds = MutableStateFlow<Set<String>>(emptySet())
     private val likedIds = MutableStateFlow<Set<String>>(emptySet())
-    private val peekId = MutableStateFlow<String?>(null)
-    private val deepDiveId = MutableStateFlow<String?>(null)
     private val index = MutableStateFlow(0)
     private val loading = MutableStateFlow(true)
 
     private val queue: StateFlow<List<Reel>> = repository.observeQueue()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    // NB: nested 4+3+2 combines instead of one 7-flow combine. The 7-arity
-    // heterogeneous overload does not resolve on our coroutines version, so
+    // NB: nested 4+1 combines instead of one 5-flow combine. Heterogeneous
+    // overloads above 4-arity do not resolve on our coroutines version, so
     // keep every combine at an arity that has existed forever.
     val uiState: StateFlow<FeedUiState> = combine(
         combine(queue, index, loading, savedIds) { q, i, load, s ->
@@ -96,24 +87,17 @@ class FeedViewModel @Inject constructor(
                 currentIndex = i.coerceIn(0, max(0, q.size - 1)),
                 isLoading = load,
                 savedIds = s,
+                likedIds = likedIds.value,
             )
         },
-        combine(likedIds, peekId, deepDiveId) { l, p, d ->
-            FeedPartialOverlays(
-                likedIds = l,
-                peekReelId = p,
-                deepDiveReelId = d,
-            )
-        },
-    ) { main, overlays ->
+        likedIds,
+    ) { main, liked ->
         FeedUiState(
             reels = main.reels,
             currentIndex = main.currentIndex,
             isLoading = main.isLoading,
             savedIds = main.savedIds,
-            likedIds = overlays.likedIds,
-            peekReelId = overlays.peekReelId,
-            deepDiveReelId = overlays.deepDiveReelId,
+            likedIds = liked,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, FeedUiState())
 
@@ -204,7 +188,6 @@ class FeedViewModel @Inject constructor(
         index.value = newIndex
         pageStartMs = clock()
         interactedWithCurrent = false
-        peekId.value = null
         persistPosition(newIndex, state.reels.getOrNull(newIndex)?.id)
         // Prefetch trigger: repository / data layer warms next 5 (Room is in-memory here;
         // image/code LRU lives in the UI layer via Coil + highlight cache).
@@ -271,21 +254,24 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Quiz answers are the SOLE grading signal (Spec v2: no Got-it buttons).
+     * Persists SRS grade, per-topic mastery, XP, and the active day so
+     * streaks accrue from real quiz activity.
+     */
     fun onGrade(reelId: String, correct: Boolean, label: String) {
         interactedWithCurrent = true
-        viewModelScope.launch { repository.recordGrade(reelId, correct, label) }
+        viewModelScope.launch {
+            repository.recordGrade(reelId, correct, label)
+            val topic = repository.getReel(reelId)?.topic?.ifBlank { null }
+                ?: return@launch
+            progressStore.recordQuizResult(topic, correct)
+            progressStore.addXp(if (correct) 15 else 5)
+        }
     }
 
     fun onInteract() {
         interactedWithCurrent = true
-    }
-
-    fun onPeek(reelId: String?) {
-        peekId.value = reelId
-    }
-
-    fun onDeepDive(reelId: String?) {
-        deepDiveId.value = reelId
     }
 
     fun restoreIndex(): StateFlow<Int> = index

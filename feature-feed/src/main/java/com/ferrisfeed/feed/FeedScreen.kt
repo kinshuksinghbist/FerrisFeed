@@ -6,27 +6,27 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -37,28 +37,24 @@ import com.ferrisfeed.coreui.QuizCard
 import com.ferrisfeed.coreui.QuizUiModel
 import com.ferrisfeed.coreui.ReelCard
 import com.ferrisfeed.coreui.ReelSkeleton
-import com.ferrisfeed.coreui.TrapCard
-import androidx.compose.material3.SheetValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 
 /**
- * Doomscroll feed.
+ * Doomscroll feed (Spec v2).
  *
- * - Full-screen [VerticalPager], one reel per page.
- * - Prefetch: ViewModel warms next 5 reels on every page change; UI shows [ReelSkeleton]
- *   while [FeedUiState.isLoading] is true.
- * - Double-tap: toggles save (heart/save burst handled by ReelCard state).
- * - Long-press: peeks the quiz answer overlay without grading.
- * - Swipe-left: per-reel [HorizontalPager] page 1 is the quiz variant.
- * - Deep Dive: modal bottom sheet with full body + code + trap.
+ * - Full-screen [VerticalPager], one reel per page. No inner vertical scroll
+ *   anywhere: the pager owns all vertical motion, and a low snap threshold
+ *   means even a small swipe commits to the next page.
+ * - Each page is ONE unified card stack: info ([ReelCard]) -> code
+ *   ([CodeCard] with flip-to-output) -> quiz inline ([QuizCard]). Quiz
+ *   answers are the sole SRS signal via [FeedViewModel.onGrade].
+ * - Like/save live on an Instagram-style right rail (48dp targets);
+ *   double-tap anywhere toggles save. No buttons, sheets, or hints inside
+ *   the content column.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
     viewModel: FeedViewModel,
-    onRunCode: (reelId: String, code: String) -> Unit,
     modifier: Modifier = Modifier,
     /** Deep-link / search entry: jump to this reel once the queue loads. */
     focusedReelId: String? = null,
@@ -77,8 +73,6 @@ fun FeedScreen(
     }
 
     // Loaded but the database yielded nothing (seeding failed or was wiped).
-    // A dedicated empty state beats a blank pager: it names the cause and
-    // offers a retry instead of stranding the user.
     if (state.reels.isEmpty()) {
         EmptyFeed(onRetry = { viewModel.retryLoad() }, modifier = modifier)
         return
@@ -110,6 +104,11 @@ fun FeedScreen(
         state = pagerState,
         modifier = modifier.fillMaxSize(),
         beyondViewportPageCount = 5, // prefetch next 5 compositions
+        // Low positional threshold: small drags still commit to next page.
+        flingBehavior = PagerDefaults.flingBehavior(
+            state = pagerState,
+            snapPositionalThreshold = 0.25f,
+        ),
     ) { page ->
         val reel = state.reels.getOrNull(page) ?: return@VerticalPager
         val isSaved = state.savedIds.contains(reel.id)
@@ -118,31 +117,12 @@ fun FeedScreen(
             reel = reel,
             isSaved = isSaved,
             isLiked = isLiked,
-            peekActive = state.peekReelId == reel.id,
             onLike = { viewModel.onLike(reel.id, !isLiked) },
             onSave = { viewModel.onSave(reel.id, !isSaved) },
             onDoubleTapSave = { viewModel.onToggleSave(reel.id) },
-            onLongPressPeek = { viewModel.onPeek(reel.id) },
-            onPeekRelease = { viewModel.onPeek(null) },
-            onDeepDive = { viewModel.onDeepDive(reel.id) },
             onGrade = { correct, label -> viewModel.onGrade(reel.id, correct, label) },
             onInteract = { viewModel.onInteract() },
-            onRunCode = { onRunCode(reel.id, it) },
         )
-    }
-
-    // Deep Dive bottom sheet
-    val deepDiveReel = state.reels.firstOrNull { it.id == state.deepDiveReelId }
-    if (deepDiveReel != null) {
-        ModalBottomSheet(
-            onDismissRequest = { viewModel.onDeepDive(null) },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        ) {
-            DeepDiveContent(
-                reel = deepDiveReel,
-                onRunCode = { onRunCode(deepDiveReel.id, it) },
-            )
-        }
     }
 }
 
@@ -151,173 +131,80 @@ private fun ReelPage(
     reel: Reel,
     isSaved: Boolean,
     isLiked: Boolean,
-    peekActive: Boolean,
     onLike: () -> Unit,
     onSave: () -> Unit,
     onDoubleTapSave: () -> Unit,
-    onLongPressPeek: () -> Unit,
-    onPeekRelease: () -> Unit,
-    onDeepDive: () -> Unit,
     onGrade: (Boolean, String) -> Unit,
     onInteract: () -> Unit,
-    onRunCode: (String) -> Unit,
 ) {
-    // Inner horizontal pager: 0 = explainer, 1 = quiz variant.
-    val quizPager = rememberPagerState(pageCount = { 2 })
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(reel.id) {
-                detectTapGestures(
-                    onDoubleTap = { onDoubleTapSave() },
-                    onLongPress = {
-                        onLongPressPeek()
-                    },
-                    onPress = {
-                        tryAwaitRelease()
-                        onPeekRelease()
-                    },
-                )
+                detectTapGestures(onDoubleTap = { onDoubleTapSave() })
             },
     ) {
-        HorizontalPager(
-            state = quizPager,
-            modifier = Modifier.fillMaxSize(),
-        ) { qPage ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp, vertical = 20.dp),
+        // Content column: info -> code -> quiz. No scroll: everything must
+        // fit, the pager handles all motion.
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 12.dp, end = 68.dp, top = 20.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            ReelCard(
+                track = reel.track.id,
+                level = reel.level,
+                hook = reel.hook,
+                body = reel.bodyMd,
+                takeaway = reel.takeaway,
+            )
+            if (reel.code != null) {
+                CodeCard(
+                    code = reel.code,
+                    language = reel.language,
+                    output = reel.output,
+                )
+            }
+            QuizCard(
+                quiz = reel.toQuizUi(),
+                onResult = { correct, label -> onInteract(); onGrade(correct, label) },
+            )
+        }
+        // Right action rail, vertically centered like Reels/TikTok.
+        Column(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            IconButton(
+                onClick = { onInteract(); onLike() },
+                modifier = Modifier.size(48.dp),
             ) {
-                if (qPage == 0) {
-                    ExplainerContent(
-                        reel = reel,
-                        isSaved = isSaved,
-                        isLiked = isLiked,
-                        onLike = { onInteract(); onLike() },
-                        onSave = { onInteract(); onSave() },
-                        onDeepDive = { onInteract(); onDeepDive() },
-                        onRunCode = { onInteract(); onRunCode(it) },
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "← Swipe for quiz",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                    )
-                } else {
-                    val quizUi = reel.toQuizUi()
-                    QuizCard(
-                        quiz = quizUi,
-                        onResult = { correct, label -> onInteract(); onGrade(correct, label) },
-                    )
-                    if (peekActive) {
-                        Spacer(Modifier.height(8.dp))
-                        PeekAnswerOverlay(answerText = peekText(reel))
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "Swipe → back to explainer",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                    )
-                }
+                Icon(
+                    imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = if (isLiked) "Unlike" else "Like",
+                    tint = if (isLiked) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
+            IconButton(
+                onClick = { onInteract(); onSave() },
+                modifier = Modifier.size(48.dp),
+            ) {
+                Icon(
+                    imageVector = if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                    contentDescription = if (isSaved) "Unsave" else "Save",
+                    tint = if (isSaved) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.size(28.dp),
+                )
             }
         }
     }
-}
-
-@Composable
-private fun ExplainerContent(
-    reel: Reel,
-    isSaved: Boolean,
-    isLiked: Boolean,
-    onLike: () -> Unit,
-    onSave: () -> Unit,
-    onDeepDive: () -> Unit,
-    onRunCode: (String) -> Unit,
-) {
-    ReelCard(
-        track = reel.track.id,
-        level = reel.level,
-        readTimeSec = estimateReadSeconds(reel),
-        hook = reel.hook,
-        body = reel.bodyMd,
-        takeaway = reel.takeaway,
-        isLiked = isLiked,
-        isSaved = isSaved,
-        onLike = onLike,
-        onSave = onSave,
-        onDeepDive = onDeepDive,
-        onGotIt = {},
-        onFuzzy = {},
-    )
-    if (reel.code != null) {
-        Spacer(Modifier.height(12.dp))
-        CodeCard(code = reel.code, language = reel.language, onRun = onRunCode)
-    }
-    Spacer(Modifier.height(12.dp))
-    TrapCard(trap = reel.trap, compilerMessage = reel.trapCompilerMessage)
-}
-
-/** Deep Dive sheet: full-bleed body, code, trap, and quiz. */
-@Composable
-private fun DeepDiveContent(
-    reel: Reel,
-    onRunCode: (String) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-    ) {
-        Text(text = reel.hook, style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(8.dp))
-        Text(text = reel.bodyMd, style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(12.dp))
-        if (reel.code != null) {
-            CodeCard(code = reel.code, language = reel.language, onRun = onRunCode)
-            Spacer(Modifier.height(12.dp))
-        }
-        TrapCard(trap = reel.trap, compilerMessage = reel.trapCompilerMessage, initiallyExpanded = true)
-        Spacer(Modifier.height(12.dp))
-        QuizCard(quiz = reel.toQuizUi(), onResult = { _, _ -> })
-        Spacer(Modifier.height(32.dp))
-    }
-}
-
-@Composable
-private fun PeekAnswerOverlay(answerText: String) {
-    androidx.compose.material3.Card(
-        colors = androidx.compose.material3.CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-        ),
-    ) {
-        Text(
-            text = "Peek: $answerText",
-            modifier = Modifier.padding(12.dp),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
-}
-
-/**~200wpm → seconds, min 20s so a reel never claims to be instant. */
-fun estimateReadSeconds(reel: Reel): Int {
-    val words = (reel.hook + " " + reel.bodyMd + " " + reel.takeaway)
-        .split(Regex("\\s+")).count { it.isNotBlank() }
-    val codeLines = reel.code?.lines()?.size ?: 0
-    return maxOf(20, (words / 200.0 * 60).toInt() + codeLines * 3)
-}
-
-private fun peekText(reel: Reel): String = when (reel.quiz.type) {
-    QuizType.MCQ -> reel.quiz.options.getOrNull(reel.quiz.answerIndex) ?: ""
-    QuizType.TAP_BUG -> "line ${reel.quiz.buggyLineIndex + 1}"
-    QuizType.FILL_BLANK -> reel.quiz.acceptedAnswers.firstOrNull().orEmpty()
 }
 
 private fun Reel.toQuizUi(): QuizUiModel = when (quiz.type) {
@@ -341,11 +228,6 @@ private fun Reel.toQuizUi(): QuizUiModel = when (quiz.type) {
         explanation = quiz.explanation,
     )
 }
-
-// Keep SheetValue import referenced for predictive-back customization hook.
-@OptIn(ExperimentalMaterial3Api::class)
-@Suppress("unused")
-private fun isSheetExpandedHack(v: SheetValue): Boolean = v == SheetValue.Expanded
 
 /** Shown when loading finished but Room returned zero reels. */
 @Composable
@@ -378,34 +260,13 @@ private fun EmptyFeed(onRetry: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 private fun FeedScreenPreviewLite() {
     FerrisFeedTheme(darkTheme = true) {
-        ExplainerContent(
-            reel = previewReel(),
-            isSaved = true,
-            isLiked = false,
-            onLike = {},
-            onSave = {},
-            onDeepDive = {},
-            onRunCode = {},
+        ReelCard(
+            track = "rust",
+            level = 1,
+            hook = "Why does this simple function not compile?",
+            body = "Ownership moves values. Pass a String by value and the caller loses it.",
+            takeaway = "Move by default; borrow with & to keep ownership.",
+            modifier = Modifier.padding(16.dp),
         )
     }
 }
-
-private fun previewReel() = Reel(
-    id = "rust-own-014",
-    track = Track.RUST,
-    level = 1,
-    hook = "Why does this simple function not compile?",
-    bodyMd = "Ownership moves values. Pass a String by value and the caller loses it.",
-    code = "fn main() {\n    let s = String::from(\"hi\");\n}",
-    language = "rust",
-    takeaway = "Move by default; borrow with & to keep ownership.",
-    trap = "Using s after move.",
-    trapCompilerMessage = "error[E0382]: borrow of moved value",
-    quiz = QuizModel(
-        type = QuizType.MCQ,
-        question = "What happens?",
-        options = listOf("move", "copy"),
-        answerIndex = 0,
-        explanation = "String moves.",
-    ),
-)

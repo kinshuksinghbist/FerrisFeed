@@ -108,6 +108,7 @@ class RoomReelDataSource(
         takeaway = takeaway,
         trap = trap,
         trapCompilerMessage = null,
+        topic = topic,
         quiz = parseQuiz(quizJson, code),
         tags = ReelEntity.tagsOf(tagsCsv),
         dueAtEpochMs = nextDueMillis,
