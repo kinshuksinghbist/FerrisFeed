@@ -103,6 +103,7 @@ class RoomReelDataSource(
         hook = hook,
         bodyMd = bodyMd,
         code = code,
+        output = output,
         language = language.ifBlank { "rust" },
         takeaway = takeaway,
         trap = trap,

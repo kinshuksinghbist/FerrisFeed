@@ -35,6 +35,10 @@
       "type": ["string", "null"],
       "description": "Runnable snippet, max 15 lines. Null/omitted when reel has no code."
     },
+    "output": {
+      "type": ["string", "null"],
+      "description": "Expected result shown by the code-card flip: exact stdout for runnable programs, key result/error for fragments. Max 15 lines. Null when not backfilled (flip hidden)."
+    },
     "language": {
       "type": "string",
       "default": "rust",

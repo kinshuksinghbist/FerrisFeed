@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
  */
 @Database(
     entities = [ReelEntity::class, ReelFts::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class FerrisDatabase : RoomDatabase() {
@@ -49,6 +49,10 @@ abstract class FerrisDatabase : RoomDatabase() {
 
         private fun build(context: Context): FerrisDatabase {
             return Room.databaseBuilder(context, FerrisDatabase::class.java, DB_NAME)
+                // Beta-only: v1 never shipped to users, so a destructive
+                // upgrade for the v2 `output` column is acceptable. Write a
+                // real Migration before any production release.
+                .fallbackToDestructiveMigration()
                 .fallbackToDestructiveMigrationOnDowngrade()
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {

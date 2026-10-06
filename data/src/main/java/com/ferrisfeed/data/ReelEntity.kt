@@ -27,6 +27,8 @@ data class ReelEntity(
     @ColumnInfo(name = "body_md") val bodyMd: String,
     /** Nullable: some theory reels have no code. Max ~15 lines when present. */
     val code: String?,
+    /** Expected result for the code-card flip. Null until backfilled. */
+    val output: String? = null,
     /** "rust" | "toml" | "wat" | "typescript" | "" when [code] is null. */
     val language: String = "rust",
     val takeaway: String,

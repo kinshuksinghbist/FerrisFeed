@@ -40,6 +40,8 @@ data class Reel(
     val bodyMd: String,
     val code: String?,
     val language: String,
+    /** Expected result for the code-card flip; null hides the flip button. */
+    val output: String?,
     val takeaway: String,
     val trap: String,
     val trapCompilerMessage: String?,

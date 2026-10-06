@@ -100,6 +100,14 @@ def validate_reel(data: object, path: Path) -> list[str]:
                 # Warning only: TODO's minimal schema omits language; UI defaults to rust.
                 WARNINGS.append(f"[{data.get('id', '?')}] language: missing with code present (defaults to rust)")
 
+    # --- output: <= 15 lines, string or null (flip hidden when null) ---
+    output = data.get("output", None)
+    if output is not None:
+        if not isinstance(output, str):
+            errors.append("output: must be a string or null")
+        elif len(output.splitlines()) > 15:
+            errors.append(f"output: must be <= 15 lines, got {len(output.splitlines())}")
+
     # --- takeaway: 1 sentence-ish ---
     takeaway = data.get("takeaway", "")
     if not isinstance(takeaway, str) or not takeaway.strip():

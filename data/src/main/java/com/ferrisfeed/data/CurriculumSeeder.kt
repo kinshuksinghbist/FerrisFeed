@@ -80,6 +80,7 @@ class CurriculumSeeder(
             hook = text("hook").orEmpty(),
             bodyMd = text("body_md", "bodyMd").orEmpty(),
             code = text("code"),
+            output = text("output"),
             language = text("language") ?: "rust",
             takeaway = text("takeaway").orEmpty(),
             trap = text("trap").orEmpty(),
