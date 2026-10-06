@@ -20,6 +20,10 @@ plugins {
 val syncCurriculumAssets = tasks.register<Sync>("syncCurriculumAssets") {
     from(rootProject.file("content"))
     exclude("schema.json")
+    // Spec v2: the WASM track is out of the app. Content stays dormant in the
+    // repo, but it must not ride along in the APK either (the seeder already
+    // ignores it), so the asset sync drops the wasm directory entirely.
+    exclude("wasm/**")
     into(layout.buildDirectory.dir("generated/curriculum"))
 }
 

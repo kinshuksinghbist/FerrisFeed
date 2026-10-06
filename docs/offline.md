@@ -9,9 +9,11 @@ network, no spinner: 400+ reels ship inside the APK.
   (minus `schema.json`) into generated APK assets. The merge flattens to the
   APK asset ROOT (`assets/rust/…`, `assets/system-design/…`), which is the
   path `CurriculumSeeder` lists — never `assets/curriculum/`.
-- Only Rust and System Design ship (Spec v2): `content/wasm/**` stays in the
-  repo but is **dormant** — not synced into seeding, not seeded, not rendered,
-  not searchable. Do not re-add without a spec change.
+- Only Rust and System Design ship (Spec v2): the wasm content directory is
+  excluded from the asset sync, and the seeder lists only the rust and
+  system-design asset directories. The files stay **dormant** in repo (not in
+  the APK, not seeded, not rendered, not searchable); do not re-add without a
+  spec change.
 - On first DB creation, `FerrisDatabase` fires `CurriculumSeeder`, which
   parses the JSON on IO and inserts ~500 rows, then the feed observes the
   table. No prepackaged SQLite: a hand-built `.db` must carry Room's exact
