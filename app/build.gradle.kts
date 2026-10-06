@@ -9,6 +9,17 @@ plugins {
     alias(libs.plugins.baselineprofile)
 }
 
+/**
+ * Mirrors repo-root `content/*.json` (minus the schema) into generated
+ * assets. Incremental: re-runs only when content changes.
+ */
+val syncCurriculumAssets = tasks.register<Sync>("syncCurriculumAssets") {
+    from(rootProject.file("content")) {
+        exclude("schema.json")
+    }
+    into(layout.buildDirectory.dir("generated/curriculum"))
+}
+
 android {
     namespace = "com.ferrisfeed.app"
     compileSdk = 36
@@ -63,6 +74,13 @@ android {
     baselineProfile {
         // Generates startup + scroll baselines into src/main/baselineProfiles/
         automaticGenerationDuringBuild = true
+    }
+    sourceSets {
+        // Single source of truth stays in repo-root content/ (validated JSON).
+        // This syncs it into generated assets every build so :data's
+        // CurriculumSeeder can populate Room on first launch. Do NOT check
+        // generated files in and do NOT hand-copy JSON into src/main/assets.
+        getByName("main").assets.srcDir(syncCurriculumAssets)
     }
 }
 

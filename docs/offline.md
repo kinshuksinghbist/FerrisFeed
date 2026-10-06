@@ -3,16 +3,18 @@
 FerrisFeed works fully in airplane mode from first launch. No account, no
 network, no spinner: 400+ reels ship inside the APK.
 
-## 1. Prepackaged Room database
+## 1. First-launch seeding (current path)
 
-- `FerrisDatabase` uses `Room.createFromAsset("databases/ferris.db")`.
-- Release pipeline: content JSON (`content/**/*.json`, validated by the Rust
-  schema linter) -> SQLite generator script -> `app/src/main/assets/databases/ferris.db`.
-- The asset DB contains all reels + the FTS4 index prebuilt, so FTS search
-  works offline with zero first-run indexing cost.
-- `fallbackToDestructiveMigrationOnDowngrade()` only; upgrades ship as a
-  new asset + auto-migration. Schema version is exported (`exportSchema =
-  true`) and the schema JSON is checked into version control.
+- `:app:syncCurriculumAssets` mirrors validated repo-root `content/**/*.json`
+  (minus `schema.json`) into generated APK assets under `curriculum/`.
+- On first DB creation, `FerrisDatabase` fires `CurriculumSeeder`, which
+  parses the JSON on IO and inserts ~500 rows, then the feed observes the
+  table. No prepackaged SQLite: a hand-built `.db` must carry Room's exact
+  schema identity hash, and a missing/stale one crashes on EVERY launch
+  instead of degrading — seeding lets Room own its schema.
+- Upgrade path (optional, later): content JSON -> SQLite generator script ->
+  `createFromAsset` + auto-migration. Keep the seeder as the fallback even
+  then; `exportSchema = true` stays on either way.
 
 Asset budget: text for 550 reels is ~2-3 MB SQLite; illustrations are
 WebP in `assets/img/` (~5-8 MB). Total offline payload stays under ~12 MB,

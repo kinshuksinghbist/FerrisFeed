@@ -4,12 +4,22 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
- * Offline-first database. Ships pre-populated from the APK asset so the app
- * works fully in airplane mode on first launch (see docs/offline.md).
+ * Offline-first database. Populated on first launch from the validated
+ * curriculum JSON bundled in APK assets (see [CurriculumSeeder]) — there is
+ * deliberately NO `createFromAsset("...db")` call: a prepackaged SQLite file
+ * must carry Room's exact schema identity hash, and a missing/stale one
+ * crashes on EVERY launch instead of degrading. Seeding from JSON lets Room
+ * own its schema. A release pipeline may reintroduce a prebaked DB later;
+ * until then this is the single supported path.
  *
- * - `reels` holds 400+ curated reels baked at release time.
+ * - `reels` holds 400+ curated reels seeded at first launch.
  * - `reel_fts` is the FTS4 index, rebuilt automatically by Room triggers.
  * - Weekly [CurriculumSyncWorker] REPLACE-upserts new packs; user SRS columns
  *   for existing rows are preserved by merging (see worker), never overwritten.
@@ -23,11 +33,13 @@ abstract class FerrisDatabase : RoomDatabase() {
     abstract fun reelDao(): ReelDao
 
     companion object {
-        const val ASSET_PATH = "databases/ferris.db"
         const val DB_NAME = "ferris.db"
 
         @Volatile
         private var instance: FerrisDatabase? = null
+
+        /** App-lifetime scope for background DB work (seeding). */
+        private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         fun getInstance(context: Context): FerrisDatabase {
             return instance ?: synchronized(this) {
@@ -37,9 +49,22 @@ abstract class FerrisDatabase : RoomDatabase() {
 
         private fun build(context: Context): FerrisDatabase {
             return Room.databaseBuilder(context, FerrisDatabase::class.java, DB_NAME)
-                // Prepack: 400+ reels in APK assets, verified by release checklist.
-                .createFromAsset(ASSET_PATH)
                 .fallbackToDestructiveMigrationOnDowngrade()
+                .addCallback(object : Callback() {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        super.onCreate(db)
+                        // First launch ever: fill Room from bundled JSON off
+                        // the opening thread. Feed observes the table and
+                        // waits for rows (see FeedViewModel init).
+                        ioScope.launch {
+                            runCatching {
+                                val database = getInstance(context)
+                                CurriculumSeeder(context, database.reelDao())
+                                    .seedIfEmpty()
+                            }
+                        }
+                    }
+                })
                 .build()
         }
 

@@ -11,13 +11,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlowimport kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.max
 import kotlin.random.Random
 
@@ -125,9 +125,12 @@ class FeedViewModel @Inject constructor(
             loading.value = true
             savedIds.value = repository.savedIds()
             likedIds.value = repository.likedIds()
-            // First run: pull everything Room has, then shuffle due-first.
-            // Later reshuffles reuse the live queue via reshuffle().
-            val all = repository.allReels()
+            // First run: Room is still seeding from bundled JSON, so wait for
+            // the first non-empty snapshot instead of reading once and
+            // concluding the feed is empty. 30s cap, then show empty state.
+            val all = withTimeoutOrNull(30_000) {
+                repository.observeAllReels().first { it.isNotEmpty() }
+            }.orEmpty()
             if (all.isNotEmpty()) {
                 repository.refreshQueue(buildQueue(all, clock()))
             }
@@ -238,7 +241,9 @@ class FeedViewModel @Inject constructor(
         viewModelScope.launch {
             var current = queue.value
             if (current.isEmpty()) {
-                val all = repository.allReels()
+                val all = withTimeoutOrNull(15_000) {
+                    repository.observeAllReels().first { it.isNotEmpty() }
+                }.orEmpty()
                 if (all.isEmpty()) return@launch
                 repository.refreshQueue(all)
                 current = all

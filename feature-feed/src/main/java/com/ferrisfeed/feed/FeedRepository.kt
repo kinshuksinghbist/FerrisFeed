@@ -69,6 +69,8 @@ interface ReelLocalDataSource {
 /** Feed repository: pure ordering + impression plumbing over the local data source. */
 interface FeedRepository {
     fun observeQueue(): Flow<List<Reel>>
+    /** Live full table (Room seed lands here on first launch). */
+    fun observeAllReels(): Flow<List<Reel>>
     suspend fun allReels(): List<Reel>
     suspend fun refreshQueue(shuffled: List<Reel>)
     suspend fun getReel(id: String): Reel?
@@ -91,6 +93,8 @@ class DefaultFeedRepository(
     private val queue = MutableStateFlow<List<Reel>>(emptyList())
 
     override fun observeQueue(): Flow<List<Reel>> = queue.asStateFlow()
+
+    override fun observeAllReels(): Flow<List<Reel>> = local.observeReels()
 
     override suspend fun allReels(): List<Reel> = local.allReels()
 

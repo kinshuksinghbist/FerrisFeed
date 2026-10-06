@@ -247,11 +247,12 @@ per key. (`intOrNull` DOES exist — inconsistent, just memorize it.)
 
 ## 15. Known gaps left for next session (CI is green, app is not done)
 
-- **First-launch crash:** `FerrisDatabase` uses
-  `createFromAsset("databases/ferris.db")` but no such asset exists in
-  `app/src/main/assets/`. Generating a Room-valid prepackaged DB from
-  `content/*.json` (including the `room_master_table` identity hash) is a
-  dedicated task — do not hand-write the SQLite.
+- **First-launch crash FIXED after this was written:** `createFromAsset`
+  was removed; `:app:syncCurriculumAssets` mirrors `content/*.json` into
+  generated assets and `:data CurriculumSeeder` populates Room on first
+  `onCreate`, with `FeedViewModel` waiting up to 30s for the first rows.
+  A release pipeline may still prebake a `.db` later — if it does, keep the
+  seeder as fallback and never hand-write the SQLite (Room identity hash).
 - Two deprecation warnings remain (`LocalClipboardManager` →
   `LocalClipboard`, `Icons.Filled.MenuBook` → AutoMirrored). Warnings only.
 - Widget manifest registration (`ReelOfDayWidgetReceiver` +

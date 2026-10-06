@@ -40,7 +40,8 @@ do not relitigate them without new evidence.
 - **Hilt 2.52 + hilt-navigation-compose** — constructor injection for
   ViewModels, DAOs, repositories, workers. `HiltWorkerFactory` for
   WorkManager.
-- **Room 2.6.1 + KSP** — prepackaged `curriculum.db` in assets,
+- **Room 2.6.1 + KSP** — `curriculum/*.json` in APK assets seeds
+  the DB on first launch (`CurriculumSeeder`),
   FTS4 for search, `ProgressDao` for SRS state. KSP over KAPT for speed.
   Schema export to `data/schemas/` for review.
 - **DataStore Preferences 1.1.1** — XP, streak, mastery, dynamic-color

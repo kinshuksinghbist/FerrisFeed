@@ -60,5 +60,5 @@ docs/           vision.md, tech-stack.md
 
 - `minSdk 26`, `targetSdk 34`, edge-to-edge, predictive back enabled.
 - Release builds use R8 full mode + baseline profiles. Keep the APK < 25 MB.
-- Prepackaged curriculum DB ships as `curriculum.db` in assets; weekly
+- Curriculum JSON ships in APK assets and seeds Room on first launch; weekly
   packs sync via WorkManager.
