@@ -7,23 +7,30 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
           cache: gradle
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android SDK packages (API 34 to match compileSdk)
+        run: |
+          sdkmanager --sdk_root="${ANDROID_SDK_ROOT:-$ANDROID_HOME}" \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0"
 
       - name: Gradle wrapper validation
-        uses: gradle/wrapper-validation-action@v2
+        uses: gradle/actions/wrapper-validation@v3
 
       - name: Assemble debug
         run: ./gradlew :app:assembleDebug --stacktrace
@@ -33,15 +40,17 @@ jobs:
 
       - name: Upload test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: unit-test-reports
           path: |
             **/build/reports/tests/
             **/build/test-results/
+          if-no-files-found: warn
 
       - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
