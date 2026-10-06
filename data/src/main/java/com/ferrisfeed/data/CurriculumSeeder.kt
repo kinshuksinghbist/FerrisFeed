@@ -3,7 +3,6 @@ package com.ferrisfeed.data
 import android.content.Context
 import android.util.Log
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.encodeToString
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -82,7 +81,9 @@ class CurriculumSeeder(
             language = text("language") ?: "rust",
             takeaway = text("takeaway").orEmpty(),
             trap = text("trap").orEmpty(),
-            quizJson = quizElement?.let { json.encodeToString(it) },
+            // JsonObject.toString() is defined to emit valid JSON, which is
+            // all the UI parser needs (see RoomReelDataSource.parseQuiz).
+            quizJson = quizElement?.toString(),
             orderIndex = orderIndex,
         )
     }
