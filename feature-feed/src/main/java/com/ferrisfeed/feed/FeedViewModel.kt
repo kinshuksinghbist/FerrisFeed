@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -61,12 +63,17 @@ private data class FeedPartialOverlays(
  * Tracking: impression (first paint), dwell (ms on page), skip (dwell < 1500ms and no interaction).
  * Position: persists current index + reel id hash to DataStore, restores on launch.
  */
-class FeedViewModel(
+@HiltViewModel
+class FeedViewModel @Inject constructor(
     private val repository: FeedRepository,
     private val dataStore: DataStore<Preferences>,
-    private val clock: () -> Long = System::currentTimeMillis,
-    private val random: Random = Random.Default,
 ) : ViewModel() {
+
+    /** Overridable clock for tests. */
+    var clock: () -> Long = System::currentTimeMillis
+
+    /** Overridable RNG for tests. */
+    var random: Random = Random.Default
 
     private val savedIds = MutableStateFlow<Set<String>>(emptySet())
     private val likedIds = MutableStateFlow<Set<String>>(emptySet())
@@ -116,11 +123,16 @@ class FeedViewModel(
     init {
         viewModelScope.launch {
             loading.value = true
+            savedIds.value = repository.savedIds()
+            likedIds.value = repository.likedIds()
+            // First run: pull everything Room has, then shuffle due-first.
+            // Later reshuffles reuse the live queue via reshuffle().
+            val all = repository.allReels()
+            if (all.isNotEmpty()) {
+                repository.refreshQueue(buildQueue(all, clock()))
+            }
             val restored = dataStore.data.first()
             val restoredIndex = restored[KEY_LAST_INDEX] ?: 0
-            // Initial queue comes from repository (preloaded by :data prepackaged DB).
-            // Re-shuffle once so due cards surface first.
-            reshuffle(nowMs = clock())
             index.value = restoredIndex
             loading.value = false
             pageStartMs = clock()
@@ -219,6 +231,24 @@ class FeedViewModel(
 
     fun onToggleSave(reelId: String) {
         onSave(reelId, !savedIds.value.contains(reelId))
+    }
+
+    /** Jump to a reel by id (deep links, search results). No-op if unknown. */
+    fun focusReel(id: String) {
+        viewModelScope.launch {
+            var current = queue.value
+            if (current.isEmpty()) {
+                val all = repository.allReels()
+                if (all.isEmpty()) return@launch
+                repository.refreshQueue(all)
+                current = all
+            }
+            val idx = current.indexOfFirst { it.id == id }
+            if (idx >= 0) {
+                index.value = idx
+                persistPosition(idx, id)
+            }
+        }
     }
 
     fun onGrade(reelId: String, correct: Boolean, label: String) {

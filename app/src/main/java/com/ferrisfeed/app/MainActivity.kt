@@ -1,5 +1,8 @@
 package com.ferrisfeed.app
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,19 +23,32 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import com.ferrisfeed.coreui.theme.FerrisFeedTheme
-import com.ferrisfeed.feature.feed.FeedScreen
-import com.ferrisfeed.feature.path.PathScreen
-import com.ferrisfeed.feature.path.SearchScreen
+import com.ferrisfeed.coreui.FerrisFeedTheme
+import com.ferrisfeed.data.ReelDao
+import com.ferrisfeed.data.ReelEntity
+import com.ferrisfeed.data.SearchFilters as DataSearchFilters
+import com.ferrisfeed.data.SearchRepository
+import com.ferrisfeed.feed.FeedScreen
+import com.ferrisfeed.feed.FeedViewModel
+import com.ferrisfeed.path.PathScreen
+import com.ferrisfeed.path.SearchResult
+import com.ferrisfeed.path.SearchScreen
+import com.ferrisfeed.path.defaultPathNodes
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -53,6 +69,9 @@ sealed interface Route : NavKey {
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    @Inject
+    lateinit var reelDao: ReelDao
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -62,7 +81,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             FerrisFeedTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    FerrisFeedNavHost(initialReelId = deepLinkedReel)
+                    FerrisFeedNavHost(
+                        initialReelId = deepLinkedReel,
+                        reelDao = reelDao,
+                    )
                 }
             }
         }
@@ -70,13 +92,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun FerrisFeedNavHost(initialReelId: String?) {
-    val backStack = rememberNavBackStack(
-        buildList<NavKey> {
-            add(Route.Feed)
-            if (initialReelId != null) add(Route.ReelDetail(initialReelId))
-        }
-    )
+fun FerrisFeedNavHost(initialReelId: String?, reelDao: ReelDao) {
+    val backStack = rememberNavBackStack(Route.Feed)
+    androidx.compose.runtime.LaunchedEffect(initialReelId) {
+        if (initialReelId != null) backStack.add(Route.ReelDetail(initialReelId))
+    }
     val currentTop = backStack.lastOrNull()
     val selectedTab: Route = when (currentTop) {
         is Route.Path -> Route.Path
@@ -139,33 +159,83 @@ fun FerrisFeedNavHost(initialReelId: String?) {
             entryProvider = { key ->
                 when (key) {
                     is Route.Feed -> NavEntry(key) {
-                        FeedScreen(
-                            onOpenReel = { reelId -> backStack.add(Route.ReelDetail(reelId)) },
-                            onOpenPath = { backStack.add(Route.Path) }
-                        )
+                        FeedEntry(focusedReelId = null)
                     }
                     is Route.Path -> NavEntry(key) {
                         PathScreen(
-                            onOpenReel = { reelId -> backStack.add(Route.ReelDetail(reelId)) }
+                            nodes = remember { defaultPathNodes() },
+                            onNodeClick = { backStack.add(Route.Search) },
                         )
                     }
                     is Route.Search -> NavEntry(key) {
-                        SearchScreen(
-                            onOpenReel = { reelId -> backStack.add(Route.ReelDetail(reelId)) }
-                        )
+                        SearchEntry(reelDao = reelDao) { reelId ->
+                            backStack.add(Route.ReelDetail(reelId))
+                        }
                     }
                     is Route.ReelDetail -> NavEntry(key) {
-                        FeedScreen(
-                            focusedReelId = key.reelId,
-                            onOpenReel = { reelId -> backStack.add(Route.ReelDetail(reelId)) },
-                            onOpenPath = { backStack.add(Route.Path) }
-                        )
+                        FeedEntry(focusedReelId = key.reelId)
                     }
                     else -> error("Unknown route $key")
                 }
             }
         )
     }
+}
+
+/** Feed tab fragment: Hilt-provided ViewModel, playground runner for code. */
+@Composable
+private fun FeedEntry(focusedReelId: String?) {
+    val viewModel: FeedViewModel = hiltViewModel()
+    val context = LocalContext.current
+    FeedScreen(
+        viewModel = viewModel,
+        focusedReelId = focusedReelId,
+        onRunCode = { _, code -> openRustPlayground(context, code) },
+    )
+}
+
+/** Search tab fragment: Room FTS via :data, mapped to path UI models. */
+@Composable
+private fun SearchEntry(reelDao: ReelDao, onOpenReel: (String) -> Unit) {
+    val repository = remember(reelDao) { SearchRepository(reelDao) }
+    var results by remember { mutableStateOf<List<SearchResult>>(emptyList()) }
+    val scope = rememberCoroutineScope()
+    SearchScreen(
+        results = results,
+        onQueryChanged = { query, filters ->
+            scope.launch {
+                results = repository.search(
+                    query = query,
+                    filters = DataSearchFilters(
+                        track = filters.track,
+                        minLevel = filters.level ?: 1,
+                        maxLevel = filters.level ?: 3,
+                        hasCode = filters.hasCode,
+                        hasQuiz = filters.hasQuiz,
+                    ),
+                ).map { it.toSearchResult() }
+            }
+        },
+        onResultClick = { result -> onOpenReel(result.id) },
+    )
+}
+
+private fun ReelEntity.toSearchResult(): SearchResult = SearchResult(
+    id = id,
+    track = track,
+    level = level,
+    hook = hook,
+    takeaway = takeaway,
+    hasCode = hasCode,
+    hasQuiz = hasQuiz,
+    snippet = bodyMd.take(140),
+)
+
+private fun openRustPlayground(context: Context, code: String) {
+    val uri = Uri.parse(
+        "https://play.rust-lang.org/?code=" + Uri.encode(code)
+    )
+    context.startActivity(Intent(Intent.ACTION_VIEW, uri))
 }
 
 private fun <T> MutableList<T>.clear() {

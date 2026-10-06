@@ -56,21 +56,27 @@ data class Reel(
 /** Minimal contract the :data module must fulfill (Room + prepackaged asset impl). */
 interface ReelLocalDataSource {
     fun observeReels(): Flow<List<Reel>>
+    suspend fun allReels(): List<Reel>
     suspend fun getReel(id: String): Reel?
     suspend fun upsertImpression(reelId: String, dwellMs: Long, skipped: Boolean)
     suspend fun setSaved(reelId: String, saved: Boolean)
     suspend fun setLiked(reelId: String, liked: Boolean)
+    suspend fun savedIds(): Set<String>
+    suspend fun likedIds(): Set<String>
     suspend fun recordGrade(reelId: String, correct: Boolean, label: String)
 }
 
 /** Feed repository: pure ordering + impression plumbing over the local data source. */
 interface FeedRepository {
     fun observeQueue(): Flow<List<Reel>>
+    suspend fun allReels(): List<Reel>
     suspend fun refreshQueue(shuffled: List<Reel>)
     suspend fun getReel(id: String): Reel?
     suspend fun trackImpression(reelId: String, dwellMs: Long, skipped: Boolean)
     suspend fun setSaved(reelId: String, saved: Boolean)
     suspend fun setLiked(reelId: String, liked: Boolean)
+    suspend fun savedIds(): Set<String>
+    suspend fun likedIds(): Set<String>
     suspend fun recordGrade(reelId: String, correct: Boolean, label: String)
 }
 
@@ -85,6 +91,8 @@ class DefaultFeedRepository(
     private val queue = MutableStateFlow<List<Reel>>(emptyList())
 
     override fun observeQueue(): Flow<List<Reel>> = queue.asStateFlow()
+
+    override suspend fun allReels(): List<Reel> = local.allReels()
 
     /** Also merges live SRS updates so due flags stay fresh without reshuffling. */
     fun observeMergedQueue(): Flow<List<Reel>> = local.observeReels().map { all ->
@@ -104,6 +112,8 @@ class DefaultFeedRepository(
 
     override suspend fun setSaved(reelId: String, saved: Boolean) = local.setSaved(reelId, saved)
     override suspend fun setLiked(reelId: String, liked: Boolean) = local.setLiked(reelId, liked)
+    override suspend fun savedIds(): Set<String> = local.savedIds()
+    override suspend fun likedIds(): Set<String> = local.likedIds()
     override suspend fun recordGrade(reelId: String, correct: Boolean, label: String) =
         local.recordGrade(reelId, correct, label)
 }

@@ -58,6 +58,8 @@ fun FeedScreen(
     viewModel: FeedViewModel,
     onRunCode: (reelId: String, code: String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Deep-link / search entry: jump to this reel once the queue loads. */
+    focusedReelId: String? = null,
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -88,6 +90,10 @@ fun FeedScreen(
         if (pagerState.currentPage != state.currentIndex) {
             pagerState.scrollToPage(state.currentIndex)
         }
+    }
+    // Deep-link / search entry point: jump once the queue is loaded.
+    LaunchedEffect(focusedReelId) {
+        if (focusedReelId != null) viewModel.focusReel(focusedReelId)
     }
 
     VerticalPager(
