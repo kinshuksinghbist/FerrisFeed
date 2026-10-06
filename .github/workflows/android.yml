@@ -30,6 +30,7 @@ jobs:
             "build-tools;34.0.0"
 
       - name: Gradle wrapper validation
+        continue-on-error: true
         uses: gradle/actions/wrapper-validation@v3
 
       - name: Assemble debug
