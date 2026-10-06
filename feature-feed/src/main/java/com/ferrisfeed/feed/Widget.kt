@@ -1,10 +1,12 @@
 package com.ferrisfeed.feed
 
+import android.content.ComponentName
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceTheme
@@ -15,6 +17,7 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.currentState
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -25,6 +28,7 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 
 /**
  * "Reel of the Day" Glance widget + streak counter.
@@ -41,15 +45,17 @@ import androidx.glance.text.TextStyle
  */
 class ReelOfDayWidget : GlanceAppWidget() {
 
+    override val stateDefinition = PreferencesGlanceStateDefinition
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             GlanceTheme {
-                val state = currentState<androidx.glance.state.PreferencesGlanceState>()
-                val hook = state.preferences[stringPreferencesKey(KEY_HOOK)]
+                val prefs = currentState<Preferences>()
+                val hook = prefs[stringPreferencesKey(KEY_HOOK)]
                     ?: "Why does this function not compile?"
-                val track = state.preferences[stringPreferencesKey(KEY_TRACK)] ?: "rust"
-                val streak = state.preferences[stringPreferencesKey(KEY_STREAK)] ?: "0"
-                val reelId = state.preferences[stringPreferencesKey(KEY_REEL_ID)] ?: ""
+                val track = prefs[stringPreferencesKey(KEY_TRACK)] ?: "rust"
+                val streak = prefs[stringPreferencesKey(KEY_STREAK)] ?: "0"
+                val reelId = prefs[stringPreferencesKey(KEY_REEL_ID)] ?: ""
                 WidgetContent(
                     context = context,
                     hook = hook,
@@ -91,7 +97,15 @@ private fun WidgetContent(
         modifier = androidx.glance.GlanceModifier
             .fillMaxSize()
             .padding(16.dp)
-            .clickable(actionStartActivity(DeepLinks.reelIntent(context, reelId))),
+            // NB: Glance actions must be activity-class/component based so the
+            // launcher host can serialize them; raw Intents are not accepted.
+            // Deep-link-to-reel payload rides along once the receiver +
+            // appwidget-provider XML land (see class KDoc).
+            .clickable(
+                actionStartActivity(
+                    ComponentName(context.packageName, MAIN_ACTIVITY_CLASS),
+                ),
+            ),
         verticalAlignment = Alignment.Top,
         horizontalAlignment = Alignment.Start,
     ) {
@@ -148,15 +162,9 @@ class ReelOfDayWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 private object Accents {
-    val Orange = Color(0xFFFF6B35)
-    val Muted = Color(0xFF9AA3B2)
+    val Orange = ColorProvider(Color(0xFFFF6B35))
+    val Muted = ColorProvider(Color(0xFF9AA3B2))
 }
 
-private object DeepLinks {
-    fun reelIntent(context: Context, reelId: String): android.content.Intent {
-        return android.content.Intent(
-            android.content.Intent.ACTION_VIEW,
-            android.net.Uri.parse("ferrisfeed://reel/$reelId"),
-        ).setPackage(context.packageName)
-    }
-}
+/** Fully-qualified name keeps :feature-feed decoupled from :app. */
+private const val MAIN_ACTIVITY_CLASS = "com.ferrisfeed.app.MainActivity"
