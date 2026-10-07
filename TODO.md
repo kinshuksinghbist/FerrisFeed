@@ -263,8 +263,10 @@ Store copy already promises a placement test (`docs/play-listing.md`).
       8.9.2 / Gradle 8.11.1 / compileSdk 36 triple stays locked, so
       this is a single `targetSdk` bump + full CI + APK asset check
       (learnings §17), not an SDK-level upgrade. DONE: `targetSdk 35`
-      + `tools:targetApi 35`; triple untouched; CI + asset check at
-      close-out.
+      + `tools:targetApi 35`; triple untouched. CI green on run
+      `37592167256` (`assembleDebug` + all four `testDebugUnitTest`);
+      APK asset check: 22 curriculum files (14 rust + 8 system-design),
+      0 wasm, no `schema.json`, 21.9 MB inside the 25 MB budget.
 - [x] 28b. Register the widget receiver + refresh worker (the §15
       gap list in `docs/learnings.md`). DONE: `ReelOfDayWidgetReceiver`
       in the manifest with `reel_of_day_widget_info.xml`,
@@ -285,9 +287,7 @@ Store copy already promises a placement test (`docs/play-listing.md`).
 - **Runtime smoke was not executed**: there is no JDK, Android SDK, or emulator in this
   workspace, so "first-launch seed" and "topic feed" are verified statically (asset listing +
   seeder input matching + compile), not by launching the APK. Run the app once on a device to
-  confirm the seed count and tap through a topic node.
-- Roadmap node titles come from the seeded topic key, which is derived from the content file
-  name, so they read coarse (`Extra`, `Drills`, `Beginner`). Finer nodes need a `topic` field in
-  the reel schema + a richer filename/label mapping — out of scope for this pass.
-- `targetSdk` is still 34 (Play expects 35+ for new listings) and the widget receiver + refresh
-  worker are still unregistered — both pre-existing, tracked in `docs/play-listing.md`.
+  confirm the seed count and tap through a topic node. The TalkBack walk is planned in 28c;
+  store screenshots for 27d are queued with that pass.
+- `targetSdk` is now 35 and the widget receiver + refresh worker are registered and
+  scheduled (28a–28b) — the pre-existing gaps from the Spec v2 pass are closed.

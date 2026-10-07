@@ -394,3 +394,19 @@ per file before writing.
 - Quiz option cards need `defaultMinSize(minHeight = 48.dp)` — short options
   otherwise ship sub-48dp targets. Rail IconButtons already use 48dp
   `Modifier.size` with 28dp glyphs; do not shrink them.
+
+## 26. Two latent breaks the TODO 22 commit left (found closing out P5)
+
+- A subjectless `when` with `//` comments between its entries failed
+  `:feature-path` compilation (`138:68 Expecting a when-condition` on runs
+  37582567262 + 37590339813 — red since the TODO 22 push, tests masked).
+  Rewritten as a hoisted if-else caption val with comments above it
+  (PathScreen results header). **Rule:** keep comments out from between
+  `when` entries in this codebase; if the compiler points at an `else`
+  line-end with no visible cause, rewrite as if-else instead of debating it.
+- `:data SearchFilters` defaulted `maxLevel = 3` while the content schema
+  runs 1..4 and `PathViewModel` maps unset levels to 1..4 — unfiltered
+  browse silently hid every advanced reel, and `PathBrowseIaTest` (which
+  expects 4) failed once compilation passed. Fixed the default to 4
+  (+ `isEmpty`). **Rule:** level bounds live in exactly two places —
+  the content schema doc and these two defaults — and all three must agree.
