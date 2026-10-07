@@ -308,7 +308,7 @@ fun CodeBlock(
  * - Strings: sky blue [CodeCardTokens.Output]
  * - Comments & Attributes: gray [CodeCardTokens.Muted]
  */
-fun highlightCode(code: String, language: String): AnnotatedString {
+fun highlightCode(code: String, language: String = "rust"): AnnotatedString {
     val keywords = when (language.lowercase()) {
         "rust", "rs" -> RustKeywords
         else -> RustKeywords + SysDesignKeywords

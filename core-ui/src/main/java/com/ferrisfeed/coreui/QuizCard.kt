@@ -257,7 +257,7 @@ private fun McqBody(
             }
             val containerColor by animateColorAsState(
                 targetValue = targetContainer,
-                animationSpec = FerrisMotion.Quick,
+                animationSpec = FerrisMotion.QuickColor,
                 label = "option-bg",
             )
 
@@ -443,7 +443,7 @@ private fun TapBugBody(
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
             .background(CodeCardTokens.Container)
-            .border(0.5.dp, CodeCardTokens.Border, MaterialTheme.shapes.medium)
+            .border(0.5.dp, glassStroke(), MaterialTheme.shapes.medium)
             .padding(16.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -524,7 +524,7 @@ private fun TapBugBody(
                         Spacer(Modifier.width(10.dp))
                         // Syntax-highlighted code line
                         Text(
-                            text = highlightCode(line.ifBlank { " " }, isDark = true),
+                            text = highlightCode(line.ifBlank { " " }, language = "rust"),
                             style = TextStyle(
                                 fontFamily = CodeFontFamily,
                                 fontSize = 13.sp,
@@ -554,13 +554,13 @@ private fun FillBlankBody(
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.medium)
                 .background(CodeCardTokens.Container)
-                .border(0.5.dp, CodeCardTokens.Border, MaterialTheme.shapes.medium)
+                .border(0.5.dp, glassStroke(), MaterialTheme.shapes.medium)
                 .padding(16.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (quiz.prefix.isNotBlank()) {
                     Text(
-                        text = highlightCode(quiz.prefix, isDark = true),
+                        text = highlightCode(quiz.prefix, language = "rust"),
                         style = TextStyle(fontFamily = CodeFontFamily, fontSize = 13.sp, lineHeight = 20.sp),
                     )
                 }
@@ -573,7 +573,7 @@ private fun FillBlankBody(
                         text.isNotBlank() -> MaterialTheme.colorScheme.primary
                         else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     },
-                    animationSpec = FerrisMotion.Quick,
+                    animationSpec = FerrisMotion.QuickColor,
                     label = "input-bottom-border",
                 )
 
@@ -628,7 +628,7 @@ private fun FillBlankBody(
 
                 if (quiz.suffix.isNotBlank()) {
                     Text(
-                        text = highlightCode(quiz.suffix, isDark = true),
+                        text = highlightCode(quiz.suffix, language = "rust"),
                         style = TextStyle(fontFamily = CodeFontFamily, fontSize = 13.sp, lineHeight = 20.sp),
                     )
                 }

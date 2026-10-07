@@ -73,6 +73,9 @@ object FerrisMotion {
     val QuickSize = tween<IntSize>(durationMillis = 150, easing = LinearOutSlowInEasing)
     val SmoothSize = tween<IntSize>(durationMillis = 350, easing = FastOutSlowInEasing)
 
+    val QuickColor = tween<Color>(durationMillis = 150, easing = LinearOutSlowInEasing)
+    val SmoothColor = tween<Color>(durationMillis = 350, easing = FastOutSlowInEasing)
+
     const val StaggerMs = 45
 }
 
