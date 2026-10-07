@@ -26,7 +26,7 @@
   {
     "body_md": "CAP: under partition you pick consistency or availability. PACELC adds: else latency vs consistency. Most systems choose eventual consistency with tunable quorum for balance.",
     "code": null,
-    "hook": "Partition forces a choice \u2014 latency forces another.",
+    "hook": "Partition forces a choice — latency forces another.",
     "id": "sd-int-002",
     "language": null,
     "level": 2,
@@ -139,12 +139,12 @@
     "takeaway": "Enforce average rate while permitting bursts.",
     "trap": "Per-instance buckets letting global limit slip N-fold.",
     "track": "system-design",
-    "topic_label": "concepts"
+    "topic_label": "database-sharding"
   },
   {
     "body_md": "Idempotency: same request twice has one effect. Send `Idempotency-Key`, server stores result and returns it on retry. Essential for payments and Kafka consumers with at-least-once delivery.",
     "code": "POST /pay\nIdempotency-Key: 550e8400-e29b-41d4\n=> 200 {\"status\":\"charged_once\"}",
-    "hook": "Retry safely \u2014 charge once.",
+    "hook": "Retry safely — charge once.",
     "id": "sd-int-007",
     "language": "rust",
     "level": 2,
@@ -163,7 +163,7 @@
     "takeaway": "Key every mutating call that may retry.",
     "trap": "Non-unique keys collapsing distinct payments.",
     "track": "system-design",
-    "topic_label": "concepts"
+    "topic_label": "database-sharding"
   },
   {
     "body_md": "Quorum: with N=3, W=2,R=2 you tolerate 1 failure and get strong reads. W+R>N ensures overlap. Tune: W=1 for speed, W=all for safety. Sloppy quorum keeps writes during partitions.",
@@ -187,7 +187,7 @@
     "takeaway": "Size quorums to overlap on N replicas.",
     "trap": "W=1,R=1 silently serving stale data.",
     "track": "system-design",
-    "topic_label": "concepts"
+    "topic_label": "database-sharding"
   },
   {
     "body_md": "Cache invalidation: write-through updates cache synchronously, write-behind batches, cache-aside lazy. Use versioned keys `post:42:v3` and short TTLs to bound staleness during races.",
@@ -211,11 +211,11 @@
     "takeaway": "Version and expire to contain inconsistency.",
     "trap": "Delete-then-update causing stampede on miss.",
     "track": "system-design",
-    "topic_label": "concepts"
+    "topic_label": "database-sharding"
   },
   {
     "body_md": "Back-of-envelope: 1M DAU posting twice daily is ~23 writes/sec average, ~100 peak. Storage 1KB each is ~2GB/day. Size DB, Kafka, and cache from such math before choosing instances.",
-    "code": "# 1e6 * 2 / 86400 \u2248 23 rps avg\n# 23 * 1KB * 86400 \u2248 2GB/day",
+    "code": "# 1e6 * 2 / 86400 ≈ 23 rps avg\n# 23 * 1KB * 86400 ≈ 2GB/day",
     "hook": "Arithmetic before architecture.",
     "id": "sd-int-010",
     "language": "rust",
@@ -235,7 +235,7 @@
     "takeaway": "Derive rps and bytes from user behavior.",
     "trap": "Forgetting 3x peak plus replication overhead.",
     "track": "system-design",
-    "topic_label": "concepts"
+    "topic_label": "database-sharding"
   },
   {
     "body_md": "Indexes trade read speed for write cost. B-tree for range, hash for point lookup, GIN for full-text. Check `EXPLAIN` for seq scans; add covering index on (author_id, id DESC) for feeds.",
@@ -259,7 +259,7 @@
     "takeaway": "Index the filter plus order you actually query.",
     "trap": "Over-indexing slowing every write.",
     "track": "system-design",
-    "topic_label": "concepts"
+    "topic_label": "replication"
   },
   {
     "body_md": "Write path in Rust: validate, check idempotency key in Redis, insert via sqlx, publish to Kafka, invalidate cache. Return 202 for async jobs. Log trace id across all steps.",
@@ -273,7 +273,7 @@
       "answer": 0,
       "explain": "Ordered steps keep retries and debugging sane.",
       "options": [
-        "Validate\u2192dedupe\u2192store\u2192publish",
+        "Validate→dedupe→store→publish",
         "Publish first always",
         "Skip validation",
         "Cache before DB"
@@ -283,7 +283,7 @@
     "takeaway": "Sequence side effects for retry safety.",
     "trap": "Publishing event before DB commit causes ghosts.",
     "track": "system-design",
-    "topic_label": "concepts"
+    "topic_label": "replication"
   },
   {
     "body_md": "Read path: edge cache, Redis, read replica, then primary. Use singleflight so 100 misses trigger one DB load. Serve stale-while-revalidate for feeds to hide tail latency.",
@@ -307,7 +307,7 @@
     "takeaway": "Dedupe concurrent loads for the same key.",
     "trap": "Infinite stale serving without background refresh.",
     "track": "system-design",
-    "topic_label": "concepts"
+    "topic_label": "replication"
   },
   {
     "body_md": "Timeouts, retries with jitter, circuit breakers: set 200ms downstream timeout, retry twice with exponential backoff, trip breaker after 50% failures. Fail fast to preserve threads.",
@@ -331,7 +331,7 @@
     "takeaway": "Bound every downstream call with policy.",
     "trap": "Retrying 500s aggressively amplifying outage.",
     "track": "system-design",
-    "topic_label": "concepts"
+    "topic_label": "replication"
   },
   {
     "body_md": "Observability trio: metrics for alerts, structured logs for context, traces for causality. Propagate `trace-id` via tower middleware and OpenTelemetry; dashboard RED (rate, errors, duration).",
@@ -354,6 +354,6 @@
     "takeaway": "Emit correlated metrics, logs, and traces.",
     "trap": "High-cardinality labels exploding Prometheus.",
     "track": "system-design",
-    "topic_label": "concepts"
+    "topic_label": "replication"
   }
 ]

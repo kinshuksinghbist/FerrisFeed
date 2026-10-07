@@ -139,7 +139,7 @@
     "takeaway": "Normalize cache keys and isolate private responses by identity.",
     "trap": "Caching personalized pages under a shared public key.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "horizontal-scaling"
   },
   {
     "body_md": "Token bucket allows bursts while capping average rate. Refill tokens on elapsed time and spend one per request so APIs absorb spikes without drowning backends.",
@@ -163,7 +163,7 @@
     "takeaway": "Use token buckets to allow bursts while capping average load.",
     "trap": "Setting bucket depth huge and calling it rate limiting.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "horizontal-scaling"
   },
   {
     "body_md": "Sliding window counts recent requests with smoother edges than fixed windows. Track timestamps in Redis sorted sets and expire old entries so boundary bursts cannot double-spend quota.",
@@ -187,7 +187,7 @@
     "takeaway": "Count rolling windows to stop boundary bursts from doubling quota.",
     "trap": "Using fixed windows that allow twice the quota at edges.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "horizontal-scaling"
   },
   {
     "body_md": "Retry with capped exponential backoff plus jitter spreads stampedes. Retry only idempotent errors, cap attempts, and add hedged deadline so one slow shard cannot stall everything.",
@@ -211,7 +211,7 @@
     "takeaway": "Retry idempotent calls with capped jittered backoff and limits.",
     "trap": "Retrying non-idempotent payments without idempotency keys.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "horizontal-scaling"
   },
   {
     "body_md": "Circuit breaker stops calling a failing dependency and fails fast. It trips after error threshold, probes with half-open traffic, and closes when success returns.",
@@ -235,7 +235,7 @@
     "takeaway": "Trip failing calls fast and probe recovery through half-open traffic.",
     "trap": "Keeping the breaker closed during a full downstream outage.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "horizontal-scaling"
   },
   {
     "body_md": "Bulkhead isolates pools so one bad tenant cannot sink all. Split threads, connections, and queues per dependency with per-lane caps and separate timeouts.",
@@ -259,7 +259,7 @@
     "takeaway": "Isolate resources per dependency with independent capacity caps.",
     "trap": "Sharing one pool across critical and best-effort traffic.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "caching-patterns"
   },
   {
     "body_md": "Timeout budgets cap total wait across chained calls. Set per-attempt deadlines smaller than the edge budget and propagate remaining time so deep calls cannot blow the user deadline.",
@@ -283,7 +283,7 @@
     "takeaway": "Propagate shrinking deadlines so chained calls respect edge limits.",
     "trap": "Giving every hop the full edge timeout and stacking waits.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "caching-patterns"
   },
   {
     "body_md": "Backpressure signals overload upstream instead of queueing forever. Bound queues, shed low-priority load with 429 plus Retry-After, and autoscale on queue depth rather than hope.",
@@ -307,7 +307,7 @@
     "takeaway": "Bound queues and shed low priority load with clear retry signals.",
     "trap": "Growing an unbounded queue until memory kills the host.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "caching-patterns"
   },
   {
     "body_md": "HPA scales on signals like CPU, request queue, and custom latency. Pick leading indicators, cool down flaps, and scale stateful parts separately from stateless web tiers.",
@@ -330,7 +330,7 @@
     "takeaway": "Scale on leading signals with cooldowns per tier.",
     "trap": "Scaling on lagging CPU alone during queue buildup.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "caching-patterns"
   },
   {
     "body_md": "Readiness gates traffic while liveness triggers restarts. Fail readiness when dependencies sag, fail liveness only on deadlock, and never couple deploys to aggressive restart thresholds.",
@@ -354,7 +354,7 @@
     "takeaway": "Gate traffic with readiness and reserve liveness for true deadlocks.",
     "trap": "Failing liveness on downstream slowness and restart-looping.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "caching-patterns"
   },
   {
     "body_md": "Blue-green runs two full stacks and flips traffic once green passes checks. It gives instant rollback and full isolation at double cost plus migration care for state.",
@@ -377,7 +377,7 @@
     "takeaway": "Keep parallel stacks for atomic cutover and instant rollback.",
     "trap": "Forgetting state migration while flipping stateless traffic.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "microservices"
   },
   {
     "body_md": "Canary shifts a slice of traffic to the new build and watches error and latency deltas. Automate promotion and rollback on burn signals instead of eyeballing dashboards.",
@@ -401,7 +401,7 @@
     "takeaway": "Shift traffic gradually with automatic rollback on metric regression.",
     "trap": "Canarying without rollback automation during a metric spike.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "microservices"
   },
   {
     "body_md": "Feature flags decouple deploy from release with targeted rollouts. Flag by user cohort, keep flags short-lived, and always ship a kill switch for risky paths.",
@@ -425,7 +425,7 @@
     "takeaway": "Roll out by cohort with short-lived flags and kill switches.",
     "trap": "Leaving stale flags that fork logic forever.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "microservices"
   },
   {
     "body_md": "RED tracks rate errors duration per service while USE tracks utilization saturation errors per resource. RED spots user pain fast and USE finds the bottlenecked disk or queue beneath.",
@@ -448,7 +448,7 @@
     "takeaway": "Pair service signals with resource signals to link pain to cause.",
     "trap": "Alerting on CPU alone while errors climb unnoticed.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "microservices"
   },
   {
     "body_md": "Tracing samples to keep cost sane while catching tails. Head-sample errors and slow paths, tail-sample interesting traces, and propagate baggage so spans join across services.",
@@ -472,7 +472,7 @@
     "takeaway": "Sample adaptively to keep errors and slow paths without excess cost.",
     "trap": "Sampling uniformly and losing every rare tail event.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "microservices"
   },
   {
     "body_md": "Burn-rate alerts fire on how fast you eat error budget. Page on fast burn over short windows and ticket on slow burn over days so noise drops but real outages still wake someone.",
@@ -496,6 +496,6 @@
     "takeaway": "Page on fast budget burn and ticket slow leaks separately.",
     "trap": "Paging on every short spike without budget context.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "microservices"
   }
 ]

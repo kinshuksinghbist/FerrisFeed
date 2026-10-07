@@ -139,7 +139,7 @@
     "takeaway": "Index selective leading columns and keep ranges ordered.",
     "trap": "Indexing a boolean alone and expecting faster scans.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "sql-vs-nosql"
   },
   {
     "body_md": "GIN indexes map tokens to row lists so full text and array containment avoid full scans. They cost slower writes and bigger size, so use them for search tags and JSONB containment.",
@@ -163,7 +163,7 @@
     "takeaway": "Use GIN for text search and array containment workloads.",
     "trap": "Putting GIN on a hot counter column with constant writes.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "sql-vs-nosql"
   },
   {
     "body_md": "EXPLAIN ANALYZE runs the query and shows actual rows versus estimates plus buffers and timing. Look for seq scans on big tables, nested loops exploding, and wrong row estimates needing ANALYZE or better stats.",
@@ -187,7 +187,7 @@
     "takeaway": "Compare actual rows with estimates before adding any index.",
     "trap": "Adding indexes without checking buffers and actual timing.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "sql-vs-nosql"
   },
   {
     "body_md": "Pool size follows cores and latency, not wishful thinking. Little math says concurrent slots near core count times one plus wait over service time, then cap per Postgres host around a few hundred.",
@@ -211,7 +211,7 @@
     "takeaway": "Size pools from cores and latency then enforce a hard cap.",
     "trap": "Opening thousands of direct connections per service.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "sql-vs-nosql"
   },
   {
     "body_md": "Read replicas replay the primary log so heavy writes create lag. Serve stale-tolerant feeds from replicas and read-your-write paths from primary or wait for replay position.",
@@ -235,7 +235,7 @@
     "takeaway": "Send tolerant reads to replicas and critical reads to primary.",
     "trap": "Reading own write from a lagging replica.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "sql-vs-nosql"
   },
   {
     "body_md": "Partitioning splits one table by key for pruning while sharding spreads data across hosts for scale. Partition first for time ranges, shard when one node cannot hold writes or connections.",
@@ -259,7 +259,7 @@
     "takeaway": "Partition single tables for pruning and shard clusters for capacity.",
     "trap": "Sharding before exhausting indexes and partitioning.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "indexes-lsm"
   },
   {
     "body_md": "Hash each node to many points on a ring and walk clockwise to place keys. Adding a node steals only neighbor ranges, and virtual nodes even out hot spots from uneven hashes.",
@@ -283,7 +283,7 @@
     "takeaway": "Map nodes to ring points so joins move only neighbor ranges.",
     "trap": "Using plain modulo and reshuffling all keys on resize.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "indexes-lsm"
   },
   {
     "body_md": "Quorums trade latency for safety with W plus R above N. Write to W replicas and read from R so the sets overlap and the reader always sees the latest acknowledged write.",
@@ -307,7 +307,7 @@
     "takeaway": "Keep write plus read counts above replica count for overlap.",
     "trap": "Setting W plus R below N and claiming strong reads.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "indexes-lsm"
   },
   {
     "body_md": "Vector clocks attach per-node counters to each write so replicas compare histories. Concurrent counters mean conflict to merge while dominated counters mean one version safely wins.",
@@ -331,7 +331,7 @@
     "takeaway": "Track per-node counters to tell causal order from true conflicts.",
     "trap": "Using wall clock timestamps to order concurrent writes.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "indexes-lsm"
   },
   {
     "body_md": "PN-counter CRDT keeps one grow-only counter per replica for increments and one for decrements. Merge takes max per slot and value equals increments minus decrements, so replicas converge without coordination.",
@@ -355,7 +355,7 @@
     "takeaway": "Split counters per replica and merge slots by maximum value.",
     "trap": "Sharing one integer across replicas with concurrent writes.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "indexes-lsm"
   },
   {
     "body_md": "Kafka exactly-once uses idempotent producers plus transactions across partitions. Wrap consume-transform-produce in one transaction so retries never duplicate downstream effects.",
@@ -379,7 +379,7 @@
     "takeaway": "Combine idempotent producers with transactions spanning offsets and output.",
     "trap": "Committing offsets before downstream writes succeed.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "transactions-acid"
   },
   {
     "body_md": "CDC streams row changes from the WAL with Debezium into Kafka so caches and search stay fresh. Use outbox table plus connector to publish atomically with the local transaction.",
@@ -403,7 +403,7 @@
     "takeaway": "Publish changes through an outbox table tailed from the log.",
     "trap": "Writing to DB and Kafka as separate unguarded steps.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "transactions-acid"
   },
   {
     "body_md": "Redis eviction picks victims when memory fills. Use noeviction for billing writes, allkeys-lru for caches, volatile-ttl for sessions, and set maxmemory plus sampling to bound latency.",
@@ -427,7 +427,7 @@
     "takeaway": "Match eviction policy to data value and expiry pattern.",
     "trap": "Using allkeys-lru on data you cannot afford to lose.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "transactions-acid"
   },
   {
     "body_md": "Cache stampede hits when hot key expires and thousand threads recompute. Add jittered TTLs, stale-while-revalidate, and background refresh so only one worker rebuilds the value.",
@@ -450,7 +450,7 @@
     "takeaway": "Jitter expiries and serve stale data during background refresh.",
     "trap": "Expiring all hot keys on the same second.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "transactions-acid"
   },
   {
     "body_md": "Singleflight dedupes concurrent loads for one key so ten requests share one future. Wrap the fallible fetch in the call and clones receive the same result without hammering Postgres.",
@@ -474,7 +474,7 @@
     "takeaway": "Collapse duplicate concurrent loads into one shared future.",
     "trap": "Caching errors from singleflight as if they were values.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "transactions-acid"
   },
   {
     "body_md": "Postgres MVCC keeps old row versions so long transactions bloat tables. Tune autovacuum, index HOT-friendly updates, and monitor dead tuples before sequential scans slow down.",
@@ -498,6 +498,6 @@
     "takeaway": "Vacuum early and track dead tuples before scans suffer.",
     "trap": "Holding day-long transactions on a hot write table.",
     "track": "system-design",
-    "topic_label": "data systems"
+    "topic_label": "transactions-acid"
   }
 ]

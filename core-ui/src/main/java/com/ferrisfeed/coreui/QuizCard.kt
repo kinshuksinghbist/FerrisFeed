@@ -19,6 +19,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -58,6 +59,12 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -95,6 +102,16 @@ sealed interface QuizUiModel {
         val prefix: String,
         val suffix: String,
         val acceptedAnswers: List<String>,
+        override val explanation: String,
+    ) : QuizUiModel
+
+    /** Interactive click-to-code block assembly: only correct block enters into code in sequence. */
+    data class Blocks(
+        override val question: String,
+        val prefix: String = "",
+        val suffix: String = "",
+        val targetBlocks: List<String>,
+        val distractorBlocks: List<String> = emptyList(),
         override val explanation: String,
     ) : QuizUiModel
 }
@@ -171,6 +188,15 @@ fun QuizCard(
                 onSubmit = { text ->
                     val ok = quiz.acceptedAnswers.any { it.equals(text.trim(), ignoreCase = true) }
                     submit(ok, text.trim())
+                },
+            )
+            is QuizUiModel.Blocks -> BlocksBody(
+                quiz = quiz,
+                answered = answered,
+                wasCorrect = wasCorrect,
+                settled = settled,
+                onSubmit = { assembled ->
+                    submit(true, assembled)
                 },
             )
         }
@@ -295,10 +321,19 @@ private fun McqBody(
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null,
+                        role = Role.Button,
                         enabled = !answered,
                     ) {
                         selected = idx
                         onPick(idx)
+                    }
+                    .semantics {
+                        if (answered) {
+                            stateDescription = if (isAnswer) "correct" else if (isSelected) "incorrect" else ""
+                        }
+                        if (isShaking) {
+                            liveRegion = LiveRegionMode.Polite
+                        }
                     }
                     .defaultMinSize(minHeight = 64.dp)
                     .padding(16.dp),
@@ -386,7 +421,7 @@ private fun OptionSparkle(
     }
 
     if (progress.value in 0.01f..0.99f) {
-        Canvas(modifier = modifier) {
+        Canvas(modifier = modifier.clearAndSetSemantics {}) {
             val p = progress.value
             val numParticles = 12
             val center = Offset(size.width / 2f, size.height / 2f)
@@ -648,6 +683,283 @@ private fun FillBlankBody(
     }
 }
 
+/**
+ * Interactive click-to-code block assembly.
+ * Displays the code snippet with assembly slots. Only the correct next block
+ * will enter into the code; wrong blocks trigger a horizontal shake rejection.
+ */
+@Composable
+private fun BlocksBody(
+    quiz: QuizUiModel.Blocks,
+    answered: Boolean,
+    wasCorrect: Boolean,
+    settled: Boolean,
+    onSubmit: (String) -> Unit,
+) {
+    var placedBlocks by remember(quiz) { mutableStateOf<List<String>>(emptyList()) }
+    val allBankBlocks = remember(quiz) {
+        (quiz.targetBlocks + quiz.distractorBlocks).shuffled()
+    }
+    var shakingIndex by remember(quiz) { mutableIntStateOf(-1) }
+    val shakeX = remember { Animatable(0f) }
+    val reduceMotion = LocalReduceMotion.current
+    val haptics = LocalHapticFeedback.current
+
+    LaunchedEffect(shakingIndex) {
+        if (shakingIndex >= 0 && !reduceMotion) {
+            shakeX.snapTo(0f)
+            shakeX.animateTo(
+                targetValue = 0f,
+                animationSpec = keyframes {
+                    durationMillis = 320
+                    -8f at 40
+                    8f at 90
+                    -6f at 150
+                    6f at 210
+                    -3f at 265
+                    0f at 320
+                },
+            )
+            shakingIndex = -1
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // Code panel displaying prefix, assembled slots, and suffix
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.medium)
+                .background(CodeCardTokens.Container)
+                .border(0.5.dp, glassStroke(), MaterialTheme.shapes.medium)
+                .padding(16.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Header with macOS dots
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFF5F57)))
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFEBC2E)))
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF28C840)))
+                    }
+                    Text(
+                        text = "rust",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = CodeFontFamily,
+                        color = CodeCardTokens.Muted,
+                    )
+                }
+
+                if (quiz.prefix.isNotBlank()) {
+                    Text(
+                        text = highlightCode(quiz.prefix, language = "rust"),
+                        style = TextStyle(fontFamily = CodeFontFamily, fontSize = 13.sp, lineHeight = 20.sp),
+                    )
+                }
+
+                // Assembled code slots row
+                FlowRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.25f))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    // Render already placed blocks
+                    placedBlocks.forEach { token ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(FerrisColors.MintCorrect.copy(alpha = 0.2f))
+                                .border(1.dp, FerrisColors.MintCorrect, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                        ) {
+                            Text(
+                                text = token,
+                                style = TextStyle(
+                                    fontFamily = CodeFontFamily,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = FerrisColors.MintCorrect,
+                                ),
+                            )
+                        }
+                    }
+
+                    // Active next slot
+                    if (placedBlocks.size < quiz.targetBlocks.size) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary,
+                                    RoundedCornerShape(6.dp),
+                                )
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                        ) {
+                            Text(
+                                text = "___",
+                                style = TextStyle(
+                                    fontFamily = CodeFontFamily,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                ),
+                            )
+                        }
+
+                        // Remaining slots placeholders
+                        val remaining = quiz.targetBlocks.size - placedBlocks.size - 1
+                        repeat(remaining) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color.Transparent)
+                                    .border(
+                                        0.5.dp,
+                                        CodeCardTokens.Muted.copy(alpha = 0.4f),
+                                        RoundedCornerShape(6.dp),
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                            ) {
+                                Text(
+                                    text = "…",
+                                    style = TextStyle(
+                                        fontFamily = CodeFontFamily,
+                                        fontSize = 13.sp,
+                                        color = CodeCardTokens.Muted.copy(alpha = 0.4f),
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (quiz.suffix.isNotBlank()) {
+                    Text(
+                        text = highlightCode(quiz.suffix, language = "rust"),
+                        style = TextStyle(fontFamily = CodeFontFamily, fontSize = 13.sp, lineHeight = 20.sp),
+                    )
+                }
+            }
+        }
+
+        // Bottom bank of blocks to click
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = if (answered) "Code assembled" else "Tap blocks to code:",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = DisplayFont,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (placedBlocks.isNotEmpty() && !answered) {
+                    Text(
+                        text = "Reset",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = DisplayFont,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clickable {
+                                placedBlocks = emptyList()
+                            }
+                            .padding(4.dp),
+                    )
+                }
+            }
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                allBankBlocks.forEachIndexed { bankIdx, blockToken ->
+                    val timesInPlaced = placedBlocks.count { it == blockToken }
+                    val timesInBankBeforeThis = allBankBlocks.take(bankIdx).count { it == blockToken }
+                    val isUsed = timesInPlaced > timesInBankBeforeThis
+                    val isShaking = bankIdx == shakingIndex
+                    val interactionSource = remember { MutableInteractionSource() }
+
+                    val borderStroke = when {
+                        isShaking -> BorderStroke(1.5.dp, MaterialTheme.colorScheme.error)
+                        isUsed -> BorderStroke(0.5.dp, glassStroke().copy(alpha = 0.2f))
+                        else -> BorderStroke(1.dp, glassStroke())
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .graphicsLayer {
+                                if (isShaking) {
+                                    translationX = shakeX.value * density
+                                }
+                            }
+                            .pressScale(interactionSource, pressed = 0.94f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .glass(RoundedCornerShape(12.dp))
+                            .border(borderStroke, RoundedCornerShape(12.dp))
+                            .clickable(
+                                interactionSource = interactionSource,
+                                indication = null,
+                                enabled = !isUsed && !answered,
+                            ) {
+                                val nextExpected = quiz.targetBlocks.getOrNull(placedBlocks.size)
+                                if (blockToken == nextExpected) {
+                                    // Correct block! Only correct block enters
+                                    val updated = placedBlocks + blockToken
+                                    placedBlocks = updated
+                                    haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                                    if (updated.size == quiz.targetBlocks.size) {
+                                        onSubmit(updated.joinToString(" "))
+                                    }
+                                } else {
+                                    // Wrong block! Rejected with shake and Reject haptic
+                                    haptics.performHapticFeedback(HapticFeedbackType.Reject)
+                                    shakingIndex = bankIdx
+                                }
+                            }
+                            .semantics {
+                                role = Role.Button
+                                if (isShaking) {
+                                    liveRegion = LiveRegionMode.Polite
+                                    stateDescription = "incorrect"
+                                } else if (isUsed) {
+                                    stateDescription = "placed"
+                                }
+                            }
+                            .defaultMinSize(minHeight = 48.dp)
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = blockToken,
+                            style = TextStyle(
+                                fontFamily = CodeFontFamily,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isUsed) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                else MaterialTheme.colorScheme.onSurface,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** Slide-up glass explanation panel (Item 38d). */
 @Composable
 private fun ExplanationPanel(
@@ -775,3 +1087,42 @@ private fun QuizFillBlankDarkPreview() {
         )
     }
 }
+
+@Preview(name = "Quiz Blocks dark", showBackground = true, backgroundColor = 0xFF0B0E14)
+@Composable
+private fun QuizBlocksDarkPreview() {
+    FerrisFeedTheme(darkTheme = true) {
+        QuizCard(
+            quiz = QuizUiModel.Blocks(
+                question = "Assemble the mutable reference.",
+                prefix = "fn bump(n: ",
+                suffix = "i32) { *n += 1; }",
+                targetBlocks = listOf("&mut"),
+                distractorBlocks = listOf("&", "*", "ref"),
+                explanation = "Exclusive mutable borrow is written with &mut.",
+            ),
+            onResult = { _, _ -> },
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+
+@Preview(name = "Quiz Blocks light", showBackground = true, backgroundColor = 0xFFFFFBF2)
+@Composable
+private fun QuizBlocksLightPreview() {
+    FerrisFeedTheme(darkTheme = false) {
+        QuizCard(
+            quiz = QuizUiModel.Blocks(
+                question = "Assemble the mutable reference.",
+                prefix = "fn bump(n: ",
+                suffix = "i32) { *n += 1; }",
+                targetBlocks = listOf("&mut"),
+                distractorBlocks = listOf("&", "*", "ref"),
+                explanation = "Exclusive mutable borrow is written with &mut.",
+            ),
+            onResult = { _, _ -> },
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+

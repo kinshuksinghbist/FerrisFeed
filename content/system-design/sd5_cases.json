@@ -165,7 +165,7 @@
     "takeaway": "Precompute ranked prefixes at write time.",
     "trap": "Hitting DB per keystroke.",
     "track": "system-design",
-    "topic_label": "app cases"
+    "topic_label": "url-shortener"
   },
   {
     "body_md": "Notifications: requirements 50M pushes/day, dedupe, quiet hours. API enqueue event. Storage Kafka plus per-user queue. Bottleneck fan-out storms; snippet batches by user.",
@@ -189,7 +189,7 @@
     "takeaway": "Batch and dedupe per user with backoff.",
     "trap": "Retry storm waking users at 3am.",
     "track": "system-design",
-    "topic_label": "app cases"
+    "topic_label": "url-shortener"
   },
   {
     "body_md": "Ride-hailing match: need nearby drivers <500ms, surge. API request ride, update location. Storage geo index Redis GEOADD, trips in Postgres. Bottleneck geo query; snippet searches radius.",
@@ -213,7 +213,7 @@
     "takeaway": "Geo-query then rank by ETA and surge.",
     "trap": "Stale locations dispatching ghost drivers.",
     "track": "system-design",
-    "topic_label": "app cases"
+    "topic_label": "url-shortener"
   },
   {
     "body_md": "Video pipeline: requirements 4K upload, transcode, HLS. API upload, webhook done. Storage S3 raw plus CDN segments. Bottleneck transcode; snippet enqueues job.",
@@ -237,7 +237,7 @@
     "takeaway": "Async transcode, segment, cache at edge.",
     "trap": "Serving 4K mp4 directly to phones.",
     "track": "system-design",
-    "topic_label": "app cases"
+    "topic_label": "url-shortener"
   },
   {
     "body_md": "E-commerce checkout: requirements cart, pay once, inventory. API reserve, charge idempotent, confirm. Storage orders Postgres, stock Redis decrement. Bottleneck oversell; snippet uses saga.",
@@ -252,7 +252,7 @@
       "explain": "Reserve plus idempotent charge plus confirm avoids double-sell.",
       "options": [
         "Charge first blindly",
-        "Reserve\u2192charge idempotent\u2192confirm saga",
+        "Reserve→charge idempotent→confirm saga",
         "No inventory check",
         "Double-charge ok"
       ],
@@ -261,7 +261,7 @@
     "takeaway": "Saga with reservation and idempotency.",
     "trap": "No fencing letting two checkouts win.",
     "track": "system-design",
-    "topic_label": "app cases"
+    "topic_label": "url-shortener"
   },
   {
     "body_md": "Metrics pipeline: need 1M points/sec ingest, 7-day queries. API write batch, query range. Storage Kafka to ClickHouse downsampled. Bottleneck cardinality; snippet batches writes.",
@@ -285,6 +285,6 @@
     "takeaway": "Batch, compress, downsample by age.",
     "trap": "Unbounded label cardinality exploding storage.",
     "track": "system-design",
-    "topic_label": "app cases"
+    "topic_label": "url-shortener"
   }
 ]

@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
@@ -164,7 +165,7 @@ private fun PromptContent(
             ) {
                 // Expanding soft pulse ring
                 if (!reduceMotion) {
-                    Canvas(modifier = Modifier.size(72.dp)) {
+                    Canvas(modifier = Modifier.size(72.dp).clearAndSetSemantics {}) {
                         val currentRadius = (28.dp.toPx()) + (8.dp.toPx() * pulseProgress)
                         val ringAlpha = (1f - pulseProgress).coerceIn(0f, 0.6f)
                         drawCircle(
@@ -254,7 +255,7 @@ private fun ListeningContent(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // 5-bar visualizer
-        Canvas(modifier = Modifier.size(width = 46.dp, height = 28.dp)) {
+        Canvas(modifier = Modifier.size(width = 46.dp, height = 28.dp).clearAndSetSemantics {}) {
             val barWidth = 6.dp.toPx()
             val gap = 4.dp.toPx()
             val maxHeight = 28.dp.toPx()

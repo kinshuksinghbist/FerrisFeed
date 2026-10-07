@@ -43,14 +43,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -713,6 +714,14 @@ private fun Reel.toQuizUi(): QuizUiModel = when (quiz.type) {
         acceptedAnswers = quiz.acceptedAnswers,
         explanation = quiz.explanation,
     )
+    QuizType.BLOCKS -> QuizUiModel.Blocks(
+        question = quiz.question,
+        prefix = quiz.prefix,
+        suffix = quiz.suffix,
+        targetBlocks = quiz.targetBlocks.ifEmpty { quiz.acceptedAnswers },
+        distractorBlocks = quiz.distractorBlocks.ifEmpty { quiz.options },
+        explanation = quiz.explanation,
+    )
 }
 
 /**
@@ -738,7 +747,10 @@ private fun SessionProgressBar(
         modifier = modifier
             .fillMaxWidth()
             .height(3.dp)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Reel ${segmentInWindow + 1} of 5"
+            },
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         val primaryColor = MaterialTheme.colorScheme.primary
@@ -747,6 +759,7 @@ private fun SessionProgressBar(
         for (i in 0 until 5) {
             Box(
                 modifier = Modifier
+                    .clearAndSetSemantics {}
                     .weight(1f)
                     .fillMaxHeight()
                     .clip(CircleShape)

@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -62,7 +63,7 @@ fun SwipeCue(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Canvas(modifier = Modifier.size(width = 24.dp, height = 20.dp)) {
+        Canvas(modifier = Modifier.size(width = 24.dp, height = 20.dp).clearAndSetSemantics {}) {
             val strokeWidth = 2.dp.toPx()
             val w = size.width
             val chevronHeight = 5.dp.toPx()

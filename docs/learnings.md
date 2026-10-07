@@ -410,3 +410,20 @@ per file before writing.
   expects 4) failed once compilation passed. Fixed the default to 4
   (+ `isEmpty`). **Rule:** level bounds live in exactly two places —
   the content schema doc and these two defaults — and all three must agree.
+
+## 27. P6 Design-Studio Overhaul Learnings
+
+- **Bundled Font Resources**:
+  - Android AAPT requires font resource filenames under `res/font/` to be strictly lowercase alphanumeric with underscores (`[a-z0-9_]`). Hyphens or uppercase names (`SpaceGrotesk-Medium.ttf`) fail the resource merge task.
+  - Core-UI namespace generates `R.font.*` seamlessly without new Maven dependencies.
+- **Compose Foundation FlowRow is Stable in Compose 1.8+**:
+  - `androidx.compose.foundation.layout.FlowRow` is fully stable and does not require experimental annotations (`@OptIn(ExperimentalLayoutApi::class)` is obsolete).
+- **Navigation3 Transition Animation Spec Names**:
+  - In Compose 1.8.x Navigation3 (`NavDisplay`), use `togetherWith` rather than legacy transition DSLs. Keep screen crossfade durations to 200–350ms.
+- **GraphicsLayer for 120Hz Pager Transforms**:
+  - Per-page 3D perspective transforms (`scale`, `alpha`, `rotationX`, `cameraDistance`) must read pager offset state exclusively inside the `Modifier.graphicsLayer { ... }` block to skip recomposition during vertical fling.
+- **Accessibility `liveRegion` on Error Animations**:
+  - When triggering error animations (such as horizontal shake on wrong MCQ or block selection), setting `liveRegion = LiveRegionMode.Polite` in Compose semantics ensures TalkBack immediately announces the state to the user without interrupting critical announcements.
+- **Font Scale Safety Valve**:
+  - Strict no-inner-vertical-scroll rule prevents nested scroll conflicts; however, when system `fontScale > 1.3f`, enabling `Modifier.verticalScroll(scrollState)` and scaling hook text to `headlineSmall` guarantees that large text is never clipped on low-height devices.
+

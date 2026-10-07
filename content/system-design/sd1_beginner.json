@@ -26,7 +26,7 @@
   {
     "body_md": "REST uses resources plus verbs: GET reads, POST creates, PUT replaces, PATCH merges, DELETE removes. Return 201 with Location on create, 404 for missing, 409 for conflicts. Version via /v1.",
     "code": "POST /v1/posts\n{\"title\":\"hi\"}\n=> 201 Created\nLocation: /v1/posts/42",
-    "hook": "Resources, verbs, status codes \u2014 done right.",
+    "hook": "Resources, verbs, status codes — done right.",
     "id": "sd-beg-002",
     "language": "rust",
     "level": 1,
@@ -122,7 +122,7 @@
   {
     "body_md": "SQL gives ACID, joins, and schema; NoSQL gives flexible scale-out for keys, docs, or wide rows. Choose Postgres for relations and transactions, Dynamo-style KV for massive simple lookups.",
     "code": "CREATE TABLE posts (\n  id BIGSERIAL PRIMARY KEY,\n  author_id BIGINT NOT NULL,\n  body TEXT NOT NULL\n);",
-    "hook": "Relations vs scale \u2014 pick by query pattern.",
+    "hook": "Relations vs scale — pick by query pattern.",
     "id": "sd-beg-006",
     "language": "sql",
     "level": 1,
@@ -141,7 +141,7 @@
     "takeaway": "Model queries first, then pick the store.",
     "trap": "Storing graphs in relational joins at depth 5.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "http-caching"
   },
   {
     "body_md": "Redis is in-memory with strings, hashes, lists, sets, sorted sets, and streams. Use for cache, counters, leaderboards, and rate limits. Persist with AOF+RDB and cluster when memory exceeds one node.",
@@ -165,7 +165,7 @@
     "takeaway": "Put hot, ephemeral, or ranked data in Redis.",
     "trap": "Treating cache as source of truth without TTL.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "http-caching"
   },
   {
     "body_md": "Load balancers spread traffic: L4 by connection, L7 by URL/header. Algorithms include round-robin, least-conn, and consistent hash. Health-check backends and drain before deploy.",
@@ -188,7 +188,7 @@
     "takeaway": "Balance plus health-check for resilient tiers.",
     "trap": "Sticky sessions hiding uneven load.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "http-caching"
   },
   {
     "body_md": "CDNs cache static assets at edge PoPs near users. Origin sets Cache-Control, CDN serves hits in ms. Use versioned URLs for immutable assets and purge on deploy for HTML.",
@@ -212,12 +212,12 @@
     "takeaway": "Cache immutable assets at the edge.",
     "trap": "Caching personalized HTML at edge leaks data.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "http-caching"
   },
   {
     "body_md": "Latency vs throughput: latency is time per request, throughput is requests per second. CDN and caching cut latency; horizontal scale and batching raise throughput. Measure p95, not averages.",
     "code": null,
-    "hook": "Fast once vs fast often \u2014 different fixes.",
+    "hook": "Fast once vs fast often — different fixes.",
     "id": "sd-beg-010",
     "language": null,
     "level": 1,
@@ -235,7 +235,7 @@
     "takeaway": "Track p95 latency and max throughput separately.",
     "trap": "Averaging hides tail-latency outages.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "http-caching"
   },
   {
     "body_md": "Polling vs push: short-poll wastes requests, long-poll holds open, SSE streams one-way, WebSocket is bidirectional. Choose SSE for feeds, WebSocket for chat.",
@@ -259,7 +259,7 @@
     "takeaway": "Match push primitive to directionality.",
     "trap": "Polling a feed every second from a million clients.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "load-balancing"
   },
   {
     "body_md": "API pagination: cursor-based with `after_id` scales, offset breaks on inserts. Return `next_cursor` and limit. Order by indexed (created_at, id) for stable pages.",
@@ -283,7 +283,7 @@
     "takeaway": "Paginate by cursor on indexed columns.",
     "trap": "Deep OFFSET scans slowing page 1000.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "load-balancing"
   },
   {
     "body_md": "Caching levels: browser, CDN, LB, app, Redis, DB. Cache-aside reads Redis then DB on miss. Set TTLs, version keys, and invalidate on write. Stampede-protect with singleflight.",
@@ -307,12 +307,12 @@
     "takeaway": "Read cache first, fill on miss with TTL.",
     "trap": "No TTL causing permanently stale reads.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "load-balancing"
   },
   {
     "body_md": "Status codes matter: 2xx success, 301/304 redirect/cache, 400 bad input, 401 unauth, 403 forbidden, 404 missing, 429 slow down, 5xx server fault. Retry only 429/5xx with backoff.",
     "code": "HTTP/1.1 429 Too Many Requests\nRetry-After: 2",
-    "hook": "Codes are contracts \u2014 honor them.",
+    "hook": "Codes are contracts — honor them.",
     "id": "sd-beg-014",
     "language": "rust",
     "level": 1,
@@ -331,7 +331,7 @@
     "takeaway": "Signal precisely so retries behave correctly.",
     "trap": "Returning 200 with error JSON breaks tooling.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "load-balancing"
   },
   {
     "body_md": "Monolith vs microservices: start modular monolith, extract when teams or scale demand. Microservices add deploy freedom but need discovery, tracing, and versioned contracts.",
@@ -354,6 +354,6 @@
     "takeaway": "Split by team or scaling pressure, not hype.",
     "trap": "Distributed monolith with all the costs, none of the gains.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "load-balancing"
   }
 ]

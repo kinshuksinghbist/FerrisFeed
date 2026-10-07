@@ -1,155 +1,86 @@
-# FerrisFeed Feed UX — Spec v2 (locked)
+# FerrisFeed Feed UX — Design Pass (P6 Overhaul)
 
-The Compose implementation is `FeedScreen.kt` + `FeedViewModel.kt`; the visuals
-are the `core-ui` cards. This doc is the interaction contract QA tests against.
-It replaces the v1 doomscroll spec: **one reel is ONE card**, the quiz is inline,
-and quiz answers are the only grading signal.
+The Compose implementation is `FeedScreen.kt` + `FeedViewModel.kt` wrapped in
+`AppShell.kt`; the visuals are the `core-ui` cards and controls. This document
+defines the design studio visual and usability system.
 
-## Layout — one reel, two pages (user review 2026-10-07)
+## 1. App Shell Architecture
 
-A full-screen `VerticalPager` shows one reel per TWO pages (lesson, then
-quiz). Each page is a single `Column`, top to bottom, **with no inner
-vertical scroll**:
+The screen is framed by floating chrome:
+1. **Top Persistent Stat Bar** (`StatBar`):
+   - Left: `StreakFlame` chip (`.glass`, flame icon with 900ms looping flicker when streak > 0, `AnimatedCounter`, streak color tiering).
+   - Center: Optional topic / screen title (`DisplayFont` labelLarge).
+   - Right: XP pill (`GoldXp` text, `.glass`, `NumberStyle` tabular figures) + floating "+15 XP" toast that rises 24dp and fades out (800ms) on successful quiz answers.
+2. **Session Progress Indicator** (`SessionProgressBar`):
+   - Positioned directly beneath the stat bar across the top.
+   - Shows current position within a 5-reel session queue window: 5 thin segments (height 3dp, gap 4dp, horizontal padding 16dp).
+   - Completed segments = `primary`, current segment = smooth animated fill (0.5 for lesson, 1.0 for quiz), future segments = `onSurface @ 15%`.
+   - TalkBack announces `Reel X of 5` for the entire bar; child segments clear semantics.
+3. **Bottom Floating Navigation Bar** (`FerrisNavBar`):
+   - 64dp height, pill shape (`CircleShape`), `.glass` container with 0.5dp `glassStroke()`.
+   - Two routes: **Feed** (home icon) and **Path** (timeline/map icon).
+   - Selected tab expands horizontally with `Bouncy` icon scale and bold `DisplayFont` label.
+   - Semantics: `Role.Tab` + `selected` state.
 
-1. **Lesson page** (`InfoPage`) — speaker prompt (`SpeakCard`, first reel
-   only, hiding persists) → unified info card (`ReelCard`): centered
-   animated difficulty label → hook (headline) → body → takeaway as the
-   closing line (track-colored, no boxed callout) → code well contained in
-   the same card when the reel has code (language + copy + flip-to-output;
-   flip hidden when `output` is null). The card's container is washed with
-   the track color (orange Rust, sky-blue System Design) instead of
-   carrying a pill/badge. Fixed 12.5sp mono; horizontal scroll for long
-   lines is allowed, vertical is not.
-2. **Quiz page** (`QuizPage`) — "Prove it" + the hook as the retrieval cue
-   + `QuizCard` (MCQ / tap-the-bug / fill-blank). Answering is the sole
-   SRS/XP/streak signal (`FeedViewModel.onGrade`).
+## 2. Pager & Card Layout (One Reel = Two Pages)
 
-Like/save float on a shared translucent right-edge rail over the content
-edge (48dp circular scrims, vertically centered, identical on both pages
-so gestures never change meaning mid-reel). Double-tap anywhere toggles
-save. There are no action rows inside the cards, no bottom sheet, no peek
-overlay.
+A full-screen `VerticalPager` (`beyondViewportPageCount = 5`, `snapPositionalThreshold = 0.25`)
+displays each reel as two pages:
+1. **Lesson Page** (`InfoPage`):
+   - Full-bleed vertical track gradient background (`trackBrush`).
+   - `ReelCard`: 32dp shape (`large`), 0.5dp glass stroke border, inner padding 24dp.
+   - Entrance choreography: settled page triggers sequential fade/rise for header, hook, body, takeaway, and code well.
+   - Header row: Left = track chip (12dp capsule, 6dp track dot + label); Right = 3-bar sequential difficulty indicator (Easy/Medium/Hard).
+   - Hook: 28sp `DisplayFont` Bold (`headlineMedium`). Switches to `headlineSmall` when `fontScale > 1.3f`.
+   - Body: `bodyLarge` (17sp) with `parseInlineMarkdown` supporting `` `inline code` `` and `**bold**`.
+   - Takeaway: 3dp vertical accent bar in `trackTextColor` with 12dp padding, `titleSmall`, no arrow glyphs.
+   - Code Block well (`CodeBlock`): macOS header dots, mono language label, 36dp segmented pill "Code | Output" toggle, 36dp copy chip with check toast, line numbers gutter (`labelSmall` mono right-aligned), and syntax highlighting.
+   - **Horizontal Action Row** (`ReelActionRow`) placed below the card: left = Like (`FerrisIconButton` heart with `Confirm` haptic and 6-dot radial spark) + Save (`FerrisIconButton` bookmark with `Confirm` haptic and spark); right = topic chip.
+2. **Quiz Page** (`QuizPage`):
+   - Faint radial glow behind question (`trackColor @ 18%`).
+   - Top "PROVE IT" overline (`labelMedium`, letter spacing 2sp, `primary`).
+   - Hook as retrieval cue (`headlineSmall` @ 70% alpha).
+   - Question as hero in `headlineMedium`.
+   - Options sit directly on page:
+     - **MCQ**: 64dp min height, `.glass` medium cards, 32dp letter circle badges (A–D). Correct = MintContainer fill, check badge, mint border, `OptionSparkle` (12 mint particles) and `ConfettiBurst` on mastery crossing 0.85; Incorrect = errorContainer fill, X badge, horizontal shake (±8dp, 320ms, `Reject` haptic, TalkBack `liveRegion` announcement), followed by 250ms delayed correct outline reveal.
+     - **Click-to-Code Blocks** (`BlocksBody`): Top code panel with highlighted prefix/suffix and dashed active slot; bottom bank of code blocks. Tapping correct block enters slot with `Confirm` haptic; tapping wrong block shakes (±8dp, 320ms) with `Reject` haptic and rejection sound feedback. Reset button restores bank.
+     - **Tap-the-Bug**: Unified code panel with line numbers gutter and hint pill.
+     - **Fill-in-the-Blank**: Unified code panel with `BasicTextField`, glowing bottom border, and `FerrisButton` pinned above IME.
+   - Slide-up explanation panel (`ExplanationPanel`).
+   - Bouncing `SwipeCue` ("Swipe for next") appears 600ms after answering.
 
-## Difficulty label
+## 3. Speaker Opening (`SpeakCard`)
 
-One small centered label replaces the old `TrackPill` + `LevelBadge` +
-read-time header, mapped from the existing content `level`:
+Overlaid bottom dock card above bottom inset:
+- Prompts mic on first reel only; persists hide state in DataStore.
+- 56dp mic button with primary gradient, expanding soft pulse ring (56→72dp, 1600ms).
+- Listening state: 5-bar audio-level visualizer driven by RMS dB callbacks.
+- Heard state: Bouncy check icon, quoted italic transcript, 2.5s auto-collapse without persistent dismissal.
 
-| Level | Label | Motion |
-|---|---|---|
-| 1 | easy | slow breathing scale pulse (~2s cycle) |
-| 2 | medium | horizontal gradient shimmer sweep (~1.6s cycle) |
-| 3+ | hard | ember flicker — fast small alpha jitter (~0.9s cycle) |
+## 4. Design Pass Contrast Audit
 
-TalkBack reads "Difficulty: Medium" (semantics `contentDescription`).
+All color pairings were verified under WCAG 2.1 specifications:
 
-The motion is the reward, not the wait (TODO 24b): `ReelCard`
-composes the label text immediately with `animateDifficulty = false` and
-flips it true only when the speaker flow reports `Heard`. Capture never
-blocks text readiness (`doherty-threshold`); the cue plays after the
-spoken warm-up completes.
+| Element | Theme | Foreground Hex | Background / Context | Ratio | Level |
+|---|---|---|---|---|---|
+| Primary Text (`onSurface`) | Dark | `#E8ECF2` | Surface `#10141C` | 14.7:1 | AAA |
+| Body Text (82% alpha) | Dark | `#C1C6CE` | Surface `#10141C` | 9.8:1 | AAA |
+| Rust Track Accent / Takeaway | Dark | `#FF8A5B` | Surface `#12161F` | 7.1:1 | AAA |
+| System Design Track Accent | Dark | `#70CFFF` | Surface `#12161F` | 10.5:1 | AAA |
+| Rust Inline Code Span | Dark | `#FFB59E` | 10% white well | 8.5:1 | AAA |
+| SD Inline Code Span | Dark | `#8FDCF7` | 10% white well | 11.2:1 | AAA |
+| Primary Text (`onSurface`) | Light | `#1F1B16` | Paper `#FFFBF2` | 15.2:1 | AAA |
+| Rust Track Accent / Takeaway | Light | `#A33400` | Track `#FFE3D4` | 5.4:1 | AA |
+| System Design Track Accent | Light | `#006584` | Track `#D9F1FA` | 4.9:1 | AA |
+| Glass Panel over Gradient | Both | White / Dark | 70% alpha glass surface | ≥ 6.2:1 | AA/AAA |
 
-## Speaker opening (TODO 24)
+## 5. Accessibility & Font Scale Exceptions
 
-Each reel opens with a `SpeakCard` prompt above the info card — phrase
-prompt → capture gesture → recognized-text reveal → hook + body → code →
-quiz (`reel-card-composition` + `micro-interaction-spec`). The spoken
-phrase is the hook itself, so no schema work (house rule 22d).
-
-- Prompt: "Say it first — tap the mic and read the headline aloud.
-  Reading still works if you skip." One verb, one Skip action.
-- Listening: label + indeterminate bar (no skeleton loop). Text is
-  already composed underneath.
-- Heard: "Heard you" + the transcript in quotes. Difficulty motion starts.
-- Unavailable (no recognizer, denied permission, error): "Voice off —
-  reading works the same" + one-line reason + Retry/Hide. Never a
-  spinner, never a dead end (`ux-writing`, `loading-states`).
-- Audio: platform `SpeechRecognizer` + `RECORD_AUDIO` only. No new
-  dependencies, no app-level network calls. Quiz answers stay the sole
-  SRS/XP/streak signal (`onGrade`); recognition only marks the page
-  interacted so speak-then-leave is not logged as a skip.
-
-## Gestures
-
-| Gesture | Location | Effect |
-|---|---|---|
-| Vertical swipe | anywhere | Next / previous page: lesson → quiz → next lesson. Low positional threshold (`snapPositionalThreshold = 0.25`) so even a small swipe commits. |
-| Double-tap | reel page | Toggle **Save** (bookmark). Invisible — no hints, no chrome. |
-| Tap heart | right rail | Toggle **Like**. |
-| Tap bookmark | right rail | Toggle **Save**. |
-| Tap copy | code card header | Copy the code snippet to the clipboard. |
-| Tap flip | code card header | Swap the card body between highlighted code and expected `output`. Hidden when `output` is null. |
-
-There is no horizontal pager and no inner vertical scroll, so a vertical drag
-always means "change reel" — the old nested-scroll fight is structurally gone.
-
-## Motion — 300ms budget
-
-- Pager snap: stock `PagerDefaults.flingBehavior` with a 0.25 positional
-  threshold; `beyondViewportPageCount = 5` keeps the next 5 pages composed.
-- Code flip: `animateFloatAsState(tween(300))` rotates the flip icon 180°.
-- `ProgressRing` mastery sweep: `animateFloatAsState` to the new value.
-- `StreakFlame` pop: 1.0 → 1.25 scale spring when the streak increments.
-- Shimmer: 1200ms infinite linear sweep, shown only during prefetch/skeletons.
-
-## Haptics
-
-- Quiz correct: `HapticFeedbackType.LongPress` tick (the "yes" tick).
-- Quiz incorrect: `HapticFeedbackType.Reject` (the "no" buzz).
-- Save via double-tap: no haptic on plain scroll to avoid fatigue.
-- All haptics go through `LocalHapticFeedback` so system settings are honored;
-  no custom vibrator calls.
-
-## Feed engine (ViewModel contract)
-
-- **Shuffle**: 70% due SRS cards (sorted by `dueAt`, oldest first), 20% new in
-  `path_order`, 10% random review. At least one fresh card when any exist.
-  Interleaved due/other so two due cards rarely sit back-to-back.
-- **Topic filter**: `setTopicFilter(topic)` narrows the whole queue to one
-  roadmap topic (`Route.TopicFeed`); `null` restores the full mix. Called from
-  the route, and `focusReel` still searches the full table as a fallback.
-- **Prefetch**: on every page change the ViewModel resolves the next 5 reel ids
-  (`getReel`) so code highlight + images are warm. UI keeps 5 offscreen pages.
-- **Tracking**: page enter stamps `pageStartMs`; page exit logs
-  `(reelId, dwellMs, skipped = dwell < 1500ms && !interacted)`.
-- **Position**: current index + reel id hash debounced (400ms) into DataStore
-  (`feed_last_index`, `feed_last_id_hash`); restored on cold start.
-- **Empty vs loading**: seeding failures render an explicit empty state with a
-  Retry button (`retryLoad()`), never an infinite skeleton.
-
-## Path tab + browse (S7, TODO 22)
-
-- Bottom nav is Feed + Path only. The Search tab and `Route.Search` are gone.
-- The top of the Path screen is the browse section: query field + chips for
-  **topic / track / level / has-code / has-quiz** + result rows. Results render
-  as items of the same `LazyColumn` as the roadmap (one scroller; nothing
-  nestable). A "Clear filters" chip appears whenever any chip is set.
-- Topic-first IA: with an empty query and no chips the section shows a
-  **Browse by topic** directory — every roadmap topic as a row with its reel
-  count, entry level, and mastery. The topic chips in the row above come from
-  the same live topic list, so a chip can never lead to an empty shelf.
-- One topic identity everywhere (TODO 21): roadmap node, browse chip, result
-  caption, and `Route.TopicFeed(topicId)` all address the exact stored topic
-  string. Result rows caption their topic so a hit says where it lives.
-- Selecting a track resets the topic chip (and vice versa is scoped per
-  track), so the chip row never mixes topics across tracks.
-- Roadmap nodes are real: one per topic with reels in Room
-  (`ReelDao.countByTopic` → count + lowest level) with mastery from
-  `ProgressStore` (2%/idle-day decay). A fresh install honestly shows 0%.
-- Tapping a node or a directory row opens `Route.TopicFeed(topicId)` — that
-  topic's reels only, quiz + info mixed, same card as the main feed. Browsing
-  a topic via chips shows the same reels as flat rows instead.
-- Empty results under an active query or scope say why and how to widen
-  ("Nothing matches those filters yet — clear one to widen the net."), never
-  a bare "0 results". The resting state is the directory, not a blank list.
-
-## Accessibility
-
-- Every icon button has a content description (`Like`, `Save`, `Copy code`,
-  `Show output`…).
-- Quiz options are full-width 48dp+ tap targets with answer state announced via
-  the explanation card, not color alone.
-- Difficulty is announced via semantics; track identity is not color-only
-  because the label spells out difficulty and the row text names the track.
-- Code is read by TalkBack line-by-line from the raw string, not the highlighted
-  spans.
+1. **TalkBack Semantics**:
+   - `FerrisNavBar`: `Role.Tab` + `selected` property.
+   - `SessionProgressBar`: `contentDescription = "Reel X of 5"`, children `clearAndSetSemantics {}`.
+   - `QuizCard` MCQ options: `Role.Button` + `stateDescription` ("correct" / "incorrect").
+   - Shake errors: Announced via `liveRegion = LiveRegionMode.Polite`.
+   - Decorative animations (`RadialSpark`, `ConfettiBurst`, pulse rings, chevrons): `clearAndSetSemantics {}`.
+2. **Font Scale Exception (Spec v2 Exception)**:
+   - While the app strictly maintains a no-inner-vertical-scroll rule for normal operation, when system `fontScale > 1.3f`, `ReelCard` enables a `Modifier.verticalScroll(scrollState)` safety valve and scales hooks down to `headlineSmall` so large text is never clipped on small devices.

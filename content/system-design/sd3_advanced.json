@@ -2,7 +2,7 @@
   {
     "body_md": "2PC prepares then commits across shards with a coordinator. Strong atomicity but blocking if coordinator dies. Use for money moves; prefer Saga with compensations for long-lived flows.",
     "code": null,
-    "hook": "All or nothing \u2014 unless the coordinator dies.",
+    "hook": "All or nothing — unless the coordinator dies.",
     "id": "sd-adv-001",
     "language": null,
     "level": 3,
@@ -24,7 +24,7 @@
   },
   {
     "body_md": "Saga splits transactions into local steps with compensating actions. Choreography emits events; orchestration drives steps. On failure run compensations backwards. Design each step idempotent.",
-    "code": "// saga: book \u2192 pay \u2192 notify\n// on pay fail: cancel(book)",
+    "code": "// saga: book → pay → notify\n// on pay fail: cancel(book)",
     "hook": "Long transactions as reversible steps.",
     "id": "sd-adv-002",
     "language": "rust",
@@ -49,7 +49,7 @@
   {
     "body_md": "Raft elects a leader, replicates log entries, commits on majority. Terms prevent split-brain; heartbeats detect failure. Use etcd or TikV rather than hand-rolling consensus.",
     "code": null,
-    "hook": "Majority rules \u2014 literally.",
+    "hook": "Majority rules — literally.",
     "id": "sd-adv-003",
     "language": null,
     "level": 3,
@@ -163,12 +163,12 @@
     "takeaway": "Split fan-out strategy by follower count.",
     "trap": "Pure push melting on a viral post.",
     "track": "system-design",
-    "topic_label": "distributed"
+    "topic_label": "consensus-raft"
   },
   {
     "body_md": "Clock skew breaks ordering; use Hybrid Logical Clocks or Snowflake IDs (timestamp+node+seq). Sort by (ts, seq) and tolerate drift with bounded wait before serving reads.",
     "code": "// snowflake id\n// 41b time | 10b node | 12b seq",
-    "hook": "Time lies \u2014 sequence anyway.",
+    "hook": "Time lies — sequence anyway.",
     "id": "sd-adv-008",
     "language": "rust",
     "level": 3,
@@ -187,7 +187,7 @@
     "takeaway": "Generate sortable unique IDs, not wall-clock reliance.",
     "trap": "NTP jump reordering recent posts.",
     "track": "system-design",
-    "topic_label": "distributed"
+    "topic_label": "consensus-raft"
   },
   {
     "body_md": "Lease vs lock: leases expire so crashes recover; locks need fencing tokens to avoid split-brain writes. Use short TTL leases in Redis/etcd for leader or job ownership.",
@@ -211,7 +211,7 @@
     "takeaway": "Expire ownership and fence stale writers.",
     "trap": "Long lease delaying failover for minutes.",
     "track": "system-design",
-    "topic_label": "distributed"
+    "topic_label": "consensus-raft"
   },
   {
     "body_md": "Hot partitions kill scale: random prefix or split key spreads heat. Monitor partition throughput, add salt `hotkey#rand`, and pre-split ranges before launches.",
@@ -235,7 +235,7 @@
     "takeaway": "Spread heat, aggregate on read.",
     "trap": "Salting without read aggregation breaks counts.",
     "track": "system-design",
-    "topic_label": "distributed"
+    "topic_label": "consensus-raft"
   },
   {
     "body_md": "Poison messages crash consumers in loops. Dead-letter after N retries with headers preserving error, alert on DLQ growth, and replay after fix with backoff. Never block partition forever.",
@@ -259,7 +259,7 @@
     "takeaway": "Dead-letter and replay bad events safely.",
     "trap": "No alerting so DLQ grows unnoticed.",
     "track": "system-design",
-    "topic_label": "distributed"
+    "topic_label": "consensus-raft"
   },
   {
     "body_md": "Zero-downtime deploys: health gates, connection draining, rolling updates with two versions live. Migrations must be expand-contract: add column, dual-write, backfill, then contract.",
@@ -283,6 +283,6 @@
     "takeaway": "Make every deploy compatible with previous version.",
     "trap": "Dropping column before readers upgrade.",
     "track": "system-design",
-    "topic_label": "distributed"
+    "topic_label": "consensus-raft"
   }
 ]

@@ -139,7 +139,7 @@
       "q": "What does Borrow enable for maps?"
     },
     "takeaway": "Rely on Borrow so owned-key maps support cheap borrowed lookups.",
-    "topic_label": "intermediate misc",
+    "topic_label": "smart-pointers",
     "track": "rust",
     "trap": "Custom keys without a Borrow impl force wasteful owned lookups."
   },
@@ -163,7 +163,7 @@
       "q": "What is thiserror for?"
     },
     "takeaway": "Derive typed library errors with thiserror so callers can match precisely.",
-    "topic_label": "intermediate misc",
+    "topic_label": "smart-pointers",
     "track": "rust",
     "trap": "Using stringly errors in libraries prevents callers from handling cases."
   },
@@ -187,7 +187,7 @@
       "q": "What does anyhow context add?"
     },
     "takeaway": "Attach anyhow context at app boundaries to make failures easy to diagnose.",
-    "topic_label": "intermediate misc",
+    "topic_label": "smart-pointers",
     "track": "rust",
     "trap": "Adding context inside tight loops buries the root cause under noise."
   },
@@ -211,7 +211,7 @@
       "q": "When do map and filter execute?"
     },
     "takeaway": "Chain lazy adapters and consume once to process data in a single pass.",
-    "topic_label": "intermediate misc",
+    "topic_label": "smart-pointers",
     "track": "rust",
     "trap": "Forgetting the final collect means the adapter chain never runs at all."
   },
@@ -235,7 +235,7 @@
       "q": "What does fold do?"
     },
     "takeaway": "Use fold to reduce iterators into a single summary value or collection.",
-    "topic_label": "intermediate misc",
+    "topic_label": "smart-pointers",
     "track": "rust",
     "trap": "Folding with a shared mutable accumulator across threads causes data races."
   },
@@ -259,7 +259,7 @@
       "q": "What happens when zipped iterators differ in length?"
     },
     "takeaway": "Pair iterators with zip and enumerate but verify lengths when truncation matters.",
-    "topic_label": "intermediate misc",
+    "topic_label": "box-rc",
     "track": "rust",
     "trap": "Silent zip truncation drops trailing data when inputs differ in length."
   },
@@ -283,7 +283,7 @@
       "q": "What does collect::<Result<Vec<_>, _>> do on error?"
     },
     "takeaway": "Collect fallible maps into Result to validate whole batches with early exit.",
-    "topic_label": "intermediate misc",
+    "topic_label": "box-rc",
     "track": "rust",
     "trap": "Collecting into Vec then checking loses which element failed first."
   },
@@ -307,7 +307,7 @@
       "q": "Why does fn pick(a: &str, b: &str) -> &str fail?"
     },
     "takeaway": "Learn the three elision rules so you annotate only truly ambiguous signatures.",
-    "topic_label": "intermediate misc",
+    "topic_label": "box-rc",
     "track": "rust",
     "trap": "Annotating every lifetime by hand hides the simple elided shape."
   },
@@ -331,7 +331,7 @@
       "q": "What does for<'a> in a bound mean?"
     },
     "takeaway": "Recognize higher-ranked bounds when closures must accept any fresh borrow.",
-    "topic_label": "intermediate misc",
+    "topic_label": "box-rc",
     "track": "rust",
     "trap": "Forcing one concrete lifetime where any-lifetime is needed over-constrains callers."
   },
@@ -355,7 +355,7 @@
       "q": "What is the cost of dyn Trait?"
     },
     "takeaway": "Use trait objects for heterogeneous collections and generics for hot paths.",
-    "topic_label": "intermediate misc",
+    "topic_label": "box-rc",
     "track": "rust",
     "trap": "Putting non-object-safe generic methods on a dyn trait breaks compilation."
   },
@@ -379,7 +379,7 @@
       "q": "What do Send and Sync guarantee?"
     },
     "takeaway": "Let Send and Sync bounds guide which types can cross thread boundaries.",
-    "topic_label": "intermediate misc",
+    "topic_label": "box-rc",
     "track": "rust",
     "trap": "Wrapping Rc in Arc or sending raw pointers across threads breaks safety."
   },
@@ -403,7 +403,7 @@
       "q": "What does Arc::clone do?"
     },
     "takeaway": "Share immutable data across threads with cheap Arc clones around it.",
-    "topic_label": "intermediate misc",
+    "topic_label": "interior-mutability",
     "track": "rust",
     "trap": "Cloning inner data instead of the Arc copies megabytes on every spawn."
   },
@@ -427,7 +427,7 @@
       "q": "What is mutex poisoning?"
     },
     "takeaway": "Handle poisoned mutexes deliberately by recovering only after auditing state.",
-    "topic_label": "intermediate misc",
+    "topic_label": "interior-mutability",
     "track": "rust",
     "trap": "Blindly unwrapping lock results turns recoverable poison into a second crash."
   },
@@ -451,7 +451,7 @@
       "q": "How do you get multiple producers on mpsc?"
     },
     "takeaway": "Connect threads with channels and clone senders for multi-producer flows.",
-    "topic_label": "intermediate misc",
+    "topic_label": "interior-mutability",
     "track": "rust",
     "trap": "Blocking recv on the main thread with no sender left deadlocks forever."
   },
@@ -475,7 +475,7 @@
       "q": "Why can scoped threads borrow locals?"
     },
     "takeaway": "Use scoped threads for fork-join work that borrows local data safely.",
-    "topic_label": "intermediate misc",
+    "topic_label": "interior-mutability",
     "track": "rust",
     "trap": "Spawning detached threads that borrow locals escapes the borrow checker illegally."
   },
@@ -499,7 +499,7 @@
       "q": "What does DerefMut enable?"
     },
     "takeaway": "Use DerefMut for pointer-like mutation and avoid it on plain domain types.",
-    "topic_label": "intermediate misc",
+    "topic_label": "interior-mutability",
     "track": "rust",
     "trap": "DerefMut on value types lets callers silently mutate internals."
   },
@@ -523,7 +523,7 @@
       "q": "When should you use TryFrom?"
     },
     "takeaway": "Model fallible conversions with TryFrom so failures surface as Results.",
-    "topic_label": "intermediate misc",
+    "topic_label": "interior-mutability",
     "track": "rust",
     "trap": "Panicking inside From for invalid input turns bad data into crashes."
   }

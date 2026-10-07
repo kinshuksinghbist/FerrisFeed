@@ -1,30 +1,71 @@
 package com.ferrisfeed.path
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.ferrisfeed.coreui.DisplayFont
+import com.ferrisfeed.coreui.FerrisChip
+import com.ferrisfeed.coreui.FerrisColors
 import com.ferrisfeed.coreui.FerrisFeedTheme
+import com.ferrisfeed.coreui.FerrisMotion
 import com.ferrisfeed.coreui.Tracks
+import com.ferrisfeed.coreui.glass
+import com.ferrisfeed.coreui.glassStroke
+import com.ferrisfeed.coreui.pressScale
+import com.ferrisfeed.coreui.staggeredEntrance
 import com.ferrisfeed.coreui.trackColor
+import com.ferrisfeed.coreui.trackTextColor
 
 /**
  * Node titles: label chunks title-cased per word. Splits spaces plus the
@@ -71,18 +112,9 @@ data class SearchFilters(
 }
 
 /**
- * Search field + filter chips (Spec v2, S7; TODO 22 makes it topic-first).
- *
- * This used to be a full-screen tab; it is now a section at the top of the
- * Path screen, so it deliberately renders no list of its own (a nested lazy
- * list inside the Path list would fight the parent scroller). PathScreen
- * renders [SearchResultRow] items lazily below this section.
- *
- * Query + filters are hoisted into [PathViewModel] so the text field and the
- * result set can never disagree. The empty query + unscoped state is resting:
- * the call site prints a topic-first prompt instead of a result list.
+ * Search field + filter chips (Spec v2, S7; TODO 40e redesign).
+ * Pill search field + horizontally scrolling collapsed chip row with expandable filters panel.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SearchSection(
     query: String,
@@ -91,6 +123,9 @@ fun SearchSection(
     onQueryChanged: (String, SearchFilters) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var isFocused by remember { mutableStateOf(false) }
+    var showAdvancedFilters by remember { mutableStateOf(false) }
+
     fun emit(
         track: String? = filters.track,
         level: Int? = filters.level,
@@ -99,133 +134,357 @@ fun SearchSection(
         topic: String? = filters.topic,
     ) = onQueryChanged(query, SearchFilters(track, level, hasCode, hasQuiz, topic))
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = { onQueryChanged(it, filters) },
-            modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-            label = { Text("Search reels, traps, quizzes…") },
-            singleLine = true,
-        )
-        Spacer(Modifier.height(10.dp))
+    val advancedCount = (if (filters.level != null) 1 else 0) +
+        (if (filters.hasCode != null) 1 else 0) +
+        (if (filters.hasQuiz != null) 1 else 0) +
+        (if (filters.topic != null) 1 else 0)
 
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+    val focusBorderColor by animateColorAsState(
+        targetValue = if (isFocused) MaterialTheme.colorScheme.primary else glassStroke(),
+        animationSpec = FerrisMotion.QuickColor,
+        label = "search-focus-ring",
+    )
+
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Pill search field: 52dp height, CircleShape, .glass, search icon, clear button (Item 40e)
+        val shape = CircleShape
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(shape)
+                .glass(shape)
+                .border(if (isFocused) 1.5.dp else 0.5.dp, focusBorderColor, shape)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart,
         ) {
-            // Topic filter — TODO 22: browse first by topic. [topics] comes
-            // from the roadmap state ([PathUiState].nodes), so a chip only
-            // exists for a topic that actually has reels — never a dead end.
-            if (filters.track != null) {
-                FilterChip(
-                    selected = filters.topic == null,
-                    onClick = { emit(topic = null) },
-                    label = { Text("All topics") },
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = "Search",
+                    tint = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
                 )
-            }
-            topics.forEach { t ->
-                FilterChip(
-                    selected = filters.topic == t,
-                    onClick = { emit(topic = if (filters.topic == t) null else t) },
-                    label = { Text(t.displayTopic()) },
-                )
-            }
 
-            // Track filter — changing track resets the topic so the chip row
-            // never shows a topic that does not belong to the chosen track.
-            FilterChip(
-                selected = filters.track == null,
-                onClick = { emit(track = null, topic = null) },
-                label = { Text("All tracks") },
-            )
-            listOf(Tracks.RUST, Tracks.SYSTEM_DESIGN).forEach { t ->
-                FilterChip(
-                    selected = filters.track == t,
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    if (query.isEmpty()) {
+                        Text(
+                            text = "Search reels and topics",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        )
+                    }
+                    BasicTextField(
+                        value = query,
+                        onValueChange = { onQueryChanged(it, filters) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { isFocused = it.isFocused },
+                        textStyle = TextStyle(
+                            fontFamily = MaterialTheme.typography.bodyLarge.fontFamily,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        ),
+                        singleLine = true,
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { /* Search committed */ }),
+                    )
+                }
+
+                if (query.isNotEmpty()) {
+                    IconButton(
+                        onClick = { onQueryChanged("", filters) },
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Clear search",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            }
+        }
+
+        // Horizontally scrolling single chip row with primary filters (Item 40e)
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            item(key = "track-all") {
+                FerrisChip(
+                    label = "All tracks",
+                    selected = filters.track == null,
+                    onClick = { emit(track = null, topic = null) },
+                )
+            }
+            item(key = "track-rust") {
+                FerrisChip(
+                    label = Tracks.label(Tracks.RUST),
+                    selected = filters.track == Tracks.RUST,
                     onClick = {
                         emit(
-                            track = if (filters.track == t) null else t,
+                            track = if (filters.track == Tracks.RUST) null else Tracks.RUST,
                             topic = null,
                         )
                     },
-                    label = { Text(Tracks.label(t)) },
+                    leadingDot = FerrisColors.FerrisOrange,
                 )
             }
-            // Level filter
-            (1..4).forEach { lv ->
-                FilterChip(
-                    selected = filters.level == lv,
-                    onClick = { emit(level = if (filters.level == lv) null else lv) },
-                    label = { Text("L$lv") },
+            item(key = "track-system-design") {
+                FerrisChip(
+                    label = Tracks.label(Tracks.SYSTEM_DESIGN),
+                    selected = filters.track == Tracks.SYSTEM_DESIGN,
+                    onClick = {
+                        emit(
+                            track = if (filters.track == Tracks.SYSTEM_DESIGN) null else Tracks.SYSTEM_DESIGN,
+                            topic = null,
+                        )
+                    },
+                    leadingDot = FerrisColors.SkyBlue,
                 )
             }
-            FilterChip(
-                selected = filters.hasCode == true,
-                onClick = { emit(hasCode = if (filters.hasCode == true) null else true) },
-                label = { Text("Has code") },
-            )
-            FilterChip(
-                selected = filters.hasQuiz == true,
-                onClick = { emit(hasQuiz = if (filters.hasQuiz == true) null else true) },
-                label = { Text("Has quiz") },
-            )
+            item(key = "advanced-filters-toggle") {
+                val filtersLabel = if (advancedCount > 0) "Filters · $advancedCount" else "Filters"
+                FerrisChip(
+                    label = filtersLabel,
+                    selected = showAdvancedFilters || advancedCount > 0,
+                    onClick = { showAdvancedFilters = !showAdvancedFilters },
+                )
+            }
             if (filters.isScoped()) {
-                FilterChip(
-                    selected = false,
-                    onClick = { onQueryChanged(query, filters.cleared()) },
-                    label = { Text("Clear filters") },
-                )
+                item(key = "clear-filters") {
+                    FerrisChip(
+                        label = "Clear filters",
+                        selected = false,
+                        onClick = { onQueryChanged(query, filters.cleared()) },
+                    )
+                }
+            }
+        }
+
+        // Collapsible advanced filters panel (Level, Has code, Has quiz, Topics)
+        AnimatedVisibility(
+            visible = showAdvancedFilters,
+            enter = expandVertically(FerrisMotion.QuickOffset) + fadeIn(FerrisMotion.Quick),
+            exit = shrinkVertically(FerrisMotion.QuickOffset) + fadeOut(FerrisMotion.Quick),
+        ) {
+            val panelShape = RoundedCornerShape(16.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(panelShape)
+                    .glass(panelShape)
+                    .padding(12.dp),
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Level filter
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = "Level",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = DisplayFont,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.width(44.dp),
+                        )
+                        (1..4).forEach { lv ->
+                            FerrisChip(
+                                label = "L$lv",
+                                selected = filters.level == lv,
+                                onClick = { emit(level = if (filters.level == lv) null else lv) },
+                            )
+                        }
+                    }
+
+                    // Content type filters
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = "Type",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = DisplayFont,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.width(44.dp),
+                        )
+                        FerrisChip(
+                            label = "Has code",
+                            selected = filters.hasCode == true,
+                            onClick = { emit(hasCode = if (filters.hasCode == true) null else true) },
+                        )
+                        FerrisChip(
+                            label = "Has quiz",
+                            selected = filters.hasQuiz == true,
+                            onClick = { emit(hasQuiz = if (filters.hasQuiz == true) null else true) },
+                        )
+                    }
+
+                    // Topic chips row
+                    if (topics.isNotEmpty()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                text = "Topic",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontFamily = DisplayFont,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.width(44.dp),
+                            )
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                if (filters.track != null) {
+                                    item(key = "topic-all") {
+                                        FerrisChip(
+                                            label = "All topics",
+                                            selected = filters.topic == null,
+                                            onClick = { emit(topic = null) },
+                                        )
+                                    }
+                                }
+                                items(topics, key = { it }) { t ->
+                                    FerrisChip(
+                                        label = t.displayTopic(),
+                                        selected = filters.topic == t,
+                                        onClick = { emit(topic = if (filters.topic == t) null else t) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 /**
- * One search hit. Rendered as a lazy item by PathScreen so results and the
- * roadmap share a single scroller.
+ * One search hit (Item 40g overhaul).
+ * Shape medium, glass, track chip, L{n}, topic, real 16dp icons for Code/Quiz, titleMedium hook,
+ * bodyMedium takeaway.
  */
 @Composable
 fun SearchResultRow(
     result: SearchResult,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    index: Int = 0,
 ) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    val interactionSource = remember { MutableInteractionSource() }
+    val shape = MaterialTheme.shapes.medium
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .staggeredEntrance(index)
+            .pressScale(interactionSource, pressed = 0.97f)
+            .clip(shape)
+            .glass(shape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            )
+            .defaultMinSize(minHeight = 48.dp)
+            .padding(16.dp),
     ) {
-        Column(Modifier.padding(14.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = Tracks.label(result.track),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = trackColor(result.track),
-                )
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // Track chip (capsule 12dp, track color 16% alpha fill, 6dp track dot, label, trackTextColor)
+                val dotColor = trackColor(result.track)
+                val tColor = trackTextColor(result.track)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(dotColor.copy(alpha = 0.16f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Box(
+                            Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(dotColor),
+                        )
+                        Text(
+                            text = Tracks.label(result.track),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = tColor,
+                        )
+                    }
+                }
+
+                // Level label
                 Text(
                     text = "L${result.level}",
                     style = MaterialTheme.typography.labelMedium,
+                    fontFamily = DisplayFont,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+
+                // Topic label
                 Text(
-                    // TODO 22: every hit names its topic (path UX rule: a card
-                    // always shows where it lives in the curriculum).
                     text = result.topic.displayTopic(),
                     style = MaterialTheme.typography.labelMedium,
+                    fontFamily = DisplayFont,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+
                 Spacer(Modifier.weight(1f))
-                if (result.hasCode) Text("</>", style = MaterialTheme.typography.labelMedium)
-                if (result.hasQuiz) Text("?", style = MaterialTheme.typography.labelMedium)
+
+                // Trailing icons: 16dp real icons (Item 40g)
+                if (result.hasCode) {
+                    Icon(
+                        imageVector = Icons.Filled.Code,
+                        contentDescription = "Has code",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                if (result.hasQuiz) {
+                    Icon(
+                        imageVector = Icons.Filled.HelpOutline,
+                        contentDescription = "Has quiz",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
             }
-            Spacer(Modifier.height(6.dp))
-            Text(text = result.hook, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
+
+            Text(
+                text = result.hook,
+                style = MaterialTheme.typography.titleMedium,
+                fontFamily = DisplayFont,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
             Text(
                 text = result.takeaway,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

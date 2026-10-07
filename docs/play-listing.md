@@ -1,8 +1,7 @@
 # Play Store Listing — FerrisFeed
 
-> TODO 27d: describes the REDESIGNED card (Spec v2 + speaker opening), not
-> the old UI. Shaped by `ux-writing` + `content-strategy`: one promise per
-> line, verbs first, no feature that no longer ships.
+> Updated for P6 Design Studio Overhaul. Shaped by `ux-writing` + `content-strategy`:
+> one promise per line, verbs first, no feature that no longer ships.
 
 ## Title
 
@@ -17,30 +16,29 @@ Say it, read it, prove it. Bite-size Rust + system design, offline.
 **Say it, read it, prove it.**
 
 FerrisFeed is a vertical feed where every swipe is one 60-second Rust or
-system-design lesson — spoken first, read second, proven with a quiz.
+system-design lesson — spoken first, read second, proven with interactive code drills.
 
-- One card per idea: say the headline aloud, read the hook + short body
+- **One card per idea**: say the headline aloud, read the hook + short body
   with the takeaway as the closing line and the code inside the same
   card — flip it to see its output. Swipe once more for the quiz on its
   own reel. No inner scroll, no second screen.
-- Small centered difficulty cue: easy breathes, medium shimmers, hard
-  flickers. Track identity is the card tint itself — orange wash for Rust,
-  sky-blue wash for system design — readable in light and dark.
-- Real code on every code card: fixed readable mono, copy with one tap,
-  flip to reveal the authored expected output. Cards without a runnable
-  result simply hide the flip.
-- The quiz is the only grade: answering schedules your next review,
-  grows XP, and keeps your streak. No self-report buttons.
-- Heart + save on the right rail (48dp targets, double-tap to save),
-  like reels anywhere.
-- Path tab with real progress: one node per topic with live reel counts
-  and mastery that decays when you skip. Tap a node for that topic's feed
-  only. Search lives at the top of Path — query + topic/track/level chips
-  over the same roadmap, never a separate tab.
-- Fully offline: the whole curriculum ships in the app. Airplane-mode
-  friendly, no account needed.
-- Streaks, mastery rings, and a Ferris mascot that evolves from Egg to
-  Armored Crab as you learn.
+- **Visual polish & typography**: custom Space Grotesk headlines and
+  JetBrains Mono code editor styling with macOS window controls, line numbers,
+  and segmented Code/Output toggles.
+- **Track gradients**: Rust warms in rich orange gradients, System Design
+  in sky blue — beautiful and readable in both OLED Dark and Paper Light modes.
+- **Prove it with interactive drills**: multiple-choice questions with
+  instant haptic feedback and shake animations, plus click-to-code block
+  assembly where only the correct block enters the code slot.
+- **Floating chrome & pacing**: top stat bar with animated streak flame and
+  XP gains, a 5-reel session progress bar, and an ergonomic floating bottom nav.
+- **Horizontal action row**: like and save live comfortably below the card
+  with radial sparks and haptic ticks, never covering code or text.
+- **Path tab as a journey roadmap**: continuous timeline connecting 56dp
+  progress ring nodes, a Continue hero card with mastery resume, and
+  instant pill search with expandable filters for level, code, and topics.
+- **Fully offline**: the entire 500-reel curriculum ships in the app.
+  Airplane-mode friendly, zero tracking, no account needed.
 
 Free, no ads, no account. Optional anonymous usage stats (opt-out anytime).
 
@@ -48,26 +46,26 @@ Made by Rust learners, for Rust learners. Crab on. 🦀
 
 ## Screenshot captions (8)
 
-1. "One swipe, one idea: say the headline, then read."
-2. "Difficulty at a glance: easy breathes, medium shimmers, hard flickers."
-3. "Rust glows orange, system design glows blue — no badges needed."
-4. "Real code inside the card — one tap to copy, flip to see the output."
-5. "Swipe once more: the quiz gets its own reel. Answering is the grade."
-6. "Your path: live nodes with real counts and mastery."
-7. "Search lives in Path: topics, tracks, and filters in one place."
-8. "Fully offline. Airplane mode is a feature, not a bug."
+1. "Floating stat bar, streak flame, and session progress: learn with purpose."
+2. "Design-studio typography: bold Space Grotesk headlines and JetBrains Mono code."
+3. "Full-bleed track gradients: Rust warms orange, System Design glows sky blue."
+4. "macOS-style code editor with segmented Code/Output toggle and line numbers."
+5. "Prove it: interactive quizzes and click-to-code block assembly."
+6. "Your learning journey: roadmap timeline with progress rings and continue hero."
+7. "Powerful search: pill search field with expandable level, code, and topic filters."
+8. "100% offline-first: all curriculum packs and FSRS spaced repetition on device."
 
 ## 30-second demo script
 
 - 0:00-0:05 — Cold open on the feed mid-scroll. VO: "Say it, read it,
   prove it." Tap the mic, read the headline, "Heard you" appears.
 - 0:05-0:12 — Swipe twice (ownership reel -> borrow reel). Point out the
-  difficulty cue motion + track tint. Small swipe still advances.
+  difficulty cue motion + track gradient. Session progress bar fills.
 - 0:12-0:18 — Code well inside the card: tap copy, tap flip to reveal
-  output. Swipe to the quiz reel: tap the answer, explanation appears,
-  difficulty cue plays.
-- 0:18-0:24 — Path tab: search field + chips on top, "Browse by topic"
-  directory, tap a node into its topic-only feed. Resume bar + mastery.
+  output. Swipe to the quiz reel: tap code blocks into place, sparkle burst fires,
+  "+15 XP" toast floats to the stat bar.
+- 0:18-0:24 — Path tab: continuous timeline roadmap, 72dp ProgressRing hero
+  card, pill search with expandable filters panel. Tap a node into its topic feed.
 - 0:24-0:30 — Airplane-mode toggle ON, keep scrolling. End card: app
   icon + "FerrisFeed — free Rust + system design, offline."
 

@@ -15,7 +15,7 @@ enum class Track(val id: String) {
     }
 }
 
-enum class QuizType { MCQ, TAP_BUG, FILL_BLANK }
+enum class QuizType { MCQ, TAP_BUG, FILL_BLANK, BLOCKS }
 
 data class QuizModel(
     val type: QuizType,
@@ -25,10 +25,12 @@ data class QuizModel(
     // Tap-the-bug
     val codeLines: List<String> = emptyList(),
     val buggyLineIndex: Int = -1,
-    // Fill-blank
+    // Fill-blank & Blocks
     val prefix: String = "",
     val suffix: String = "",
     val acceptedAnswers: List<String> = emptyList(),
+    val targetBlocks: List<String> = emptyList(),
+    val distractorBlocks: List<String> = emptyList(),
     val explanation: String,
 )
 

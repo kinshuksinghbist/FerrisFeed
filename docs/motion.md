@@ -18,40 +18,57 @@ Defined centrally in `Motion.kt` (P6 31a). Never inline ad-hoc `tween(...)` numb
 
 All looping and decorative animations respect `LocalReduceMotion` (bound to system `ANIMATOR_DURATION_SCALE == 0f`). Functional transitions fall back to 100ms quick fades.
 
+## 2. Page-type and 3D Pager Transitions
 
-## 2. Confetti on mastery
+Inside `FeedScreen.kt`'s `VerticalPager`, each page applies 3D perspective transforms inside `Modifier.graphicsLayer` using `pagerState.getOffsetDistanceInPages(page)`:
+- Scale: `1f - 0.06f * abs(offset)`
+- Alpha: `1f - 0.5f * abs(offset)`
+- RotationX: `-6f * offset`
+- Camera distance: `12 * density`
+- Transform origin: `TransformOrigin(0.5f, 0.5f)`
 
-- Fires exactly once when a topic crosses 85% (MASTERED) or a Ferris stage
-  evolves (Egg -> Crab -> Armored). Never on raw XP — XP is too frequent
-  and confetti would become noise.
-- Implementation: lightweight canvas particle burst (120 particles, 900ms,
-  Ferris orange/mint/lavender), no third-party GIF/Lottie dependency.
-- Paired with a haptic tick (`HapticFeedbackType.LongPress`) + the Ferris
-  asset swap. Respects `ACCESSIBILITY reduce-motion`: shows a static badge
-  pop instead.
+Because all transforms run inside `graphicsLayer`, no re-composition occurs during scrolls, maintaining 120Hz frame rates.
 
-## 3. Shimmer skeletons while prefetching
+## 3. Error Shake & Rejection Kinetics
 
-- Next-5 pager prefetch: unbound pages render `ReelCardSkeleton` (shimmer
-  gradient sweep 1200ms, `rememberInfiniteTransition`) with the same
-  28dp card geometry, so layout never jumps when content lands.
-- Code blocks shimmer as 3-5 mono bars matching the snippet line count.
-  Shimmer is disabled under battery saver.
+1. **MCQ Error Shake**:
+   - Tapping an incorrect MCQ option drives `translationX` with keyframes: ±8dp amplitude across 3 oscillations over 320ms (`-8f at 40ms`, `8f at 90ms`, `-6f at 150ms`, `6f at 210ms`, `-3f at 265ms`, `0f at 320ms`).
+   - Accompanied by `HapticFeedbackType.Reject` and announced to screen readers via `liveRegion = LiveRegionMode.Polite`.
+2. **Click-to-Code Block Assembly Shake**:
+   - Tapping an incorrect code block triggers horizontal rejection shake (±8dp, 320ms) with `Reject` haptic feedback. Only the correct block enters the active slot.
+3. **Locked Path Node Shake**:
+   - Tapping a locked roadmap node shakes the node card (±6dp, 240ms) with `Reject` haptic feedback, while highlighting the prerequisite helper text.
 
-## 4. Haptics
+## 4. Celebrations, Sparkles & Confetti
 
-- Quiz correct: light tick. Quiz wrong: double-tick (not a buzz — wrong
-  answers shouldn't feel punished). Save (double-tap): medium tick.
-  Stage evolution: long-press pattern. All via `LocalHapticFeedback`,
-  gated on system haptics setting.
+1. **Option Sparkle** (`OptionSparkle`):
+   - Regular correct quiz answers trigger a localized sparkle burst of 12 mint particles (600ms) originating from the chosen card.
+2. **Mastery Confetti** (`ConfettiBurst`):
+   - When a topic's mastery crosses 85% on a first-try correct answer, a 60-particle canvas confetti burst (900ms) fires across the screen in brand colors (Ferris Orange, Mint, Amber, Lavender).
+   - All particle physics compute off-composition and render via Canvas.
+3. **XP Gain Toast**:
+   - Correct answers award +15 XP (+5 on retry), causing a "+15 XP" glass pill to rise 24dp and fade out over 800ms next to the StatBar XP chip.
 
-## 5. 120Hz pager + baseline profile
+## 5. Shimmer Skeletons
 
-- `VerticalPager` with `beyondViewportPageCount = 5`, LRU-highlighted code
-  cache (max 20 entries), and `graphicsLayer {}` transforms only (no
-  re-composition on scroll). Read-time + impression tracking is debounced
-  off the composition path.
-- `app/baseline-prof.txt` pins the hot path: pager, ReelCard, CodeCard,
-  QuizCard, Room DAO reads, FSRS grading, DataStore reads. The release
-  Macrobenchmark (`baselineProfile` Gradle task) regenerates it; CI fails
-  if scroll jank (frame P99) regresses >10% vs. main.
+- Next-5 pager prefetch: unbound pages render `ReelSkeleton` (32dp card geometry, header chips, 3-line hook, 4-line body, code panel) with a 20° angled shimmer sweep (1200ms).
+- Path roadmap uses `PathNodeSkeleton` (56dp ring + 2 text bars) × 5 while topics load.
+- Skeletons fall back to static 40% alpha bars under `LocalReduceMotion`.
+
+## 6. Haptics Hierarchy
+
+- Confirm / Positive (`HapticFeedbackType.Confirm`): Like tap, Save tap, Correct block placed.
+- Reject / Error (`HapticFeedbackType.Reject`): MCQ incorrect choice, Block placement rejection, Locked roadmap node tap.
+- Save double-tap: `HapticFeedbackType.LongPress` at the gesture offset.
+- Navigation tab change: `HapticFeedbackType.TextHandleMove`.
+
+## 7. Baseline Profile Hot Paths
+
+`app/baseline-prof.txt` and `app/src/main/baselineProfiles/baseline-prof.txt` pin the hot execution paths:
+- `FeedScreenKt` / `FeedPager`
+- `ReelCardKt`
+- `CodeCardKt` / `CodeBlock`
+- `QuizCardKt` / `McqBody` / `BlocksBody`
+- `AppShellKt` / `FerrisNavBar`
+- `PathScreenKt`
+- Room DAO reads and FSRS scheduling logic.

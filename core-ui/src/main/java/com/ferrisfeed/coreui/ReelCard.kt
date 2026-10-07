@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -110,7 +112,10 @@ fun ReelCard(
                 .background(trackBrush(track, isDark))
                 .padding(24.dp)
         ) {
-            Column {
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = if (density.fontScale > 1.3f) Modifier.verticalScroll(scrollState) else Modifier,
+            ) {
                 // Header row: Track chip (left) + Difficulty indicator (right)
                 Row(
                     modifier = Modifier

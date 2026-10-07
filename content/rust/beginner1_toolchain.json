@@ -2,7 +2,7 @@
   {
     "body_md": "Install Rust via **rustup**, not your OS package manager. It manages toolchains, targets, and updates with one tool. Run the installer script, then `rustc --version` to confirm.",
     "code": "$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh\n$ rustc --version\n$ cargo --version",
-    "hook": "There is only one correct way to install Rust \u2014 most beginners get it wrong.",
+    "hook": "There is only one correct way to install Rust — most beginners get it wrong.",
     "id": "rust-b1-001",
     "language": "rust",
     "level": 1,
@@ -74,7 +74,7 @@
   {
     "body_md": "Four commands cover 90% of work: `run` builds and executes, `build` compiles, `check` type-checks fast, `clippy` lints. Use `check` while iterating to save compile time.",
     "code": "$ cargo run\n$ cargo check\n$ cargo build --release\n$ cargo clippy",
-    "hook": "Stop waiting on slow builds \u2014 one command checks code 3x faster.",
+    "hook": "Stop waiting on slow builds — one command checks code 3x faster.",
     "id": "rust-b1-004",
     "language": "rust",
     "level": 1,
@@ -92,13 +92,13 @@
     "takeaway": "Use cargo check for fast iteration, build for artifacts.",
     "track": "rust",
     "trap": "Running cargo build every save wastes minutes; check is enough.",
-    "output": "# run: builds and executes the binary\n# check: type-checks only \u2014 fastest feedback, no codegen\n# build --release: optimized artifact in target/release/\n# clippy: lints pass with no warnings on clean code",
+    "output": "# run: builds and executes the binary\n# check: type-checks only — fastest feedback, no codegen\n# build --release: optimized artifact in target/release/\n# clippy: lints pass with no warnings on clean code",
     "topic_label": "toolchain"
   },
   {
     "body_md": "`Cargo.toml` is your manifest: package name, version, edition, and dependencies. Run `cargo add serde` to add deps. `Cargo.lock` pins exact versions for reproducible builds.",
     "code": "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n[dependencies]\nserde = \"1.0\"",
-    "hook": "One small file controls your entire Rust build \u2014 ignore it and builds break.",
+    "hook": "One small file controls your entire Rust build — ignore it and builds break.",
     "id": "rust-b1-005",
     "language": "rust",
     "level": 1,
@@ -122,7 +122,7 @@
   {
     "body_md": "Variables are **immutable by default** with `let`. The compiler stops accidental mutation. This default prevents whole classes of bugs other languages allow silently.",
     "code": "fn main() {\n    let x = 5;\n    // x = 6; // error!\n    println!(\"{x}\");\n}",
-    "hook": "In Rust this innocent line refuses to compile \u2014 and that is the point.",
+    "hook": "In Rust this innocent line refuses to compile — and that is the point.",
     "id": "rust-b1-006",
     "language": "rust",
     "level": 1,
@@ -141,12 +141,12 @@
     "track": "rust",
     "trap": "Forgetting mut gives `cannot assign twice` error; add `mut` deliberately.",
     "output": "5",
-    "topic_label": "toolchain"
+    "topic_label": "variables"
   },
   {
     "body_md": "Add `mut` when you truly need change. The compiler then allows assignment but still checks borrows. Prefer immutable; reach for `mut` only with a reason.",
     "code": "fn main() {\n    let mut count = 0;\n    count += 1;\n    count += 1;\n    println!(\"{count}\"); // 2\n}",
-    "hook": "Two extra characters unlock mutation \u2014 but Rust makes you ask for it.",
+    "hook": "Two extra characters unlock mutation — but Rust makes you ask for it.",
     "id": "rust-b1-007",
     "language": "rust",
     "level": 1,
@@ -165,12 +165,12 @@
     "track": "rust",
     "trap": "Marking everything mut silences the safety net; keep immutable default.",
     "output": "2",
-    "topic_label": "toolchain"
+    "topic_label": "variables"
   },
   {
     "body_md": "**Shadowing** redeclares with `let` to transform a value, even changing type. Unlike `mut`, the old binding is replaced. Great for parsing and cleanup pipelines.",
     "code": "fn main() {\n    let s = \" 42 \";\n    let s = s.trim();\n    let s: i32 = s.parse().unwrap();\n    println!(\"{s}\");\n}",
-    "hook": "Same name, three different types \u2014 and the compiler loves it.",
+    "hook": "Same name, three different types — and the compiler loves it.",
     "id": "rust-b1-008",
     "language": "rust",
     "level": 1,
@@ -189,12 +189,12 @@
     "track": "rust",
     "trap": "Confusing shadowing with mut: mut keeps type, shadowing can change it.",
     "output": "42",
-    "topic_label": "toolchain"
+    "topic_label": "variables"
   },
   {
-    "body_md": "Rust integers are explicit: `i8`\u2013`i128`, `u8`\u2013`u128`, plus `isize`/`usize` for indexing. Overflow **panics in debug**, wraps in release. Use `checked_add` when overflow matters.",
+    "body_md": "Rust integers are explicit: `i8`–`i128`, `u8`–`u128`, plus `isize`/`usize` for indexing. Overflow **panics in debug**, wraps in release. Use `checked_add` when overflow matters.",
     "code": "fn main() {\n    let a: u8 = 255;\n    let b = a.checked_add(1);\n    println!(\"{b:?}\"); // None\n}",
-    "hook": "255 + 1 crashes your debug build \u2014 here is why that is good.",
+    "hook": "255 + 1 crashes your debug build — here is why that is good.",
     "id": "rust-b1-009",
     "language": "rust",
     "level": 1,
@@ -213,12 +213,12 @@
     "track": "rust",
     "trap": "Assuming wrapping everywhere; debug panics expose hidden overflow bugs.",
     "output": "None",
-    "topic_label": "toolchain"
+    "topic_label": "variables"
   },
   {
     "body_md": "`f64` is the default float, `bool` is true/false, `char` is a full **Unicode scalar** (4 bytes), not one byte. Single quotes for char, double for strings.",
-    "code": "fn main() {\n    let pi: f64 = 3.14159;\n    let ok: bool = true;\n    let emoji: char = '\ud83e\udd80';\n    println!(\"{pi} {ok} {emoji}\");\n}",
-    "hook": "A Rust char can hold a crab \u2014 most languages cannot.",
+    "code": "fn main() {\n    let pi: f64 = 3.14159;\n    let ok: bool = true;\n    let emoji: char = '🦀';\n    println!(\"{pi} {ok} {emoji}\");\n}",
+    "hook": "A Rust char can hold a crab — most languages cannot.",
     "id": "rust-b1-010",
     "language": "rust",
     "level": 1,
@@ -236,8 +236,8 @@
     "takeaway": "char is Unicode; f64 and bool do what you expect.",
     "track": "rust",
     "trap": "Using 'a' vs \"a\" wrong: single quotes are char, double are string.",
-    "output": "3.14159 true \ud83e\udd80",
-    "topic_label": "toolchain"
+    "output": "3.14159 true 🦀",
+    "topic_label": "variables"
   },
   {
     "body_md": "**Tuples** group mixed types with fixed size; **arrays** hold one type with fixed length. Index tuples with `.0`, arrays with `[0]`. Slices borrow arrays dynamically.",
@@ -261,12 +261,12 @@
     "track": "rust",
     "trap": "Indexing array out of bounds panics at runtime; length is fixed.",
     "output": "42 2",
-    "topic_label": "toolchain"
+    "topic_label": "control-flow"
   },
   {
-    "body_md": "Define functions with `fn name(args: Type) -> Ret`. Last expression without `;` is the return. No `return` needed for tail values \u2014 idiomatic Rust omits it.",
+    "body_md": "Define functions with `fn name(args: Type) -> Ret`. Last expression without `;` is the return. No `return` needed for tail values — idiomatic Rust omits it.",
     "code": "fn add(a: i32, b: i32) -> i32 {\n    a + b // no semicolon = return\n}\nfn main() {\n    println!(\"{}\", add(2, 3));\n}",
-    "hook": "The return keyword is optional \u2014 leaving it out is actually preferred.",
+    "hook": "The return keyword is optional — leaving it out is actually preferred.",
     "id": "rust-b1-012",
     "language": "rust",
     "level": 1,
@@ -285,12 +285,12 @@
     "track": "rust",
     "trap": "Adding `;` to tail turns value into `()` and breaks return type.",
     "output": "5",
-    "topic_label": "toolchain"
+    "topic_label": "control-flow"
   },
   {
-    "body_md": "`if` needs no parens and each branch must return the same type. Use `else if` chains for multiple cases. Condition must be a real `bool` \u2014 no truthy integers.",
+    "body_md": "`if` needs no parens and each branch must return the same type. Use `else if` chains for multiple cases. Condition must be a real `bool` — no truthy integers.",
     "code": "fn main() {\n    let n = 7;\n    if n % 2 == 0 {\n        println!(\"even\");\n    } else {\n        println!(\"odd\");\n    }\n}",
-    "hook": "if 1 { } looks fine \u2014 Rust rejects it and teaches you something.",
+    "hook": "if 1 { } looks fine — Rust rejects it and teaches you something.",
     "id": "rust-b1-013",
     "language": "rust",
     "level": 1,
@@ -309,12 +309,12 @@
     "track": "rust",
     "trap": "Writing `if x = 5` assigns and errors; use `==` for comparison.",
     "output": "odd",
-    "topic_label": "toolchain"
+    "topic_label": "control-flow"
   },
   {
     "body_md": "`if` is an **expression**: assign its result with `let`. Both arms must have the same type. This replaces ternaries and keeps logic as values, not statements.",
     "code": "fn main() {\n    let n = 7;\n    let kind = if n % 2 == 0 { \"even\" } else { \"odd\" };\n    println!(\"{kind}\");\n}",
-    "hook": "Rust has no ternary operator \u2014 because it does not need one.",
+    "hook": "Rust has no ternary operator — because it does not need one.",
     "id": "rust-b1-014",
     "language": "rust",
     "level": 1,
@@ -333,12 +333,12 @@
     "track": "rust",
     "trap": "Mismatched arm types like `if c { 1 } else { \"x\" }` fail to compile.",
     "output": "odd",
-    "topic_label": "toolchain"
+    "topic_label": "control-flow"
   },
   {
     "body_md": "`loop` runs forever until `break`. It can **return a value**: `break 42`. Bind it with `let x = loop { ... }`. Perfect for retries and input prompts.",
     "code": "fn main() {\n    let mut i = 0;\n    let done = loop {\n        i += 1;\n        if i == 3 { break i * 10; }\n    };\n    println!(\"{done}\"); // 30\n}",
-    "hook": "An infinite loop that returns a value \u2014 only in Rust.",
+    "hook": "An infinite loop that returns a value — only in Rust.",
     "id": "rust-b1-015",
     "language": "rust",
     "level": 1,
@@ -357,12 +357,12 @@
     "track": "rust",
     "trap": "Forgetting break creates a true infinite loop that hangs run.",
     "output": "30",
-    "topic_label": "toolchain"
+    "topic_label": "control-flow"
   },
   {
-    "body_md": "`while` checks a condition each iteration. Great for countdowns and polling. Prefer `for` over manual index while loops \u2014 iterators prevent off-by-one errors.",
+    "body_md": "`while` checks a condition each iteration. Great for countdowns and polling. Prefer `for` over manual index while loops — iterators prevent off-by-one errors.",
     "code": "fn main() {\n    let mut n = 3;\n    while n > 0 {\n        println!(\"{n}\");\n        n -= 1;\n    }\n}",
-    "hook": "while looks simple \u2014 but Rust wants you to replace it most of the time.",
+    "hook": "while looks simple — but Rust wants you to replace it most of the time.",
     "id": "rust-b1-016",
     "language": "rust",
     "level": 1,
@@ -381,12 +381,12 @@
     "track": "rust",
     "trap": "Forgetting to update the condition variable loops forever.",
     "output": "3\n2\n1",
-    "topic_label": "toolchain"
+    "topic_label": "loops-macros"
   },
   {
     "body_md": "`for x in 0..3` iterates ranges; `0..3` excludes end, `0..=3` includes it. Works over arrays, iterators, anything `IntoIterator`. No manual indexing needed.",
     "code": "fn main() {\n    for i in 0..3 {\n        println!(\"{i}\"); // 0,1,2\n    }\n    for i in 0..=3 {\n        println!(\"{i}\"); // 0..3\n    }\n}",
-    "hook": "0..3 gives you 0,1,2 \u2014 the missing 3 trips up everyone once.",
+    "hook": "0..3 gives you 0,1,2 — the missing 3 trips up everyone once.",
     "id": "rust-b1-017",
     "language": "rust",
     "level": 1,
@@ -405,7 +405,7 @@
     "track": "rust",
     "trap": "Using 0..len+1 or ..=len wrong causes off-by-one panics.",
     "output": "0\n1\n2\n0\n1\n2\n3",
-    "topic_label": "toolchain"
+    "topic_label": "loops-macros"
   },
   {
     "body_md": "`break` exits, `continue` skips to next iteration. Labeled loops like `'outer: loop` let you break from nested loops. Labels start with a tick `'`.",
@@ -428,13 +428,13 @@
     "takeaway": "Use loop labels to control nested loops precisely.",
     "track": "rust",
     "trap": "Plain break only exits inner loop; logic silently continues outer.",
-    "output": "// compiles clean, no output \u2014 'outer break exits both loops silently",
-    "topic_label": "toolchain"
+    "output": "// compiles clean, no output — 'outer break exits both loops silently",
+    "topic_label": "loops-macros"
   },
   {
-    "body_md": "Print with `println!` (`!` means macro). Use `{var}` inline formatting, `{var:?}` with Debug. `dbg!` prints plus returns value \u2014 handy for quick debugging.",
+    "body_md": "Print with `println!` (`!` means macro). Use `{var}` inline formatting, `{var:?}` with Debug. `dbg!` prints plus returns value — handy for quick debugging.",
     "code": "fn main() {\n    let n = 42;\n    println!(\"n={n}\");\n    println!(\"{n:?}\");\n    dbg!(&n);\n}",
-    "hook": "See that ! in println! \u2014 it is not a function at all.",
+    "hook": "See that ! in println! — it is not a function at all.",
     "id": "rust-b1-019",
     "language": "rust",
     "level": 1,
@@ -453,12 +453,12 @@
     "track": "rust",
     "trap": "Forgetting :? for structs without Display gives a formatting error.",
     "output": "n=42\n42",
-    "topic_label": "toolchain"
+    "topic_label": "loops-macros"
   },
   {
     "body_md": "Editions (`2015`, `2018`, `2021`) gate language changes without breaking old code. Set `edition = \"2021\"` in Cargo.toml. New projects should always use the latest.",
     "code": "[package]\nname = \"demo\"\nversion = \"0.1.0\"\nedition = \"2021\"\n# then: cargo run",
-    "hook": "Rust never breaks your old code \u2014 this one setting is how.",
+    "hook": "Rust never breaks your old code — this one setting is how.",
     "id": "rust-b1-020",
     "language": "rust",
     "level": 1,
@@ -477,6 +477,6 @@
     "track": "rust",
     "trap": "Staying on 2015 edition disables async/await and modern syntax.",
     "output": "# edition 2021 enabled; cargo run builds with modern syntax",
-    "topic_label": "toolchain"
+    "topic_label": "loops-macros"
   }
 ]

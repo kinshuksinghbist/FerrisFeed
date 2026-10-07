@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -176,6 +177,13 @@ private data class Particle(
     val rotationSpeed: Float,
 )
 
+private val ConfettiColors = listOf(
+    Color(0xFFFF6B35), // Ferris orange
+    Color(0xFF00D9A6), // Mint
+    Color(0xFFFFC857), // Amber/gold
+    Color(0xFFB8A6FF), // Lavender
+)
+
 /** Confetti burst on mastery or celebration (P6 31g). */
 @Composable
 fun ConfettiBurst(
@@ -187,13 +195,6 @@ fun ConfettiBurst(
 
     val progress = remember(trigger) { Animatable(0f) }
 
-    val colors = listOf(
-        Color(0xFFFF6B35), // Ferris orange
-        Color(0xFF00D9A6), // Mint
-        Color(0xFFFFC857), // Amber/gold
-        Color(0xFFB8A6FF), // Lavender
-    )
-
     val particles = remember(trigger) {
         val rng = Random(trigger)
         List(60) {
@@ -201,7 +202,7 @@ fun ConfettiBurst(
             val speed = rng.nextFloat() * 400f + 250f
             val size = rng.nextFloat() * 7f + 5f
             val isCircle = rng.nextBoolean()
-            val color = colors[rng.nextInt(colors.size)]
+            val color = ConfettiColors[rng.nextInt(ConfettiColors.size)]
             val rotationSpeed = (rng.nextFloat() - 0.5f) * 720f
             Particle(speed, angle, size, isCircle, color, rotationSpeed)
         }
@@ -216,7 +217,7 @@ fun ConfettiBurst(
     }
 
     if (progress.value < 1f) {
-        Canvas(modifier = modifier.fillMaxSize()) {
+        Canvas(modifier = modifier.fillMaxSize().clearAndSetSemantics {}) {
             val center = Offset(size.width / 2f, size.height / 2f)
             val t = progress.value
             val alpha = (1f - t).coerceIn(0f, 1f)

@@ -141,7 +141,7 @@
     "takeaway": "Emit structured spans with propagated IDs.",
     "trap": "Logging PII inside spans.",
     "track": "system-design",
-    "topic_label": "rust backend"
+    "topic_label": "axum"
   },
   {
     "body_md": "Graceful shutdown: catch SIGTERM, stop accepting, drain 30s, then close pools. In axum use `with_graceful_shutdown` and tokio cancellation tokens for background Kafka tasks.",
@@ -165,7 +165,7 @@
     "takeaway": "Drain connections before exiting.",
     "trap": "Zero grace period dropping uploads mid-write.",
     "track": "system-design",
-    "topic_label": "rust backend"
+    "topic_label": "axum"
   },
   {
     "body_md": "Config via `config` crate plus env: base.yaml, prod overrides, `APP__DB_URL` env. Validate at startup with serde; fail fast on missing secrets. Never bake creds into image.",
@@ -189,7 +189,7 @@
     "takeaway": "Validate typed config at boot.",
     "trap": "Panicking on optional local-only settings.",
     "track": "system-design",
-    "topic_label": "rust backend"
+    "topic_label": "axum"
   },
   {
     "body_md": "Multi-stage Dockerfile: rust:bookworm builds with cargo-chef caching, then copies binary to distroless. Runs as nonroot, exposes 8080, sets RUST_LOG. Result under 50MB.",
@@ -213,7 +213,7 @@
     "takeaway": "Ship minimal images with cached builds.",
     "trap": "Running as root with debug symbols inside.",
     "track": "system-design",
-    "topic_label": "rust backend"
+    "topic_label": "axum"
   },
   {
     "body_md": "Health endpoints: `/healthz` for liveness, `/readyz` checking DB+Redis+Kafka. Return 200 only when ready; Kubernetes removes unready pods. Keep checks fast and dependency-scoped.",
@@ -237,7 +237,7 @@
     "takeaway": "Expose lightweight liveness and readiness probes.",
     "trap": "Readiness doing expensive full-table scan.",
     "track": "system-design",
-    "topic_label": "rust backend"
+    "topic_label": "axum"
   },
   {
     "body_md": "Error handling: `thiserror` for libs, `anyhow` for bins, map to HTTP with `IntoResponse`. Return 400 for validation, 404 for missing, 503 for downstream. Log with trace id, no unwrap in handlers.",
@@ -261,7 +261,7 @@
     "takeaway": "Model errors and map to correct codes.",
     "trap": "500 for user input errors triggering false alarms.",
     "track": "system-design",
-    "topic_label": "rust backend"
+    "topic_label": "rate-limiter"
   },
   {
     "body_md": "Auth: validate JWT in middleware, inject `Claims` extractor, check scopes per route. Cache JWKS, enforce expiry plus audience, and rate-limit login. Never trust client roles blindly.",
@@ -285,7 +285,7 @@
     "takeaway": "Authenticate once, authorize everywhere.",
     "trap": "Skipping audience check accepting foreign tokens.",
     "track": "system-design",
-    "topic_label": "rust backend"
+    "topic_label": "rate-limiter"
   },
   {
     "body_md": "Testing: `cargo test` for pure logic, `axum-test` or `tower::ServiceExt::oneshot` for routes, testcontainers for Postgres/Redis. Seed fixtures, assert status plus JSON, run migrations in setup.",
@@ -309,7 +309,7 @@
     "takeaway": "Test handlers through the tower stack.",
     "trap": "Shared DB state causing flaky parallel tests.",
     "track": "system-design",
-    "topic_label": "rust backend"
+    "topic_label": "rate-limiter"
   },
   {
     "body_md": "Rate limit with tower-governor or Redis token bucket. Key by IP plus user, return 429 with Retry-After, exempt health checks. Test burst vs sustained separately.",
@@ -333,7 +333,7 @@
     "takeaway": "Throttle upstream with clear backoff signals.",
     "trap": "Global limit blocking health probes.",
     "track": "system-design",
-    "topic_label": "rust backend"
+    "topic_label": "rate-limiter"
   },
   {
     "body_md": "Deploy: GH Actions builds, runs sqlx migrate check, pushes image, rolls Kubernetes with HPA on p95. Canary 5% first, auto-rollback on error budget burn. Tag images by SHA.",
@@ -357,6 +357,6 @@
     "takeaway": "Automate test, image, canary, and rollback.",
     "trap": "Running non-backward-compatible migration first.",
     "track": "system-design",
-    "topic_label": "rust backend"
+    "topic_label": "rate-limiter"
   }
 ]

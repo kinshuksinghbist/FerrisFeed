@@ -61,6 +61,24 @@ the skill applies to, so the next agent doesn't have to re-derive it.
 | Play listing / store copy — `docs/play-listing.md` | `ux-writing`, `content-strategy` |
 | Accumulated UI drift (e.g. inline colours vs tokens) | `design-debt-audit`, `design-token-audit` |
 
+### P6 Design-Studio Pass Skill Mapping
+
+| P6 Item | Focus Area | Applied Designer Skills |
+|---|---|---|
+| **30** | Brand Foundations (Space Grotesk, JetBrains Mono, OLED/Paper palettes, 32dp shapes) | `color-system`, `typography-scale`, `design-token`, `dark-mode-design` |
+| **31** | Motion System (`FerrisMotion`, reduce-motion, `pressScale`, `staggeredEntrance`) | `motion-system`, `animation-principles`, `micro-interaction-spec` |
+| **32** | App Shell (Floating `FerrisNavBar`, top `StatBar`, route crossfade) | `navigation-patterns`, `feedback-patterns`, `visual-hierarchy` |
+| **33** | Feed Chrome (`SessionProgressBar`, 3D pager transforms, Canvas crab claw empty state) | `gesture-patterns`, `loading-states`, `doherty-threshold`, `peak-end-rule` |
+| **34** | Lesson Card (`ReelCard`, `CodeBlock` macOS dots, inline markdown, takeaway strip) | `reel-card-composition`, `readable-measure`, `visual-hierarchy`, `critique-typography` |
+| **35** | Shared Controls (`FerrisButton`, `FerrisChip`, `FerrisIconButton`) | `component-spec`, `fitts-law`, `affordance-design` |
+| **36** | Reel Actions & XP Feedback (`ReelActionRow`, `OptionSparkle`, `ConfettiBurst`) | `feedback-patterns`, `peak-end-rule`, `fitts-law` |
+| **37** | Speaker Opening (`SpeakCard` dock, 5-bar RMS visualizer, soft pulse ring) | `micro-interaction-spec`, `loading-states`, `feedback-patterns` |
+| **38** | Quiz Page (`QuizPage`, MCQ glass rows, error shake, click-to-code `BlocksBody`) | `state-machine`, `feedback-patterns`, `error-recovery`, `zeigarnik-effect` |
+| **39** | Brand Mark & Visual Primitives (`FerrisMark`, `StreakFlame`, `ProgressRing`) | `brand-identity`, `data-visualization`, `feedback-patterns` |
+| **40** | Path Screen & Journey (Parallax header, Continue hero, timeline roadmap, search filter panel) | `information-architecture`, `user-journey`, `search-ux`, `visual-hierarchy` |
+| **41** | Polish & Accessibility (WCAG contrast audit, TalkBack semantics, liveRegion, font scaling) | `accessibility-audit`, `critique-color`, `accessibility-test-plan` |
+
+
 Two rules from the pack worth repeating because our codebase violates them most
 easily: **one idea per screen, one gesture** (if a card needs an inner scroll, the
 card is doing too much) and **the question that grades the learning is not

@@ -150,19 +150,20 @@ class LearningPathEngine {
             TopicNode("ownership", "rust", 1, listOf("variables"), spineOrder = 2),
             TopicNode("borrowing", "rust", 1, listOf("ownership"), spineOrder = 3),
             TopicNode("collections", "rust", 1, listOf("borrowing"), spineOrder = 4),
-            TopicNode("error-handling", "rust", 1, listOf("collections"), spineOrder = 5),
-            TopicNode("generics-traits", "rust", 2, listOf("error-handling"), spineOrder = 6),
-            TopicNode("lifetimes", "rust", 2, listOf("ownership", "generics-traits"), spineOrder = 7),
+            TopicNode("options-enums", "rust", 1, listOf("collections"), spineOrder = 5),
+            TopicNode("generics", "rust", 2, listOf("options-enums"), spineOrder = 6),
+            TopicNode("lifetimes", "rust", 2, listOf("ownership", "generics"), spineOrder = 7),
             TopicNode("smart-pointers", "rust", 2, listOf("lifetimes"), spineOrder = 8),
             TopicNode("async", "rust", 2, listOf("lifetimes", "smart-pointers"), spineOrder = 9),
             TopicNode("axum", "rust", 2, listOf("async"), spineOrder = 10),
             TopicNode("rate-limiter", "system-design", 2, listOf("axum"), spineOrder = 11),
             // System-design branch (needs axum for the Rust-flavored reels).
-            TopicNode("http-caching", "system-design", 1, listOf("toolchain"), spineOrder = 60),
-            TopicNode("hashing-cap", "system-design", 2, listOf("http-caching"), spineOrder = 61),
-            TopicNode("kafka-queues", "system-design", 2, listOf("hashing-cap"), spineOrder = 62),
-            TopicNode("raft", "system-design", 3, listOf("kafka-queues"), spineOrder = 63),
-            TopicNode("observability", "system-design", 2, listOf("axum"), spineOrder = 64),
+            TopicNode("fundamentals", "system-design", 1, listOf("toolchain"), spineOrder = 60),
+            TopicNode("http-caching", "system-design", 1, listOf("fundamentals"), spineOrder = 61),
+            TopicNode("database-sharding", "system-design", 2, listOf("http-caching"), spineOrder = 62),
+            TopicNode("scaling", "system-design", 2, listOf("database-sharding"), spineOrder = 63),
+            TopicNode("consensus-raft", "system-design", 3, listOf("scaling"), spineOrder = 64),
+            TopicNode("metrics-engine", "system-design", 2, listOf("axum"), spineOrder = 65),
         )
 
         /** The 15 placement reel IDs, spanning beginner topics. Fixed so results are comparable. */

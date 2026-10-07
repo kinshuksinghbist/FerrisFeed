@@ -160,6 +160,24 @@ class RoomReelDataSource(
                     explanation = explanation,
                 )
             }
+            val blocks = obj["blocks"]?.jsonArray?.map { it.jsonPrimitive.content }
+                ?: obj["targetBlocks"]?.jsonArray?.map { it.jsonPrimitive.content }
+                .orEmpty()
+            val distractors = obj["distractorBlocks"]?.jsonArray?.map { it.jsonPrimitive.content }
+                ?: obj["distractors"]?.jsonArray?.map { it.jsonPrimitive.content }
+                .orEmpty()
+            val quizType = text("type")
+            if (blocks.isNotEmpty() || quizType == "blocks") {
+                return@runCatching QuizModel(
+                    type = QuizType.BLOCKS,
+                    question = question,
+                    prefix = text("prefix").orEmpty(),
+                    suffix = text("suffix").orEmpty(),
+                    targetBlocks = blocks,
+                    distractorBlocks = distractors,
+                    explanation = explanation,
+                )
+            }
             val accepted = obj["acceptedAnswers"]?.jsonArray?.map { it.jsonPrimitive.content }
                 ?: obj["answers"]?.jsonArray?.map { it.jsonPrimitive.content }
                 .orEmpty()

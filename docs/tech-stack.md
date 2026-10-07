@@ -8,11 +8,18 @@ do not relitigate them without new evidence.
 
 ## Language + UI
 
-- **Kotlin + Jetpack Compose + Material 3 Expressive** — 100% Compose,
-  no Views, no XML layouts. Expressive color schemes
-  (`expressiveLightColorScheme` / `expressiveDarkColorScheme` where
-  available on M3 1.3+, fallback to standard M3) with dynamic color
-  toggle. Rounded 28dp cards, dark OLED `#0B0E14`, Ferris orange `#FF6B35`.
+- **Kotlin + Jetpack Compose + Material 3 (1.3.x)** — 100% Compose,
+  no Views, no XML layouts. Compose BOM 2025.04.01 floor. Material 3
+  Expressive is NOT used. All motion, glass cards, and controls are built
+  with pure Compose foundation/animation/Canvas tokens.
+- **Typography & Bundled OFL Fonts** — Resource files under
+  `core-ui/src/main/res/font/`, NOT Maven dependencies:
+  - Display Font: `Space Grotesk` Medium and Bold.
+  - Code Font: `JetBrains Mono` Regular, Medium, and Bold.
+  - Body Font: Platform default sans-serif for optimal long-line legibility.
+- **Palette & Shapes** — Dynamic color is OFF by default (`dynamicColor = false`).
+  OLED Dark `#0B0E14` with `#10141C` surface; Paper Light `#FFFBF2`.
+  Card shapes: 32dp (`large`), medium 24dp, small 16dp.
 - **minSdk 26, targetSdk 35, edge-to-edge, predictive back** —
   minSdk 26 covers 98%+ devices while keeping `VerticalPager` + dynamic
   color simple. Edge-to-edge via `enableEdgeToEdge()` plus
@@ -22,15 +29,15 @@ do not relitigate them without new evidence.
 
 ## Modules
 
-- **`:app`** — `MainActivity`, `FerrisApp`, DI wiring, NavHost,
+- **`:app`** — `MainActivity`, `FerrisApp`, `AppShell`, DI wiring, NavHost,
   notifications, baseline profiles, R8.
-- **`:core-ui`** — design system only: `ReelCard`, `CodeCard`,
-  `QuizCard`, `TrapCard`, `ProgressRing`, `StreakFlame`, `TrackPill`,
-  theme, shimmer. Previewable dark + light + dynamic.
-- **`:feature-feed`** — vertical pager, prefetch, shuffle, impression
-  tracking, deep-dive bottom sheet.
-- **`:feature-path`** — DAG path engine UI, placement test, daily mix,
-  search + topic map.
+- **`:core-ui`** — design system tokens and controls: `ReelCard`, `CodeCard`,
+  `QuizCard`, `ProgressRing`, `StreakFlame`, `FerrisMark`, `FerrisButton`,
+  `FerrisChip`, `FerrisIconButton`, theme, motion, inline markdown.
+- **`:feature-feed`** — vertical pager, 3D page transitions, prefetch, shuffle,
+  session progress bar, speaker opening dock, feed actions.
+- **`:feature-path`** — DAG path engine UI, roadmap timeline, hero continue card,
+  search with expandable filters panel.
 - **`:data`** — Room entities/DAOs (reels + FTS + progress), DataStore,
   repositories, WorkManager sync workers.
 
@@ -56,15 +63,14 @@ do not relitigate them without new evidence.
 - **Coil 2.6.0 + okhttp-network** — memory (25%) + disk (256 MB) cache
   for memory-diagram images, airplane-mode friendly.
 - **kotlinx.serialization 1.7.3** — reel JSON schema
-  (`hook/body/code/takeaway/trap/quiz`), NavKeys, RemoteConfig payloads.
+  (`hook/body/code/takeaway/quiz`), NavKeys, RemoteConfig payloads.
   Codegen via `kotlin-serialization` plugin, no reflection.
 
 ## Shared Rust Core
 
 - **`rust-core/` crate `ferris-core`** — curriculum model, FSRS-lite,
-  XP calculator, DAG resolver. Exposed to Android via UniFFI/JNI and to
-  web preview via `wasm-pack`. This is why the app dogfoods Rust while
-  teaching it. Android owns the scaffold; the Rust agent owns the crate.
+  XP calculator, DAG resolver. Exposed to Android via UniFFI/JNI.
+  Android owns the scaffold; the Rust agent owns the crate.
 
 ## Performance + Release
 
@@ -72,6 +78,4 @@ do not relitigate them without new evidence.
   `consumer-rules.pro` per module, size budget < 25 MB.
 - **Baseline profiles** — `androidx.baselineprofile` plugin, startup +
   `VerticalPager` scroll rules checked into
-  `app/src/main/baselineProfiles/`.
-- **Dynamic color** — Material You `dynamicLightColorScheme` /
-  `dynamicDarkColorScheme` when the user opts in; Ferris palette otherwise.
+  `app/baseline-prof.txt` and `app/src/main/baselineProfiles/`.

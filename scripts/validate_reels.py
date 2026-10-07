@@ -26,7 +26,7 @@ CONTENT_DIR = ROOT / "content"
 SCHEMA_FILE = CONTENT_DIR / "schema.json"
 
 VALID_TRACKS = {"rust", "wasm", "system-design"}
-VALID_QUIZ_TYPES = {"mcq", "tap_bug", "fill_blank"}
+VALID_QUIZ_TYPES = {"mcq", "tap_bug", "fill_blank", "blocks"}
 ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 # Non-fatal notices (e.g. missing language defaults to rust). Printed but do not fail.
@@ -181,6 +181,12 @@ def validate_reel(data: object, path: Path) -> list[str]:
             isinstance(a, str) and a.strip() for a in accepted
         ):
             errors.append("quiz.acceptedAnswers (or answers): fill_blank needs >= 1 non-empty answer")
+    elif qtype == "blocks":
+        blocks = quiz.get("blocks", quiz.get("targetBlocks", []))
+        if not isinstance(blocks, list) or not blocks or not all(
+            isinstance(b, str) and b.strip() for b in blocks
+        ):
+            errors.append("quiz.blocks (or targetBlocks): blocks needs >= 1 non-empty block token")
 
     return errors
 

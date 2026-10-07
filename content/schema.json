@@ -80,7 +80,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["mcq", "tap_bug", "fill_blank"],
+          "enum": ["mcq", "tap_bug", "fill_blank", "blocks"],
           "default": "mcq"
         },
         "question": { "type": "string", "minLength": 5 },

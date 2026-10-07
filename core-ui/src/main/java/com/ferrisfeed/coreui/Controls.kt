@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -293,7 +294,7 @@ fun FerrisIconButton(
         contentAlignment = Alignment.Center,
     ) {
         if (sparkProgress.value in 0.01f..0.99f && !reduceMotion) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
+            Canvas(modifier = Modifier.fillMaxSize().clearAndSetSemantics {}) {
                 val center = Offset(this.size.width / 2f, this.size.height / 2f)
                 val t = sparkProgress.value
                 val currentRadius = 14.dp.toPx() * t
