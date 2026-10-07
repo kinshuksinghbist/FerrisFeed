@@ -119,12 +119,12 @@ fun FerrisNavBar(
 
     val indicatorOffset by animateDpAsState(
         targetValue = if (selectedIndex == 0) item0Offset else item1Offset,
-        animationSpec = FerrisMotion.Snappy,
+        animationSpec = FerrisMotion.SnappyDp,
         label = "nav-indicator-offset",
     )
     val indicatorWidth by animateDpAsState(
         targetValue = if (selectedIndex == 0) item0Width else item1Width,
-        animationSpec = FerrisMotion.Snappy,
+        animationSpec = FerrisMotion.SnappyDp,
         label = "nav-indicator-width",
     )
 
@@ -225,8 +225,8 @@ fun FerrisNavBar(
                         )
                         AnimatedVisibility(
                             visible = isSelected,
-                            enter = expandHorizontally(animationSpec = FerrisMotion.Quick) + fadeIn(animationSpec = FerrisMotion.Quick),
-                            exit = shrinkHorizontally(animationSpec = FerrisMotion.Quick) + fadeOut(animationSpec = FerrisMotion.Quick),
+                            enter = expandHorizontally(animationSpec = FerrisMotion.QuickSize) + fadeIn(animationSpec = FerrisMotion.Quick),
+                            exit = shrinkHorizontally(animationSpec = FerrisMotion.QuickSize) + fadeOut(animationSpec = FerrisMotion.Quick),
                         ) {
                             Row {
                                 Spacer(Modifier.width(8.dp))

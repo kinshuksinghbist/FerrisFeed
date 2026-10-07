@@ -40,7 +40,9 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -62,6 +64,14 @@ object FerrisMotion {
     val SmoothOffset = tween<IntOffset>(durationMillis = 350, easing = FastOutSlowInEasing)
     val SnappyOffset = spring<IntOffset>(dampingRatio = 0.8f, stiffness = 500f)
     val BouncyOffset = spring<IntOffset>(dampingRatio = 0.55f, stiffness = 380f)
+
+    val SnappyDp = spring<Dp>(dampingRatio = 0.8f, stiffness = 500f)
+    val BouncyDp = spring<Dp>(dampingRatio = 0.55f, stiffness = 380f)
+    val QuickDp = tween<Dp>(durationMillis = 150, easing = LinearOutSlowInEasing)
+    val SmoothDp = tween<Dp>(durationMillis = 350, easing = FastOutSlowInEasing)
+
+    val QuickSize = tween<IntSize>(durationMillis = 150, easing = LinearOutSlowInEasing)
+    val SmoothSize = tween<IntSize>(durationMillis = 350, easing = FastOutSlowInEasing)
 
     const val StaggerMs = 45
 }

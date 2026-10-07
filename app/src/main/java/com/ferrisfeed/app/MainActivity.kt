@@ -122,8 +122,8 @@ fun FerrisFeedNavHost(initialReelId: String?) {
                 backStack = backStack,
                 onBack = { backStack.removeLastOrNull() },
                 transitionSpec = {
-                    val initialKey = initialState.key as? Route
-                    val targetKey = targetState.key as? Route
+                    val initialKey = initialState as? Route
+                    val targetKey = targetState as? Route
                     if ((initialKey is Route.Feed && targetKey is Route.Path) ||
                         (initialKey is Route.Path && targetKey is Route.Feed)
                     ) {
