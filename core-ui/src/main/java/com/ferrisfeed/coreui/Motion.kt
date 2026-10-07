@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -56,6 +57,12 @@ object FerrisMotion {
     val Bouncy = spring<Float>(dampingRatio = 0.55f, stiffness = 380f)
     val Smooth = tween<Float>(durationMillis = 350, easing = FastOutSlowInEasing)
     val Quick = tween<Float>(durationMillis = 150, easing = LinearOutSlowInEasing)
+
+    val QuickOffset = tween<IntOffset>(durationMillis = 150, easing = LinearOutSlowInEasing)
+    val SmoothOffset = tween<IntOffset>(durationMillis = 350, easing = FastOutSlowInEasing)
+    val SnappyOffset = spring<IntOffset>(dampingRatio = 0.8f, stiffness = 500f)
+    val BouncyOffset = spring<IntOffset>(dampingRatio = 0.55f, stiffness = 380f)
+
     const val StaggerMs = 45
 }
 
@@ -127,11 +134,11 @@ fun AnimatedCounter(
                 targetState = char,
                 transitionSpec = {
                     if (targetState > initialState) {
-                        (slideInVertically(animationSpec = FerrisMotion.Quick) { it } + fadeIn(animationSpec = FerrisMotion.Quick))
-                            .togetherWith(slideOutVertically(animationSpec = FerrisMotion.Quick) { -it } + fadeOut(animationSpec = FerrisMotion.Quick))
+                        (slideInVertically(animationSpec = FerrisMotion.QuickOffset) { it } + fadeIn(animationSpec = FerrisMotion.Quick))
+                            .togetherWith(slideOutVertically(animationSpec = FerrisMotion.QuickOffset) { -it } + fadeOut(animationSpec = FerrisMotion.Quick))
                     } else {
-                        (slideInVertically(animationSpec = FerrisMotion.Quick) { -it } + fadeIn(animationSpec = FerrisMotion.Quick))
-                            .togetherWith(slideOutVertically(animationSpec = FerrisMotion.Quick) { it } + fadeOut(animationSpec = FerrisMotion.Quick))
+                        (slideInVertically(animationSpec = FerrisMotion.QuickOffset) { -it } + fadeIn(animationSpec = FerrisMotion.Quick))
+                            .togetherWith(slideOutVertically(animationSpec = FerrisMotion.QuickOffset) { it } + fadeOut(animationSpec = FerrisMotion.Quick))
                     }
                 },
                 label = "digit-$i",
