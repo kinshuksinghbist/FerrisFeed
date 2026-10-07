@@ -86,7 +86,7 @@ class FeedViewModel @Inject constructor(
 
     private val swipeHintSeenInternal = MutableStateFlow(false)
     /** True once the user performs the first vertical swipe; persisted across launches. */
-    val swipeHintSeen: StateFlow<Boolean> = swipeHintSeenInternal.asStateFlow()
+    val swipeHintSeen: StateFlow<Boolean> = swipeHintSeenInternal
 
     /** Topic-only feed filter (Route.TopicFeed); null = the full mixed queue. */
     private val topicFilter = MutableStateFlow<String?>(null)
