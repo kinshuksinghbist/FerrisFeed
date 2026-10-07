@@ -24,31 +24,44 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.ferrisfeed.coreui.CodeCard
 import com.ferrisfeed.coreui.FerrisFeedTheme
 import com.ferrisfeed.coreui.QuizCard
 import com.ferrisfeed.coreui.QuizUiModel
 import com.ferrisfeed.coreui.ReelCard
 import com.ferrisfeed.coreui.ReelSkeleton
+import com.ferrisfeed.coreui.SpeakCard
+import com.ferrisfeed.coreui.SpeakState
 import androidx.compose.ui.tooling.preview.Preview
 
 /**
- * Doomscroll feed (Spec v2).
+ * Doomscroll feed (Spec v2 + TODO 24 speaker opening).
  *
  * - Full-screen [VerticalPager], one reel per page. No inner vertical scroll
  *   anywhere: the pager owns all vertical motion, and a low snap threshold
  *   means even a small swipe commits to the next page.
- * - Each page is ONE unified card stack: info ([ReelCard]) -> code
- *   ([CodeCard] with flip-to-output) -> quiz inline ([QuizCard]). Quiz
- *   answers are the sole SRS signal via [FeedViewModel.onGrade].
+ * - Each page is ONE unified card stack: speaker prompt ([SpeakCard]) ->
+ *   info ([ReelCard]) -> code ([CodeCard] with flip-to-output) -> quiz
+ *   inline ([QuizCard]). Quiz answers are the sole SRS signal via
+ *   [FeedViewModel.onGrade]. The lesson text composes immediately; speech
+ *   only gates the difficulty reward motion (`animateDifficulty`).
  * - Like/save live on an Instagram-style right rail (48dp targets);
  *   double-tap anywhere toggles save. No buttons, sheets, or hints inside
  *   the content column.
@@ -123,6 +136,7 @@ fun FeedScreen(
             onDoubleTapSave = { viewModel.onToggleSave(reel.id) },
             onGrade = { correct, label -> viewModel.onGrade(reel.id, correct, label) },
             onInteract = { viewModel.onInteract() },
+            onRecognition = { id, heard -> viewModel.onRecognition(id, heard) },
         )
     }
 }
@@ -137,7 +151,71 @@ private fun ReelPage(
     onDoubleTapSave: () -> Unit,
     onGrade: (Boolean, String) -> Unit,
     onInteract: () -> Unit,
+    onRecognition: (reelId: String, heard: Boolean) -> Unit = { _, _ -> },
 ) {
+    val context = LocalContext.current
+    var speakState: SpeakState by remember(reel.id) { mutableStateOf(SpeakState.Prompt) }
+    var recognizer: android.speech.SpeechRecognizer? by remember(reel.id) {
+        mutableStateOf(null)
+    }
+    // Dismissed prompt stays dismissed for this reel instance only.
+    var speakHidden: Boolean by remember(reel.id) { mutableStateOf(false) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            speakState = SpeakState.Listening
+            onRecognition(reel.id, false)
+            recognizer = SpeechRecognition.listenOnce(
+                context,
+                onHeard = { transcript ->
+                    speakState = SpeakState.Heard(transcript)
+                    onRecognition(reel.id, true)
+                },
+                onUnavailable = { reason ->
+                    speakState = SpeakState.Unavailable(reason)
+                },
+            )
+        } else {
+            speakState = SpeakState.Unavailable(
+                "Microphone permission is off — reading works the same.",
+            )
+        }
+    }
+    DisposableEffect(reel.id) {
+        onDispose {
+            runCatching { recognizer?.destroy() }
+            recognizer = null
+        }
+    }
+    fun startSpeak() {
+        if (!SpeechRecognition.isAvailable(context)) {
+            speakState = SpeakState.Unavailable(
+                "Speech recognition is not available on this device.",
+            )
+            return
+        }
+        val granted = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            speakState = SpeakState.Listening
+            onRecognition(reel.id, false)
+            recognizer = SpeechRecognition.listenOnce(
+                context,
+                onHeard = { transcript ->
+                    speakState = SpeakState.Heard(transcript)
+                    onRecognition(reel.id, true)
+                },
+                onUnavailable = { reason ->
+                    speakState = SpeakState.Unavailable(reason)
+                },
+            )
+        } else {
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+    // Recognition complete gates ONLY the difficulty reward motion (TODO 24b).
+    val animateDifficulty = speakState is SpeakState.Heard
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -145,20 +223,30 @@ private fun ReelPage(
                 detectTapGestures(onDoubleTap = { onDoubleTapSave() })
             },
     ) {
-        // Content column: info -> code -> quiz. No scroll: everything must
-        // fit, the pager handles all motion.
+        // Content column: speak -> info -> code -> quiz. No scroll:
+        // everything must fit, the pager handles all motion.
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(start = 12.dp, end = 68.dp, top = 20.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (!speakHidden) {
+                SpeakCard(
+                    state = speakState,
+                    phrase = reel.hook,
+                    onSpeak = { startSpeak() },
+                    onRetry = { startSpeak() },
+                    onDismiss = { speakHidden = true },
+                )
+            }
             ReelCard(
                 track = reel.track.id,
                 level = reel.level,
                 hook = reel.hook,
                 body = reel.bodyMd,
                 takeaway = reel.takeaway,
+                animateDifficulty = animateDifficulty,
             )
             if (reel.code != null) {
                 CodeCard(

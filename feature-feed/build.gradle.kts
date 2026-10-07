@@ -43,6 +43,9 @@ dependencies {
 
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    // Speaker-opening permission launcher (TODO 24): same catalog entry the
+    // :app module already uses — no new coordinate.
+    implementation(libs.androidx.activity.compose)
 
     implementation(libs.navigation3.runtime)
     implementation(libs.navigation3.ui)
@@ -53,6 +56,9 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
+    // Widget refresh worker (TODO 28b): same catalog entry :data already
+    // uses — no new coordinate.
+    implementation(libs.workmanager.ktx)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

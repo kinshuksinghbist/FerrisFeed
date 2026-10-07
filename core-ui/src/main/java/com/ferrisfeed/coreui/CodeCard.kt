@@ -54,6 +54,25 @@ private val SysDesignKeywords = setOf(
 )
 
 /**
+ * Code editor palette (TODO 23c `design-token-audit`).
+ *
+ * The code card keeps a fixed GitHub-dark editor surface in BOTH themes —
+ * that is deliberate, not drift: a light editor surface at 12.5sp mono
+ * fails the 23a contrast audit for keyword hues, while the dark surface
+ * holds >= 7:1 for every span. These tokens are the single home for that
+ * palette; do not inline new hex values in this file.
+ */
+object CodeCardTokens {
+    val Container = Color(0xFF0D1117)
+    val Muted = Color(0xFF8B949E)
+    val Body = Color(0xFFC9D1D9)
+    val Output = Color(0xFFA5D6FF)
+    val Keyword = Color(0xFFFF7B72)
+    val Number = Color(0xFF79C0FF)
+    val Macro = Color(0xFFD2A8FF)
+}
+
+/**
  * Code snippet card (Spec v2): header has language label + copy + flip, and
  * nothing else. No Run button, no font slider (fixed 12.5sp mono), no second
  * copy row.
@@ -86,7 +105,7 @@ fun CodeCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D1117)),
+        colors = CardDefaults.cardColors(containerColor = CodeCardTokens.Container),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -98,20 +117,20 @@ fun CodeCard(
                 Text(
                     text = if (flipped) "output" else language.lowercase(),
                     style = MaterialTheme.typography.labelMedium.copy(fontFamily = CodeFontFamily),
-                    color = Color(0xFF8B949E),
+                    color = CodeCardTokens.Muted,
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
                     text = if (copied) "Copied!" else "${code.lines().size} lines",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (copied) FerrisColors.MintCorrect else Color(0xFF8B949E),
+                    color = if (copied) FerrisColors.MintCorrect else CodeCardTokens.Muted,
                 )
                 if (output != null) {
                     IconButton(onClick = { flipped = !flipped }) {
                         Icon(
                             imageVector = Icons.Filled.SwapVert,
                             contentDescription = if (flipped) "Show code" else "Show output",
-                            tint = Color(0xFFC9D1D9),
+                            tint = CodeCardTokens.Body,
                             modifier = Modifier.rotate(flipRotation),
                         )
                     }
@@ -125,7 +144,7 @@ fun CodeCard(
                     Icon(
                         imageVector = Icons.Filled.ContentCopy,
                         contentDescription = "Copy code",
-                        tint = Color(0xFFC9D1D9),
+                        tint = CodeCardTokens.Body,
                     )
                 }
             }
@@ -138,7 +157,7 @@ fun CodeCard(
                     fontFamily = CodeFontFamily,
                     fontSize = 12.5.sp,
                     lineHeight = 18.5.sp,
-                    color = Color(0xFFA5D6FF),
+                    color = CodeCardTokens.Output,
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
@@ -167,12 +186,12 @@ fun highlightCode(code: String, language: String): AnnotatedString {
         else -> RustKeywords + SysDesignKeywords
     }
     return buildAnnotatedString {
-        val keywordStyle = SpanStyle(color = Color(0xFFFF7B72), fontWeight = FontWeight.SemiBold)
-        val stringStyle = SpanStyle(color = Color(0xFFA5D6FF))
-        val commentStyle = SpanStyle(color = Color(0xFF8B949E))
-        val numberStyle = SpanStyle(color = Color(0xFF79C0FF))
-        val macroStyle = SpanStyle(color = Color(0xFFD2A8FF))
-        val defaultStyle = SpanStyle(color = Color(0xFFC9D1D9), fontFamily = CodeFontFamily)
+        val keywordStyle = SpanStyle(color = CodeCardTokens.Keyword, fontWeight = FontWeight.SemiBold)
+        val stringStyle = SpanStyle(color = CodeCardTokens.Output)
+        val commentStyle = SpanStyle(color = CodeCardTokens.Muted)
+        val numberStyle = SpanStyle(color = CodeCardTokens.Number)
+        val macroStyle = SpanStyle(color = CodeCardTokens.Macro)
+        val defaultStyle = SpanStyle(color = CodeCardTokens.Body, fontFamily = CodeFontFamily)
 
         var i = 0
         var tokenStart = -1

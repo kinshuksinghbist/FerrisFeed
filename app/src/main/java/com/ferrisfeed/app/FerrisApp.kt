@@ -28,6 +28,10 @@ class FerrisApp : Application(), Configuration.Provider, ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        // TODO 28b: schedule the weekly curriculum sync + the 6h widget
+        // refresh. KEEP (not REPLACE) so a reinstall never double-enqueues.
+        com.ferrisfeed.data.CurriculumSyncWorker.schedule(this)
+        com.ferrisfeed.feed.WidgetRefreshWorker.schedule(this)
     }
 
     override fun newImageLoader(): ImageLoader {

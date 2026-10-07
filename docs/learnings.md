@@ -369,3 +369,28 @@ newline — and APK asset diffs must show only the new field.
 is byte-identical to the original and refuses to write when none matches.
 **Rule:** any script that edits `content/` must prove the no-op round trip
 per file before writing.
+
+## 25. Redesign session (TODO 23–28): what the green run proved
+
+- `rememberLauncherForActivityResult` lives in `androidx.activity:activity-compose`.
+  A feature module using it must declare the dependency itself — the `:app`
+  module having it does NOT leak it downstream. Same catalog entry, no new
+  coordinate (learnings §1 still holds: it is already used by `:app`).
+- Platform `SpeechRecognizer` needs no dependency and no new permission
+  beyond `RECORD_AUDIO`. `EXTRA_PREFER_OFFLINE` is compile-safe on minSdk 26
+  (constant inlined from compileSdk 36, ignored by old recognizers at
+  runtime). Always `destroy()` the recognizer in a `DisposableEffect`
+  keyed by reel id — pagers compose ahead and leak listeners otherwise.
+- `GlanceAppWidgetManager.getGlanceIds(provider: Class<T>)` takes the
+  WIDGET class (`ReelOfDayWidget::class.java`), not the receiver. Verified
+  against the developer reference before writing `WidgetRefreshWorker`.
+- `targetSdk` 34 → 35 is a one-line bump with the AGP 8.9.2 / Gradle 8.11.1 /
+  compileSdk 36 triple untouched (learnings §3). Bump `tools:targetApi` in
+  the manifest alongside it.
+- Gating animation on state (`DifficultyLabel(animated)`, false until
+  `Heard`) keeps motion as reward without blocking content: text composes
+  immediately, the cue plays after capture. Same pattern applies to any
+  future "celebrate after X" motion.
+- Quiz option cards need `defaultMinSize(minHeight = 48.dp)` — short options
+  otherwise ship sub-48dp targets. Rail IconButtons already use 48dp
+  `Modifier.size` with 28dp glyphs; do not shrink them.

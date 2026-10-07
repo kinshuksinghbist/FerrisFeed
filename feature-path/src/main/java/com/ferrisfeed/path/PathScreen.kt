@@ -280,12 +280,16 @@ private fun PathNodeRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            // Status dot
+            // Status dot: locked uses the theme outline at reduced alpha so
+            // the dim tracks both themes instead of a fixed gray.
+            val lockedDot = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
             Box(modifier = Modifier.size(12.dp)) {
                 Canvas(Modifier.fillMaxSize()) {
                     drawCircle(
                         color = when {
-                            locked -> Color.Gray.copy(alpha = 0.4f)
+                            // TODO 23c: locked state uses the theme outline,
+                            // never a raw gray, so it tracks both themes.
+                            locked -> lockedDot
                             node.mastery >= 0.8f -> FerrisColors.MintCorrect
                             else -> accent
                         },
@@ -339,6 +343,8 @@ private fun Float.toIntPercent(): Int = (this * 100).toInt().coerceIn(0, 100)
 
 @Composable
 private fun ConnectorLine() {
+    // TODO 23c: connector uses the theme outline, not a fixed gray.
+    val line = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
@@ -346,7 +352,7 @@ private fun ConnectorLine() {
     ) {
         val x = size.width / 2
         drawLine(
-            color = Color.Gray.copy(alpha = 0.5f),
+            color = line,
             start = Offset(x, 0f),
             end = Offset(x, size.height),
             strokeWidth = 3f,

@@ -12,6 +12,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -56,6 +57,17 @@ object FerrisColors {
     // Text on dark
     val TextPrimaryDark = Color(0xFFF2F4F8)
     val TextSecondaryDark = Color(0xFFA7B0C2)
+
+    // Track text: contrast-safe ink for the takeaway closing line and other
+    // small track-colored text. The raw track hues (orange #FF6B35,
+    // sky-blue #4CC9F0) fail 4.5:1 on one theme each, so each track carries
+    // a dark-theme and a light-theme ink. Pairs were chosen for roughly
+    // equal luminance distance from their surfaces (see design-token audit
+    // in docs/feed-ux.md). Shaped by `design-token` + `dark-mode-design`.
+    val RustTextDark = Color(0xFFFFB59E)
+    val RustTextLight = Color(0xFF9C3D12)
+    val SysDesignTextDark = Color(0xFF8FDCF7)
+    val SysDesignTextLight = Color(0xFF0A5A78)
 }
 
 private val DarkColorScheme = darkColorScheme(
@@ -150,6 +162,45 @@ val LocalTrackColors = staticCompositionLocalOf {
         wasm = FerrisColors.WasmBlue,
         systemDesign = FerrisColors.SkyBlueSysDesign,
     )
+}
+
+/**
+ * Track wash tokens (TODO 23, shaped by `design-token`).
+ *
+ * The card wash is always a 14% blend of the track hue into the current
+ * surface, so identity reads without spending header chrome and text stays
+ * on a near-surface color. Do NOT inline a different alpha or a raw track
+ * color as a container elsewhere — call [trackWash] so the ratio cannot
+ * drift. `dark-mode-design`: the same ratio works on Midnight OLED
+ * (#0B0E14) and Warm Paper because both surfaces are near-neutral; the
+ * blend moves with the surface instead of fighting it.
+ */
+object TrackWashTokens {
+    const val WASH_RATIO = 0.14f
+}
+
+@Composable
+fun trackWash(track: String): Color {
+    val surface = MaterialTheme.colorScheme.surface
+    return lerp(surface, trackColor(track), TrackWashTokens.WASH_RATIO)
+}
+
+/**
+ * Contrast-safe track ink for small text (takeaway line, captions).
+ * Raw track hues are identity signals, not text colors: orange fails on
+ * light paper and sky-blue fails on light paper, so this returns the
+ * per-theme ink that holds >= 4.5:1 against the current surface
+ * (TODO 23a `accessibility-audit` + `critique-color`). Body text itself
+ * stays on onSurface/onSurfaceVariant and never uses this.
+ */
+@Composable
+fun trackTextColor(track: String): Color {
+    val dark = isSystemInDarkTheme()
+    return when (track) {
+        Tracks.RUST -> if (dark) FerrisColors.RustTextDark else FerrisColors.RustTextLight
+        Tracks.SYSTEM_DESIGN -> if (dark) FerrisColors.SysDesignTextDark else FerrisColors.SysDesignTextLight
+        else -> MaterialTheme.colorScheme.primary
+    }
 }
 
 /**

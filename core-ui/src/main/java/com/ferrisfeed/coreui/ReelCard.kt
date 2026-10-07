@@ -11,7 +11,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -27,6 +26,16 @@ import androidx.compose.ui.unit.dp
  * Deliberately action-free: like/save live on the feed's right rail, quiz
  * grading is the SRS signal, code has its own card. No inner scroll — the
  * pager owns all vertical motion.
+ *
+ * Contrast (TODO 23a): the container comes from [trackWash] (14% blend, so
+ * body text sits on a near-surface color) and the takeaway closing line
+ * uses [trackTextColor] (per-theme ink holding >= 4.5:1), never the raw
+ * track hue. Shaped by `accessibility-audit` + `critique-color`.
+ *
+ * Speaker flow (TODO 24b): [animateDifficulty] gates the animated cue. The
+ * caller keeps it false until speech recognition completes, so the motion
+ * rewards the capture instead of competing with it; text is always composed
+ * immediately (capture never blocks readiness, `doherty-threshold`).
  */
 @Composable
 fun ReelCard(
@@ -36,9 +45,10 @@ fun ReelCard(
     body: String,
     takeaway: String,
     modifier: Modifier = Modifier,
+    animateDifficulty: Boolean = true,
 ) {
-    val surface = MaterialTheme.colorScheme.surface
-    val tinted = lerp(surface, trackColor(track), 0.14f)
+    val tinted = trackWash(track)
+    val takeawayColor = trackTextColor(track)
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -46,7 +56,7 @@ fun ReelCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
     ) {
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-            DifficultyLabel(level = level)
+            DifficultyLabel(level = level, animated = animateDifficulty)
 
             Spacer(Modifier.height(10.dp))
 
@@ -69,7 +79,7 @@ fun ReelCard(
                 Text(
                     text = "\u2192 $takeaway",
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                    color = trackColor(track),
+                    color = takeawayColor,
                 )
             }
         }

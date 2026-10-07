@@ -1,32 +1,44 @@
 # Play Store Listing — FerrisFeed
 
+> TODO 27d: describes the REDESIGNED card (Spec v2 + speaker opening), not
+> the old UI. Shaped by `ux-writing` + `content-strategy`: one promise per
+> line, verbs first, no feature that no longer ships.
+
 ## Title
 
 FerrisFeed — Learn Rust in 60 Seconds
 
 ## Short description (80 chars)
 
-Doomscroll, but you get hired. Bite-size Rust, WASM, system design.
+Say it, read it, prove it. Bite-size Rust + system design, offline.
 
 ## Full description
 
-**Doomscroll, but you get hired.**
+**Say it, read it, prove it.**
 
-FerrisFeed is a TikTok-style vertical feed where every swipe is a
-60-second Rust, WASM, or system-design lesson — with runnable code and a
-one-tap quiz that locks it into memory.
+FerrisFeed is a vertical feed where every swipe is one 60-second Rust or
+system-design lesson — spoken first, read second, proven with a quiz.
 
-- 400+ bite-size reels: ownership to lifetimes to async to Axum, plus WASM
-  and system-design tracks drawn from real interview blueprints.
-- Spaced repetition built in: "Got it / Still fuzzy" grades schedule your
-  next review automatically. Weak spots resurface until they stick.
-- Learning path with prerequisites: Ownership -> Lifetimes -> Async ->
-  Axum -> Rate Limiter. Placement test lets experienced devs skip beginner.
-- Daily Mix (7 new + 8 reviews + 5 weak spots) and resume-where-left-off,
-  so 10 minutes a day compounds.
+- One card per idea: say the headline aloud, read the hook + short body
+  with the takeaway as the closing line, flip the code to see its output,
+  answer the quiz inline. No inner scroll, no second screen.
+- Small centered difficulty cue: easy breathes, medium shimmers, hard
+  flickers. Track identity is the card tint itself — orange wash for Rust,
+  sky-blue wash for system design — readable in light and dark.
+- Real code on every code card: fixed readable mono, copy with one tap,
+  flip to reveal the authored expected output. Cards without a runnable
+  result simply hide the flip.
+- The quiz is the only grade: answering schedules your next review,
+  grows XP, and keeps your streak. No self-report buttons.
+- Heart + save on the right rail (48dp targets, double-tap to save),
+  like reels anywhere.
+- Path tab with real progress: one node per topic with live reel counts
+  and mastery that decays when you skip. Tap a node for that topic's feed
+  only. Search lives at the top of Path — query + topic/track/level chips
+  over the same roadmap, never a separate tab.
 - Fully offline: the whole curriculum ships in the app. Airplane-mode
   friendly, no account needed.
-- Streaks, mastery heatmap, and a Ferris mascot that evolves from Egg to
+- Streaks, mastery rings, and a Ferris mascot that evolves from Egg to
   Armored Crab as you learn.
 
 Free, no ads, no account. Optional anonymous usage stats (opt-out anytime).
@@ -35,32 +47,33 @@ Made by Rust learners, for Rust learners. Crab on. 🦀
 
 ## Screenshot captions (8)
 
-1. "The feed that teaches: one swipe, one Rust concept."
-2. "Real code on every card — syntax-highlighted, copy with one tap."
-3. "One-tap quizzes with instant explanations. Still fuzzy? It reschedules."
-4. "Traps: the compiler errors you'll actually hit, defused in 60 seconds."
-5. "Your path: Ownership -> Lifetimes -> Async -> Axum -> Rate Limiter."
-6. "Daily Mix: 7 new + 8 reviews + 5 weak spots. 10 minutes a day."
-7. "Mastery heatmap + streaks. Watch the crab armor up."
+1. "One swipe, one idea: say the headline, then read."
+2. "Difficulty at a glance: easy breathes, medium shimmers, hard flickers."
+3. "Rust glows orange, system design glows blue — no badges needed."
+4. "Real code, one tap to copy, flip to see the output."
+5. "The quiz lives in the card. Answering is the grade."
+6. "Your path: live nodes with real counts and mastery."
+7. "Search lives in Path: topics, tracks, and filters in one place."
 8. "Fully offline. Airplane mode is a feature, not a bug."
 
 ## 30-second demo script
 
-- 0:00-0:04 — Cold open on the feed mid-scroll. VO: "Doomscroll, but you
-  get hired." Swipe twice (ownership reel -> borrow reel).
-- 0:04-0:10 — Double-tap to save (haptic tick). Tap "Deep Dive" sheet;
-  shared-element transition visible.
-- 0:10-0:17 — Quiz card: tap correct option, mint flash + explanation.
-  Tap "Still fuzzy" on the next one; caption "it reschedules itself."
-- 0:17-0:24 — Roadmap graph lighting up Ownership -> Lifetimes; resume
-  bar "Continue Ownership 62%". Heatmap + Ferris Crab evolution.
+- 0:00-0:05 — Cold open on the feed mid-scroll. VO: "Say it, read it,
+  prove it." Tap the mic, read the headline, "Heard you" appears.
+- 0:05-0:12 — Swipe twice (ownership reel -> borrow reel). Point out the
+  difficulty cue motion + track tint. Small swipe still advances.
+- 0:12-0:18 — Code card: tap copy, tap flip to reveal output. Quiz card:
+  tap the answer, explanation appears, difficulty cue plays.
+- 0:18-0:24 — Path tab: search field + chips on top, "Browse by topic"
+  directory, tap a node into its topic-only feed. Resume bar + mastery.
 - 0:24-0:30 — Airplane-mode toggle ON, keep scrolling. End card: app
-  icon + "FerrisFeed — 400+ free reels, offline."
+  icon + "FerrisFeed — free Rust + system design, offline."
 
 ## Privacy policy summary (listing short text)
 
 No account, no ads, no sale of data. Optional anonymous usage stats
-(reel views, quiz accuracy) with in-app opt-out. Full policy in-app and
+(reel views, quiz accuracy, voice-capture counts — never transcripts or
+audio) with in-app opt-out. Full policy in-app and
 at ferrisfeed.app/privacy.
 
 ## Beta track + feedback loop

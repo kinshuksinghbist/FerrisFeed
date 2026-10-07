@@ -10,6 +10,9 @@ Code: `data/.../data/Analytics.kt` (`Analytics`, `ExperimentFlags`).
 | `reel_dwell` | reel_id, track, topic, dwell_ms, bucket (skip/glance/read/deep) | Scroll depth per topic |
 | `reel_save` / `reel_unsave` | reel_id | Save rate = content value |
 | `quiz_answer` | reel_id, topic, correct, grade, hook_variant | Accuracy per topic + A/B outcome |
+| `recognition_start` | reel_id, topic | Speaker-opening capture started (TODO 24; no transcript) |
+| `recognition_complete` | reel_id, topic, heard, latency_bucket (fast/normal/slow) | Capture completed; heard only, never content |
+| `topic_tap` | topic, source (roadmap/directory/chip) | Taps per topic = which entry leads where |
 | `topic_mastery` | topic, mastery_pct | Retention curve input |
 | `streak_tick` | streak_days | Habit metric |
 
@@ -35,7 +38,6 @@ stack traces + OS version only.
   delete honored via the Play Data Deletion path (see privacy policy).
 
 ## 4. A/B via RemoteConfig
-
 `ExperimentFlags.fromRemoteConfig()` reads:
 
 - `hook_style`: `curiosity_gap` (control) vs `compiler_error` vs
@@ -47,3 +49,13 @@ stack traces + OS version only.
 Rules: one primary metric per experiment, 95% significance, min 7 days,
 no PII in variant assignment, and losing variants are deleted — not left
 to rot as dead flags. Flags are documented in this file when added.
+
+## 5. Weekly card-analytics digest (TODO 27b)
+
+`CardAnalyticsDigest.summarize(events)` reads existing events only — no new
+backend, no new collection. Input is the same event list `Analytics`
+already emits (empty when opted out, so the digest honestly says "no
+data"). Output: reels seen, quiz answer count + accuracy, recognition
+start/heard counts, taps per topic, skip rate. Read the first data with
+`behavioural-analytics` (27c); anything built to compare variants goes
+through `a-b-test-design` first — the digest never assigns variants.

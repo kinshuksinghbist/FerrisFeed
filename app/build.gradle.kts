@@ -34,7 +34,10 @@ android {
     defaultConfig {
         applicationId = "com.ferrisfeed.app"
         minSdk = 26
-        targetSdk = 34
+        // TODO 28a: Play expects 35+ for new listings. The AGP 8.9.2 /
+        // Gradle 8.11.1 / compileSdk 36 triple stays locked — this is a
+        // single targetSdk bump, not an SDK-level upgrade.
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0.0-mvp"
 

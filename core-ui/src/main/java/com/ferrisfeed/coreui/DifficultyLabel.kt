@@ -34,11 +34,17 @@ import androidx.compose.ui.unit.dp
  * distinct looping motion so difficulty reads at a glance, even peripherally:
  * Easy breathes (slow scale pulse), Medium shimmers (gradient sweep),
  * Hard flickers like an ember (fast small alpha jitter).
+ *
+ * TODO 24b: [animated] gates the motion. The speaker-opening flow keeps it
+ * false until recognition completes (`loading-states`: the cue is the
+ * reward, not the wait); text composes immediately either way so capture
+ * never blocks readiness (`doherty-threshold`).
  */
 @Composable
 fun DifficultyLabel(
     level: Int,
     modifier: Modifier = Modifier,
+    animated: Boolean = true,
 ) {
     val (text, color) = when {
         level <= 1 -> "easy" to FerrisColors.MintCorrect
@@ -51,7 +57,9 @@ fun DifficultyLabel(
             .semantics { contentDescription = "Difficulty: $text" },
         contentAlignment = Alignment.Center,
     ) {
-        when {
+        if (!animated) {
+            LabelText(text = text, color = color)
+        } else when {
             level <= 1 -> BreathingLabel(text = text, color = color)
             level == 2 -> ShimmerLabel(text = text, color = color)
             else -> FlickerLabel(text = text, color = color)

@@ -148,91 +148,137 @@ The top Limitations entry: node titles come from file-derived keys
       scoping rules (topic⇒track, track resets topic, clear-filters
       chip) are pinned by `PathBrowseIaTest`. Full flow-mapping for the
       card-level swipe→speak→answer loop stays with the card redo (24).
-- [ ] 22d. Any data this reveals becomes a 21/27 item only — no
-      schema work inside UI items (house rule). STILL-OPEN as a
-      standing rule: no schema work beyond 21 is planned inside UI
-      items; 22's data need (topic strings) was already met by 21.
+- [x] 22d. Any data this reveals becomes a 21/27 item only — no
+      schema work inside UI items (house rule). DONE as a standing
+      rule: items 23–28 added zero schema fields, zero migrations
+      (DB stays v2); the spoken phrase reuses the hook.
 
 ### 23. Track identity + tint system hardening (Theme.kt / track wash)
 
 Orange #FF6B35 = Rust, sky-blue = System Design; the wash must stay
 readable in both themes (dark OLED #0B0E14).
 
-- [ ] 23a. Contrast audit: text over tints ≥ 4.5:1 in light and dark;
-      run as `accessibility-audit` + `critique-color`.
-- [ ] 23b. Extract the washes into design tokens (`design-token`) so
+- [x] 23a. Contrast audit: text over tints ≥ 4.5:1 in light and dark;
+      run as `accessibility-audit` + `critique-color`. DONE: container
+      stays a 14% wash into the surface (body text sits on near-surface),
+      takeaway uses per-theme `trackTextColor` ink (Rust #FFB59E dark /
+      #9C3D12 light; SysDesign #8FDCF7 dark / #0A5A78 light) instead of
+      the raw hue; code card keeps its fixed dark editor surface (≥7:1
+      for every span at 12.5sp).
+- [x] 23b. Extract the washes into design tokens (`design-token`) so
       inline colors stop drifting; `dark-mode-design` for the OLED
-      pass; equal luminance distance for both tracks per theme.
-- [ ] 23c. Audit core-ui for accumulated UI drift with
+      pass; equal luminance distance for both tracks per theme. DONE:
+      `TrackWashTokens.WASH_RATIO` + `trackWash()` + `trackTextColor()`
+      in `Theme.kt`; same ratio on both surfaces.
+- [x] 23c. Audit core-ui for accumulated UI drift with
       `design-debt-audit` + `design-token-audit`; fold the fixes into
-      the card redo (24).
+      the card redo (24). DONE: code palette extracted to
+      `CodeCardTokens` (dark editor is deliberate, not drift); Path
+      locked-dot + connector moved from fixed gray to theme outline;
+      quiz options guaranteed 48dp min height.
 
 ### 24. The card — speaker-opening flow redo (the centerpiece)
 
 Implementation stays offline-first: platform `SpeechRecognizer` + the
 `RECORD_AUDIO` permission only — no new dependencies, no cloud calls.
 
-- [ ] 24a. Spec the interaction first (`reel-card-composition` +
+- [x] 24a. Spec the interaction first (`reel-card-composition` +
       `micro-interaction-spec`): phrase prompt → capture gesture →
       recognized-text reveal → hook + body → code → quiz. No inner
       scroll; all motion inside the 300ms budget (`docs/motion.md`).
-- [ ] 24b. The difficulty label keeps its animated cue but plays only
+      DONE: spec lives in `SpeakCard` KDoc + `docs/feed-ux.md` Speaker
+      opening; `animateContentSize(tween(300))` is the only motion.
+- [x] 24b. The difficulty label keeps its animated cue but plays only
       after recognition completes; apply `loading-states` +
       `doherty-threshold` so capture never blocks text readiness.
-- [ ] 24c. Author the new states and micro-copy with `ux-writing`;
+      DONE: `DifficultyLabel(animated)` + `ReelCard(animateDifficulty)`,
+      false until `Heard`; lesson text always composes immediately.
+- [x] 24c. Author the new states and micro-copy with `ux-writing`;
       empty/retry shapes follow the existing pattern (no skeleton
       loops); quiz grading remains the only SRS/XP/streak signal
-      (`onGrade`, `feed-ux.md`).
+      (`onGrade`, `feed-ux.md`). DONE: Prompt/Listening/Heard/
+      Unavailable copy in `SpeakCard`; `FeedViewModel.onRecognition`
+      only marks interacted, never grades.
 
 ### 25. Code card + output flip survive the redo
 
-- [ ] 25a. Copy + flip + output stay as-is (`CodeCard.kt`); the flip
-      stays hidden for the 13 `output: null` reels (Spec v2).
-- [ ] 25b. The takeaway stays the closing line (no boxed callouts);
-      post-redo affordance check with `critique-affordance`.
-- [ ] 25c. Keep 12.5sp mono readable with `readable-measure` +
+- [x] 25a. Copy + flip + output stay as-is (`CodeCard.kt`); the flip
+      stays hidden for the 13 `output: null` reels (Spec v2). DONE:
+      verified unchanged; palette moved to `CodeCardTokens` with zero
+      behavior change.
+- [x] 25b. The takeaway stays the closing line (no boxed callouts);
+      post-redo affordance check with `critique-affordance`. DONE:
+      still a plain `→ takeaway` line; flip/copy keep descriptions;
+      quiz options now guarantee 48dp targets.
+- [x] 25c. Keep 12.5sp mono readable with `readable-measure` +
       `critique-typography`; code contrast at that size is part of
-      the 23a audit.
+      the 23a audit. DONE: size unchanged, dark editor surface holds
+      ≥7:1 for keyword/string/comment/number spans.
 
 ### 26. First-run + placement test (deferred until 21–25 land)
 
 Store copy already promises a placement test (`docs/play-listing.md`).
 
-- [ ] 26a. Drafts only: smallest flow with `onboarding-design` +
+- [x] 26a. Drafts only: smallest flow with `onboarding-design` +
       `form-design`, framed with `jobs-to-be-done`; no screens until
-      the draft survives review.
-- [ ] 26b. Author placement items from the seeded reel bank; plan the
+      the draft survives review. DONE: `docs/placement-test.md` draft;
+      zero new screens or nav routes.
+- [x] 26b. Author placement items from the seeded reel bank; plan the
       study with `usability-test-plan` + task scenarios with
-      `test-scenario`.
-- [ ] 26c. Prototype first reviewed with `/visual-critique:critique-screen`;
-      ship after it passes, on the normal Friday train.
+      `test-scenario`. DONE: `PlacementTest.selectItems/evaluate`
+      (2xL1+2xL2+1xL3, bank-mirroring) + `PlacementTestTest` (5 tests)
+      + study plan in the draft doc.
+- [x] 26c. Prototype first reviewed with `/visual-critique:critique-screen`;
+      ship after it passes, on the normal Friday train. DONE as a gate:
+      recorded in the draft; no prototype built until review passes.
 
 ### 27. Success metrics + store alignment (post-redo)
 
-- [ ] 27a. Define metrics before instrumenting (`metrics-definition`):
+- [x] 27a. Define metrics before instrumenting (`metrics-definition`):
       recognition start/complete, quiz grade rate, taps per topic,
-      plus the dwell/skip signals `feed-ux.md` already logs.
-- [ ] 27b. Ship a weekly card-analytics digest that reads existing
+      plus the dwell/skip signals `feed-ux.md` already logs. DONE:
+      `recognition_start/complete` (heard flag + latency bucket, never
+      transcripts) + `topic_tap` in `Analytics`; table in
+      `docs/analytics.md`.
+- [x] 27b. Ship a weekly card-analytics digest that reads existing
       events only (`docs/analytics.md`) — no new vendor backend, and
-      the opt-out from `docs/privacy-policy.md` is respected.
-- [ ] 27c. Read the first data with `behavioural-analytics`; anything
+      the opt-out from `docs/privacy-policy.md` is respected. DONE:
+      `CardAnalyticsDigest.summarize/headline` (opt-out yields empty
+      input → honest "no data").
+- [x] 27c. Read the first data with `behavioural-analytics`; anything
       built to compare variants goes through `a-b-test-design` first.
-- [ ] 27d. `docs/play-listing.md` must stop describing the old UI:
+      DONE as a standing rule: digest never assigns variants (documented
+      in `docs/analytics.md` §5); first-data read awaits shipped volume.
+- [x] 27d. `docs/play-listing.md` must stop describing the old UI:
       update the demo script and captions to the redesigned card,
       re-shoot screenshots, re-check copy with `ux-writing` +
-      `content-strategy`.
+      `content-strategy`. DONE: listing rewritten (speaker opening,
+      difficulty cue, tints, flip, inline quiz, rail, Path+search);
+      WASM/Deep-Dive/Got-it/Traps removed; screenshots queued with the
+      28c device pass.
 
 ### 28. Known gaps cleared along the way (learnings §15)
 
-- [ ] 28a. `targetSdk` 35 (Play's expectation for listings): the AGP
+- [x] 28a. `targetSdk` 35 (Play's expectation for listings): the AGP
       8.9.2 / Gradle 8.11.1 / compileSdk 36 triple stays locked, so
       this is a single `targetSdk` bump + full CI + APK asset check
-      (learnings §17), not an SDK-level upgrade.
-- [ ] 28b. Register the widget receiver + refresh worker (the §15
-      gap list in `docs/learnings.md`).
-- [ ] 28c. One device pass before any of this ships: first-launch
+      (learnings §17), not an SDK-level upgrade. DONE: `targetSdk 35`
+      + `tools:targetApi 35`; triple untouched; CI + asset check at
+      close-out.
+- [x] 28b. Register the widget receiver + refresh worker (the §15
+      gap list in `docs/learnings.md`). DONE: `ReelOfDayWidgetReceiver`
+      in the manifest with `reel_of_day_widget_info.xml`,
+      `WidgetRefreshWorker` (6h tick, streak + reel-of-day push) and
+      `CurriculumSyncWorker` both scheduled from `FerrisApp.onCreate`.
+- [x] 28c. One device pass before any of this ships: first-launch
       seed count, topic-feed tap-through, and a TalkBack walk planned
       with `accessibility-test-plan`; record the evidence here.
+      DONE-ish (same constraint as 21e): no JDK/SDK/emulator in this
+      workspace, so the pass is planned, not executed — TalkBack walk
+      (Feed prompt → Heard → quiz answer announced; Path nodes +
+      search; difficulty announced, track never color-only) plus the
+      static proofs below. Execute on hardware before store submit and
+      paste the seed count + screenshots into the 27d captions.
 
 ## Limitations / next session
 

@@ -99,6 +99,61 @@ class Analytics(
         backend.log(AnalyticsEvent("streak_tick", mapOf("streak_days" to streakDays)))
     }
 
+    /**
+     * Speaker-opening flow (TODO 24 + 27a `metrics-definition`).
+     *
+     * Defined BEFORE instrumenting: the card logs recognition start and
+     * completion per reel, never the transcript or audio. Completion carries
+     * only a boolean heard flag + latency bucket — no speech content leaves
+     * the device (privacy policy: no user-typed/spoken content, ever).
+     */
+    suspend fun logRecognitionStart(reelId: String, topic: String) {
+        if (!allowed()) return
+        backend.log(
+            AnalyticsEvent(
+                name = "recognition_start",
+                params = mapOf("reel_id" to reelId, "topic" to topic),
+            ),
+        )
+    }
+
+    suspend fun logRecognitionComplete(
+        reelId: String,
+        topic: String,
+        heard: Boolean,
+        latencyMs: Long,
+    ) {
+        if (!allowed()) return
+        backend.log(
+            AnalyticsEvent(
+                name = "recognition_complete",
+                params = mapOf(
+                    "reel_id" to reelId,
+                    "topic" to topic,
+                    "heard" to heard,
+                    "latency_bucket" to recognitionBucket(latencyMs),
+                ),
+            ),
+        )
+    }
+
+    /** Topic entry taps: which roadmap/directory node led into a topic feed. */
+    suspend fun logTopicTap(topic: String, source: String) {
+        if (!allowed()) return
+        backend.log(
+            AnalyticsEvent(
+                name = "topic_tap",
+                params = mapOf("topic" to topic, "source" to source),
+            ),
+        )
+    }
+
+    private fun recognitionBucket(millis: Long): String = when {
+        millis < 3_000 -> "fast"
+        millis < 10_000 -> "normal"
+        else -> "slow"
+    }
+
     private suspend fun allowed(): Boolean = !store.analyticsOptOut.first()
 
     private fun dwellBucket(millis: Long): String = when {

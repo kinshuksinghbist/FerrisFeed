@@ -37,6 +37,32 @@ read-time header, mapped from the existing content `level`:
 
 TalkBack reads "Difficulty: Medium" (semantics `contentDescription`).
 
+The motion is the reward, not the wait (TODO 24b): `ReelCard`
+composes the label text immediately with `animateDifficulty = false` and
+flips it true only when the speaker flow reports `Heard`. Capture never
+blocks text readiness (`doherty-threshold`); the cue plays after the
+spoken warm-up completes.
+
+## Speaker opening (TODO 24)
+
+Each reel opens with a `SpeakCard` prompt above the info card — phrase
+prompt → capture gesture → recognized-text reveal → hook + body → code →
+quiz (`reel-card-composition` + `micro-interaction-spec`). The spoken
+phrase is the hook itself, so no schema work (house rule 22d).
+
+- Prompt: "Say it first — tap the mic and read the headline aloud.
+  Reading still works if you skip." One verb, one Skip action.
+- Listening: label + indeterminate bar (no skeleton loop). Text is
+  already composed underneath.
+- Heard: "Heard you" + the transcript in quotes. Difficulty motion starts.
+- Unavailable (no recognizer, denied permission, error): "Voice off —
+  reading works the same" + one-line reason + Retry/Hide. Never a
+  spinner, never a dead end (`ux-writing`, `loading-states`).
+- Audio: platform `SpeechRecognizer` + `RECORD_AUDIO` only. No new
+  dependencies, no app-level network calls. Quiz answers stay the sole
+  SRS/XP/streak signal (`onGrade`); recognition only marks the page
+  interacted so speak-then-leave is not logged as a skip.
+
 ## Gestures
 
 | Gesture | Location | Effect |

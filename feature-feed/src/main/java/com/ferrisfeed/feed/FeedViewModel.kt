@@ -321,6 +321,18 @@ class FeedViewModel @Inject constructor(
         interactedWithCurrent = true
     }
 
+    /**
+     * Speaker-opening capture callback (TODO 24c).
+     *
+     * Deliberately NOT a grading signal: quiz answers stay the sole
+     * SRS/XP/streak input (`onGrade`). Recognition only marks the page
+     * interacted (so a speak-then-leave is not logged as a skip) — the
+     * analytics backend records start/complete separately (TODO 27a).
+     */
+    fun onRecognition(reelId: String, heard: Boolean) {
+        interactedWithCurrent = true
+    }
+
     fun restoreIndex(): StateFlow<Int> = index
 
     private fun persistPosition(index: Int, reelId: String?) {

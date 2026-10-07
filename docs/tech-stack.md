@@ -13,10 +13,12 @@ do not relitigate them without new evidence.
   (`expressiveLightColorScheme` / `expressiveDarkColorScheme` where
   available on M3 1.3+, fallback to standard M3) with dynamic color
   toggle. Rounded 28dp cards, dark OLED `#0B0E14`, Ferris orange `#FF6B35`.
-- **minSdk 26, targetSdk 34, edge-to-edge, predictive back** —
+- **minSdk 26, targetSdk 35, edge-to-edge, predictive back** —
   minSdk 26 covers 98%+ devices while keeping `VerticalPager` + dynamic
   color simple. Edge-to-edge via `enableEdgeToEdge()` plus
   `android:enableOnBackInvokedCallback="true"` in the manifest.
+  targetSdk 35 is Play's expectation for new listings (TODO 28a); the
+  AGP 8.9.2 / Gradle 8.11.1 / compileSdk 36 triple stays locked.
 
 ## Modules
 
