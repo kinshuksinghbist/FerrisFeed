@@ -551,7 +551,7 @@ Files: `app/.../MainActivity.kt` (+ new `AppShell.kt` in `:app`).
 
 Files: `FeedScreen.kt`, `FeedViewModel.kt` (read-only additions), `core-ui`.
 
-- [ ] 33a. **Reel progress indicator** (the "progress" complaint): a thin
+- [x] 33a. **Reel progress indicator** (the "progress" complaint): a thin
       segmented bar at the very top under the stat bar showing position in
       the *session queue window*: 5 segments (current reel + next 4), height
       3dp, gap 4dp, horizontal padding 16dp; completed = `primary`, current =
@@ -559,13 +559,15 @@ Files: `FeedScreen.kt`, `FeedViewModel.kt` (read-only additions), `core-ui`.
       half-filled), future = `onSurface.copy(0.15f)`. Computed from
       `pagerState.currentPage` only — **no ViewModel change**. Placed in
       `FeedScreen` as an overlay `Box` child.
-- [ ] 33b. **Per-page transition effect**: inside the `VerticalPager` item
+      DONE: SessionProgressBar overlay added under stat bar with smooth fill animation.
+- [x] 33b. **Per-page transition effect**: inside the `VerticalPager` item
       apply `Modifier.graphicsLayer` using
       `pagerState.getOffsetDistanceInPages(page)` (clamped to ±1): scale
       `1 - 0.06*abs`, alpha `1 - 0.5*abs`, rotationX `-6° * offset` with
       `cameraDistance = 12 * density`, `transformOrigin = TransformOrigin(0.5f, 0.5f)`.
       The pager keeps its 0.25 snap threshold and `beyondViewportPageCount = 5`.
-- [ ] 33c. **Page-type affordance**: lesson page and quiz page must look
+      DONE: 3D vertical pager transform with scale, alpha, rotationX and cameraDistance.
+- [x] 33c. **Page-type affordance**: lesson page and quiz page must look
       related but distinct. Quiz page gets a faint radial glow behind the
       question (`Brush.radialGradient` of `trackColor.copy(0.18f)` → transparent,
       drawn with `drawBehind`, radius 70% of width, centered at 30% height).
@@ -573,42 +575,50 @@ Files: `FeedScreen.kt`, `FeedViewModel.kt` (read-only additions), `core-ui`.
       background **behind** the card (the background gradient replaces the
       flat surface behind the pager). The status bar area shows the same
       gradient (edge-to-edge).
-- [ ] 33d. **Back chip** for TopicFeed/ReelDetail: top-left 44dp circular
+      DONE: Full-bleed vertical track gradient behind InfoPage + radial glow behind QuizPage.
+- [x] 33d. **Back chip** for TopicFeed/ReelDetail: top-left 44dp circular
       `.glass` button with `Icons.AutoMirrored.Filled.ArrowBack`, entrance
       `Bouncy`; plus a topic title chip next to it (`Display` labelLarge,
       topic name). Needs an `onBack: (() -> Unit)? = null` and
       `title: String? = null` param on `FeedScreen`; `MainActivity` passes
       `{ backStack.removeLastOrNull() }` for those two routes only.
-- [ ] 33e. **Swipe cue**: on the very first lesson page of a fresh install
+      DONE: BackChipBar / back chip and title chip support in FeedScreen and MainActivity.
+- [x] 33e. **Swipe cue**: on the very first lesson page of a fresh install
       (reuse the existing `speakDismissed`-style DataStore pattern with a NEW
       key `KEY_SWIPE_HINT_SEEN` in `FeedViewModel`; flip to true on first page
       change) show a bottom-center chevron-up stack (3 chevrons) that
       bounces up 10dp, 900ms infinite, with the text "Swipe up" in
       `labelMedium`. Disappears (fade 150ms) after the first swipe. Position:
       above `LocalBottomBarInset`.
-- [ ] 33f. **Loading state**: replace `ReelSkeleton + CircularProgressIndicator`
+      DONE: KEY_SWIPE_HINT_SEEN in FeedViewModel + 3-chevron bouncing SwipeCue on first reel.
+- [x] 33f. **Loading state**: replace `ReelSkeleton + CircularProgressIndicator`
       with `FeedLoading`: the Ferris mark (item 39) centered, pulsing
       (scale 0.94↔1.0, 1200ms) with the line "Warming up your feed…" and
       below it a `ReelSkeleton` already matching the new card geometry
       (item 34c). One indicator only — remove the spinner.
-- [ ] 33g. **Empty state**: `EmptyFeed` gets a 96dp illustration drawn with
+      DONE: FeedLoading with pulsing FerrisMark and card skeleton (spinner removed).
+- [x] 33g. **Empty state**: `EmptyFeed` gets a 96dp illustration drawn with
       Canvas (an empty crab claw/open box is fine — a simple rounded shape
       composition in brand colors), `headlineSmall` "Nothing here yet",
       body text, and a filled pill `FerrisButton` (item 35a) "Try again".
       Fade+rise entrance with `staggeredEntrance` (3 items).
-- [ ] 33h. **Remove the first-page speaker card from the content flow**: it
+      DONE: Redesigned EmptyFeed with 96dp Canvas crab claw illustration, staggeredEntrance and FerrisButton.
+- [x] 33h. **Remove the first-page speaker card from the content flow**: it
       currently sits above the card and pushes content down (layout jump
       when it collapses). Make it an overlaid bottom sheet-like card
       anchored above `LocalBottomBarInset` (see item 37).
-- [ ] 33i. Fix **double-tap save feedback**: double-tap currently toggles
+      DONE: SpeakCard overlaid as bottom dock with animated slide-in/out.
+- [x] 33i. Fix **double-tap save feedback**: double-tap currently toggles
       save silently. Add a big heart/bookmark burst at the tap position:
       a 96dp bookmark icon (`primary`) that scales 0.4→1.2→1.0 (`Bouncy`)
       and fades out over 600ms at the tap `Offset` (store the offset from
       `detectTapGestures`'s `onDoubleTap = { offset -> … }`), plus a medium
       haptic (`HapticFeedbackType.LongPress`). Only show when the action
       *saves* (not when it unsaves).
-- [ ] 33j. Fix **bottom clutter**: remove the fixed `padding(bottom = 20.dp)`
+      DONE: 96dp bookmark burst scaling 0.4->1.2->1.0 at tap offset with LongPress haptic.
+- [x] 33j. Fix **bottom clutter**: remove the fixed `padding(bottom = 20.dp)`
       in `InfoPage`/`QuizPage`; use `LocalBottomBarInset + 16.dp`.
+      DONE: InfoPage and QuizPage bottom padding unified to LocalBottomBarInset + 16.dp.
 
 ### 34. The lesson card (`ReelCard`) — the centerpiece redo
 

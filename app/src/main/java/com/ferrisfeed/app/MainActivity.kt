@@ -156,10 +156,24 @@ fun FerrisFeedNavHost(initialReelId: String?) {
                             FeedEntry(focusedReelId = null, topicFilter = null)
                         }
                         is Route.TopicFeed -> NavEntry(key) {
-                            FeedEntry(focusedReelId = null, topicFilter = key.topicId)
+                            val prettyTitle = key.topicId
+                                .replace('_', ' ')
+                                .replace('-', ' ')
+                                .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                            FeedEntry(
+                                focusedReelId = null,
+                                topicFilter = key.topicId,
+                                onBack = { backStack.removeLastOrNull() },
+                                title = prettyTitle,
+                            )
                         }
                         is Route.ReelDetail -> NavEntry(key) {
-                            FeedEntry(focusedReelId = key.reelId, topicFilter = null)
+                            FeedEntry(
+                                focusedReelId = key.reelId,
+                                topicFilter = null,
+                                onBack = { backStack.removeLastOrNull() },
+                                title = "Reel",
+                            )
                         }
                         is Route.Path -> NavEntry(key) {
                             val viewModel: PathViewModel = hiltViewModel()
@@ -240,11 +254,21 @@ fun FerrisFeedNavHost(initialReelId: String?) {
  * to one roadmap topic; null is the full 70/20/10 mix.
  */
 @Composable
-private fun FeedEntry(focusedReelId: String?, topicFilter: String?) {
+private fun FeedEntry(
+    focusedReelId: String?,
+    topicFilter: String?,
+    onBack: (() -> Unit)? = null,
+    title: String? = null,
+) {
     val viewModel: FeedViewModel = hiltViewModel()
     LaunchedEffect(topicFilter, focusedReelId) {
         viewModel.setTopicFilter(topicFilter)?.join()
         if (focusedReelId != null) viewModel.focusReel(focusedReelId)
     }
-    FeedScreen(viewModel = viewModel)
+    FeedScreen(
+        viewModel = viewModel,
+        focusedReelId = focusedReelId,
+        onBack = onBack,
+        title = title,
+    )
 }

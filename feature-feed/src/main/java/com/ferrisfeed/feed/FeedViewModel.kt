@@ -30,6 +30,7 @@ import kotlin.random.Random
 private val KEY_LAST_INDEX = intPreferencesKey("feed_last_index")
 private val KEY_LAST_ID = longPreferencesKey("feed_last_id_hash")
 private val KEY_SPEAK_DISMISSED = booleanPreferencesKey("speak_prompt_dismissed")
+private val KEY_SWIPE_HINT_SEEN = booleanPreferencesKey("swipe_hint_seen")
 
 data class FeedUiState(
     val reels: List<Reel> = emptyList(),
@@ -83,6 +84,10 @@ class FeedViewModel @Inject constructor(
     /** True once the user hides the speaker prompt; persisted and feed-wide. */
     val speakDismissed: StateFlow<Boolean> = speakDismissedInternal
 
+    private val swipeHintSeenInternal = MutableStateFlow(false)
+    /** True once the user performs the first vertical swipe; persisted across launches. */
+    val swipeHintSeen: StateFlow<Boolean> = swipeHintSeenInternal.asStateFlow()
+
     /** Topic-only feed filter (Route.TopicFeed); null = the full mixed queue. */
     private val topicFilter = MutableStateFlow<String?>(null)
 
@@ -133,7 +138,9 @@ class FeedViewModel @Inject constructor(
             loading.value = true
             savedIds.value = repository.savedIds()
             likedIds.value = repository.likedIds()
-            speakDismissedInternal.value = dataStore.data.first()[KEY_SPEAK_DISMISSED] ?: false
+            val prefs = dataStore.data.first()
+            speakDismissedInternal.value = prefs[KEY_SPEAK_DISMISSED] ?: false
+            swipeHintSeenInternal.value = prefs[KEY_SWIPE_HINT_SEEN] ?: false
             // First run: Room is still seeding from bundled JSON, so wait for
             // the first non-empty snapshot instead of reading once and
             // concluding the feed is empty. 30s cap, then show empty state.
@@ -211,6 +218,9 @@ class FeedViewModel @Inject constructor(
             viewModelScope.launch { repository.trackImpression(prevId, dwell, skipped) }
         }
         index.value = newIndex
+        if (newIndex > 0) {
+            dismissSwipeHint()
+        }
         pageStartMs = clock()
         interactedWithCurrent = false
         persistPosition(newIndex, state.reels.getOrNull(newIndex)?.id)
@@ -364,6 +374,18 @@ class FeedViewModel @Inject constructor(
         viewModelScope.launch {
             dataStore.edit { prefs ->
                 prefs[KEY_SPEAK_DISMISSED] = true
+            }
+        }
+    }
+
+    /** Marks the initial swipe gesture cue seen and remembers it across launches. */
+    fun dismissSwipeHint() {
+        if (!swipeHintSeenInternal.value) {
+            swipeHintSeenInternal.value = true
+            viewModelScope.launch {
+                dataStore.edit { prefs ->
+                    prefs[KEY_SWIPE_HINT_SEEN] = true
+                }
             }
         }
     }
