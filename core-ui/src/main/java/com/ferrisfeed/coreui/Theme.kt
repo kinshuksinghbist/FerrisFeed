@@ -2,7 +2,9 @@ package com.ferrisfeed.coreui
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -11,23 +13,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material3.Shapes
-import androidx.compose.foundation.shape.RoundedCornerShape
 
 /** FerrisFeed design tokens. Theme name: "Midnight Terminal + Warm Paper". */
 object FerrisColors {
     // Brand
     val MidnightTerminal = Color(0xFF0B0E14)
-    val MidnightSurface = Color(0xFF12161F)
-    val MidnightSurfaceVariant = Color(0xFF1A2030)
+    val MidnightSurface = Color(0xFF10141C)
+    val MidnightSurfaceVariant = Color(0xFF171C28)
     val MidnightOutline = Color(0xFF2A3348)
 
     val FerrisOrange = Color(0xFFFF6B35)
@@ -46,6 +48,13 @@ object FerrisColors {
 
     val Error = Color(0xFFFF5470)
     val ErrorContainerDark = Color(0xFF3A1420)
+
+    // Glass tokens (P6 30d)
+    val GlassDark = Color(0xB3141926)
+    val GlassStrokeDark = Color(0x1FFFFFFF)
+    val GlassLight = Color(0xCCFFFFFF)
+    val GlassStrokeLight = Color(0x14000000)
+    val GoldXp = Color(0xFFFFC857)
 
     // Light ("Warm Paper") surfaces
     val PaperBackground = Color(0xFFFFFBF2)
@@ -69,6 +78,12 @@ object FerrisColors {
     val SysDesignTextDark = Color(0xFF8FDCF7)
     val SysDesignTextLight = Color(0xFF0A5A78)
 }
+
+@Composable
+fun glassColor(): Color = if (isSystemInDarkTheme()) FerrisColors.GlassDark else FerrisColors.GlassLight
+
+@Composable
+fun glassStroke(): Color = if (isSystemInDarkTheme()) FerrisColors.GlassStrokeDark else FerrisColors.GlassStrokeLight
 
 private val DarkColorScheme = darkColorScheme(
     primary = FerrisColors.FerrisOrange,
@@ -125,27 +140,48 @@ private val LightColorScheme = lightColorScheme(
     surfaceTint = Color(0xFFC24A1A),
 )
 
-/** Monospace stack for code. JetBrains Mono is bundled via font resource where available. */
-val CodeFontFamily: FontFamily = FontFamily.Monospace
+/** Display font stack: Space Grotesk bundled resource. */
+val DisplayFont: FontFamily = FontFamily(
+    Font(R.font.space_grotesk_medium, FontWeight.Medium),
+    Font(R.font.space_grotesk_bold, FontWeight.Bold),
+)
+
+/** Monospace stack for code: JetBrains Mono bundled resource. */
+val CodeFontFamily: FontFamily = FontFamily(
+    Font(R.font.jetbrains_mono_regular),
+    Font(R.font.jetbrains_mono_medium, FontWeight.Medium),
+    Font(R.font.jetbrains_mono_bold, FontWeight.Bold),
+)
+
+/** Tabular-digit number style for XP, streaks, and percentages. */
+val NumberStyle = TextStyle(
+    fontFamily = DisplayFont,
+    fontWeight = FontWeight.Bold,
+    fontFeatureSettings = "tnum",
+)
 
 private val FerrisTypography = androidx.compose.material3.Typography(
-    displaySmall = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
-    headlineSmall = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.SemiBold),
-    titleLarge = TextStyle(fontSize = 19.sp, fontWeight = FontWeight.SemiBold),
-    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Normal, lineHeight = 24.sp),
-    bodyMedium = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Normal, lineHeight = 20.sp),
-    labelLarge = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
-    labelMedium = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium),
-    labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium),
+    displayMedium = TextStyle(fontFamily = DisplayFont, fontSize = 40.sp, fontWeight = FontWeight.Bold, lineHeight = 44.sp, letterSpacing = (-1.0).sp),
+    displaySmall = TextStyle(fontFamily = DisplayFont, fontSize = 32.sp, fontWeight = FontWeight.Bold, lineHeight = 38.sp, letterSpacing = (-0.8).sp),
+    headlineMedium = TextStyle(fontFamily = DisplayFont, fontSize = 28.sp, fontWeight = FontWeight.Bold, lineHeight = 34.sp, letterSpacing = (-0.6).sp),
+    headlineSmall = TextStyle(fontFamily = DisplayFont, fontSize = 24.sp, fontWeight = FontWeight.Bold, lineHeight = 30.sp, letterSpacing = (-0.4).sp),
+    titleLarge = TextStyle(fontFamily = DisplayFont, fontSize = 20.sp, fontWeight = FontWeight.Bold, lineHeight = 26.sp, letterSpacing = (-0.2).sp),
+    titleMedium = TextStyle(fontFamily = DisplayFont, fontSize = 17.sp, fontWeight = FontWeight.Medium, lineHeight = 24.sp, letterSpacing = 0.sp),
+    titleSmall = TextStyle(fontFamily = DisplayFont, fontSize = 15.sp, fontWeight = FontWeight.Medium, lineHeight = 20.sp, letterSpacing = 0.1.sp),
+    bodyLarge = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Normal, lineHeight = 27.sp, letterSpacing = 0.1.sp),
+    bodyMedium = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Normal, lineHeight = 22.sp, letterSpacing = 0.1.sp),
+    bodySmall = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Normal, lineHeight = 18.sp, letterSpacing = 0.2.sp),
+    labelLarge = TextStyle(fontFamily = DisplayFont, fontSize = 14.sp, fontWeight = FontWeight.Medium, lineHeight = 18.sp, letterSpacing = 0.4.sp),
+    labelMedium = TextStyle(fontFamily = DisplayFont, fontSize = 12.sp, fontWeight = FontWeight.Medium, lineHeight = 16.sp, letterSpacing = 0.5.sp),
+    labelSmall = TextStyle(fontFamily = DisplayFont, fontSize = 11.sp, fontWeight = FontWeight.Medium, lineHeight = 14.sp, letterSpacing = 0.6.sp),
 )
 
 private val FerrisShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(14.dp),
-    medium = RoundedCornerShape(20.dp),
-    large = RoundedCornerShape(28.dp),
-    extraLarge = RoundedCornerShape(32.dp),
+    small = RoundedCornerShape(16.dp),
+    medium = RoundedCornerShape(24.dp),
+    large = RoundedCornerShape(32.dp),
+    extraLarge = RoundedCornerShape(40.dp),
 )
 
 /** Extra track colors exposed via CompositionLocal so cards stay consistent. */
@@ -185,6 +221,30 @@ fun trackWash(track: String): Color {
     return lerp(surface, trackColor(track), TrackWashTokens.WASH_RATIO)
 }
 
+/** Track gradient tokens (P6 30f). */
+fun trackBrush(track: String, dark: Boolean): Brush {
+    return when (track) {
+        Tracks.RUST -> if (dark) {
+            Brush.verticalGradient(listOf(Color(0xFF2A1710), Color(0xFF12161F)))
+        } else {
+            Brush.verticalGradient(listOf(Color(0xFFFFE3D4), Color(0xFFFFF6EF)))
+        }
+        Tracks.SYSTEM_DESIGN -> if (dark) {
+            Brush.verticalGradient(listOf(Color(0xFF10222C), Color(0xFF12161F)))
+        } else {
+            Brush.verticalGradient(listOf(Color(0xFFD9F1FA), Color(0xFFF2FAFD)))
+        }
+        else -> if (dark) {
+            Brush.verticalGradient(listOf(Color(0xFF1F1A2C), Color(0xFF12161F)))
+        } else {
+            Brush.verticalGradient(listOf(Color(0xFFEBE6F8), Color(0xFFFAF8FD)))
+        }
+    }
+}
+
+@Composable
+fun trackBrush(track: String): Brush = trackBrush(track, isSystemInDarkTheme())
+
 /**
  * Contrast-safe track ink for small text (takeaway line, captions).
  * Raw track hues are identity signals, not text colors: orange fails on
@@ -210,7 +270,7 @@ fun trackTextColor(track: String): Color {
 @Composable
 fun FerrisFeedTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -230,3 +290,4 @@ fun FerrisFeedTheme(
         )
     }
 }
+

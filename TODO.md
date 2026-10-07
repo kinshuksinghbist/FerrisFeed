@@ -355,7 +355,7 @@ here so the flip-flop is deliberate, not drift.
 
 ### 30. Brand foundations: fonts, palette, tokens (do first, everything depends on it)
 
-- [ ] 30a. **Fonts as bundled resources** (verified URLs, all return HTTP
+- [x] 30a. **Fonts as bundled resources** (verified URLs, all return HTTP
       200, SIL OFL licensed). Create `core-ui/src/main/res/font/` and
       download with curl into exactly these lowercase names:
       - `space_grotesk_medium.ttf` ←
@@ -373,7 +373,7 @@ here so the flip-flop is deliberate, not drift.
       path `/raw/master/OFL.txt`) to `docs/licenses/space-grotesk-OFL.txt`
       and `docs/licenses/jetbrains-mono-OFL.txt`. Total ≈ 1.05 MB; APK stays
       under the 25 MB budget (was 21.9 MB) — confirm in the CI APK check.
-- [ ] 30b. In `Theme.kt` define
+- [x] 30b. In `Theme.kt` define
       `val DisplayFont = FontFamily(Font(R.font.space_grotesk_medium, FontWeight.Medium), Font(R.font.space_grotesk_bold, FontWeight.Bold))`
       (headlines, hooks, numbers, nav labels, buttons) and **replace**
       `CodeFontFamily` with
@@ -400,12 +400,12 @@ here so the flip-flop is deliberate, not drift.
       | labelSmall | Display | 11 | Medium | 14 | 0.6 |
       Add `val NumberStyle = TextStyle(fontFamily = DisplayFont, fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum")`
       for XP / streak / percent so digits do not jitter while counting.
-- [ ] 30c. **Dynamic color OFF by default.** `FerrisFeedTheme(dynamicColor
+- [x] 30c. **Dynamic color OFF by default.** `FerrisFeedTheme(dynamicColor
       = true)` currently overrides the brand palette on every Android 12+
       phone, so the app looks like whatever wallpaper the user has. Change the
       default to `false`; keep the parameter. (Do not build a settings screen
       for it in this pass.)
-- [ ] 30d. **Refine the dark palette** (keep OLED `#0B0E14` background and
+- [x] 30d. **Refine the dark palette** (keep OLED `#0B0E14` background and
       Ferris orange `#FF6B35`): `surface` `#12161F` → `#10141C`;
       `surfaceVariant` `#1A2030` → `#171C28`; add to `FerrisColors`:
       `GlassDark = Color(0xB3141926)` (70% alpha panel), `GlassStrokeDark =
@@ -414,16 +414,16 @@ here so the flip-flop is deliberate, not drift.
       Light theme: `PaperBackground` stays `#FFFBF2`. Add a
       `@Composable fun glassColor(): Color` and `glassStroke(): Color` that
       choose by `isSystemInDarkTheme()`.
-- [ ] 30e. **Shapes**: set `small = 16dp`, `medium = 24dp`, `large = 32dp`,
+- [x] 30e. **Shapes**: set `small = 16dp`, `medium = 24dp`, `large = 32dp`,
       `extraLarge = 40dp` (cards are noticeably rounder than stock M3).
-- [ ] 30f. **Track gradient tokens** in `Theme.kt`:
+- [x] 30f. **Track gradient tokens** in `Theme.kt`:
       `fun trackBrush(track: String, dark: Boolean): Brush` returning a
       vertical gradient: Rust dark `#2A1710 → #12161F`; Rust light
       `#FFE3D4 → #FFF6EF`; System Design dark `#10222C → #12161F`; System
       Design light `#D9F1FA → #F2FAFD`. `trackWash()` stays for places that
       need a flat color. Rust = warm orange, System Design = cool sky blue —
       unchanged identity, now a gradient instead of a flat wash.
-- [ ] 30g. Delete the dormant `WasmBlue`/`wasm` field only if grep shows
+- [x] 30g. Delete the dormant `WasmBlue`/`wasm` field only if grep shows
       zero references after the pass; otherwise leave it (learnings: keep
       `TrackColors` stable).
 
