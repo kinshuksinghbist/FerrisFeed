@@ -125,18 +125,25 @@ fun PathScreen(
         }
 
         if (hasActiveBrowse(state.query, state.filters)) {
+            // TODO 22 (UX-writing): say why the list is empty and what
+            // narrows it — never a bare "0 results". Plain if-else chain
+            // (a subjectless when with comments between its entries broke
+            // :feature-path compilation on the TODO 22 commit).
+            val resultsCaption: String =
+                if (state.isSearching) {
+                    "Searching…"
+                } else if (state.results.isEmpty()) {
+                    "Nothing matches those filters yet — clear one to widen the net."
+                } else if (state.filters.topic != null) {
+                    "${state.results.size} reels in ${state.filters.topic.displayTopic()}"
+                } else {
+                    "${state.results.size} results"
+                }
             item(key = "results-header") {
                 Column {
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = when {
-                            state.isSearching -> "Searching…"
-                            // TODO 22 (UX-writing): say why the list is empty
-                            // and what narrows it — never a bare “0 results”.
-                            state.results.isEmpty() -> "Nothing matches those filters yet — clear one to widen the net."
-                            state.filters.topic != null -> "${state.results.size} reels in ${state.filters.topic.displayTopic()}"
-                            else -> "${state.results.size} results",
-                        },
+                        text = resultsCaption,
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
