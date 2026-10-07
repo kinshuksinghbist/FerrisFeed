@@ -93,7 +93,7 @@ fun SpeakCard(
             .fillMaxWidth()
             .glass(shape)
             .clip(shape)
-            .animateContentSize(animationSpec = FerrisMotion.Smooth)
+            .animateContentSize(animationSpec = FerrisMotion.SmoothSize)
             .semantics { contentDescription = "Speak to start" }
             .padding(16.dp),
     ) {
