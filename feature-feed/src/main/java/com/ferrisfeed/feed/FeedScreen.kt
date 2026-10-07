@@ -63,6 +63,7 @@ import com.ferrisfeed.coreui.FerrisFeedTheme
 import com.ferrisfeed.coreui.FerrisIconButton
 import com.ferrisfeed.coreui.LocalBottomBarInset
 import com.ferrisfeed.coreui.glass
+import com.ferrisfeed.coreui.trackColor
 import com.ferrisfeed.coreui.QuizCard
 import com.ferrisfeed.coreui.QuizUiModel
 import com.ferrisfeed.coreui.ReelCard
@@ -351,9 +352,7 @@ private fun QuizPage(
     onGrade: (Boolean, String) -> Unit,
     onInteract: () -> Unit,
 ) {
-    val trackColor = remember(reel.track) {
-        if (reel.track.id == "rust") FerrisColors.RustOrange else FerrisColors.SysDesignBlue
-    }
+    val trackColor = trackColor(reel.track.id)
 
     Box(
         modifier = Modifier
