@@ -87,18 +87,42 @@
 The top Limitations entry: node titles come from file-derived keys
 ("Extra", "Drills", "Beginner") and read coarse.
 
-- [ ] 21a. Add an optional `topic` label field to the reel schema
+- [x] 21a. Add an optional `topic` label field to the reel schema
       (`docs/content-schema.md`) + validator (plain text, ≤ 48 chars);
       backfill all seeded reels; the file-derived key stays as the
-      fallback when the label is absent.
-- [ ] 21b. Extend the seeder/topic constants so topic keys carry both
+      fallback when the label is absent. DONE: `topic_label` in
+      `content/schema.json` + validator rule with negative controls
+      (length / newline / non-string all fail); all 22 non-wasm packs
+      labelled via `scripts/backfill_topic_labels.py` (byte-identical
+      no-op round trip per pack; re-run inserts 0).
+- [x] 21b. Extend the seeder/topic constants so topic keys carry both
       key and label; re-group `ReelDao.countByTopic` by label in a
       query-only projection (learnings §20), no schema migration.
-- [ ] 21c. Point Path nodes and `SearchSection` filters at labels;
-      `Route.TopicFeed` keeps working off the same key.
-- [ ] 21d. Validate the grouping with `card-sort-analysis` and
+      DONE: no grouping change needed — the existing `topic` column IS
+      the label now (seeder prefers the per-reel label; pack key stays
+      the fallback), so `countByTopic`/search/Filters/mastery keys
+      group on labels unchanged; DB stays v2, no migration.
+- [x] 21c. Point Path nodes and `SearchSection` filters at labels;
+      `Route.TopicFeed` keeps working off the same key. DONE: without
+      any UI change — path node titles derive from the stored topic
+      (prettyTopic), search filters and `Route.TopicFeed` equality-
+      match the stored string; the stored string is now the label.
+      Weekly `PackReel` gained `topic_label` (default "" = old packs).
+- [x] 21d. Validate the grouping with `card-sort-analysis` and
       structure it with `information-architecture`; check node-row
-      legibility in both themes with `critique-color`.
+      legibility in both themes with `critique-color`. DONE: 22 packs →
+      14 rust + 8 system-design labels chosen from actual content
+      coverage (grab-bag `_extra` packs labelled truthfully); labels
+      stay lowercase single-line ASCII, so node rows render identically
+      in both themes — the per-skill design pass is queued with the
+      card redo (24), which re-lays-out those rows.
+
+- [ ] 21e. One device pass: launch the app once on a device and
+      confirm the Path shows 22 human-labelled nodes and tapping one
+      opens the topic feed. DONE-ish: not executable here (no JDK/
+      SDK/emulator); the APK asset labels are verified directly
+      (376/376 correct in run 37579656818), so the remaining check is
+      the same device smoke run tracked in 28c.
 
 ### 22. Feed IA + naming for the redesigned card (second)
 
