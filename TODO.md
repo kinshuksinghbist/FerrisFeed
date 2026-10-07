@@ -805,18 +805,20 @@ Files: `FeedScreen.kt` (`ReelRail`), `core-ui`.
 
 Files: `SpeakCard.kt`, `FeedScreen.kt`.
 
-- [ ] 37a. Becomes a **bottom dock card** (above `LocalBottomBarInset`),
+- [x] 37a. Becomes a **bottom dock card** (above `LocalBottomBarInset`),
       `.glass(MaterialTheme.shapes.large)`, padding 16dp, slides up with
       `Bouncy` on first page only (existing `showSpeak` logic unchanged:
       first reel, persisted dismissal). It no longer shifts the lesson card
       (it is overlay, not in the Column).
-- [ ] 37b. **Prompt state**: left a 56dp circular mic button (gradient
+      DONE: SpeakCard converted to bottom dock card with Bouncy slide-in overlay.
+- [x] 37b. **Prompt state**: left a 56dp circular mic button (gradient
       primary, `onPrimary` icon, soft pulse ring: a circle stroke expanding
       56→72dp and fading, 1600ms infinite; static under reduce-motion);
       right text "Say it first" (`titleSmall`) + "Read the headline aloud"
       (`bodySmall`, one short line, truncate the old long sentence); a
       `FerrisButton(Ghost)` "Skip" at the top-right corner of the card.
-- [ ] 37c. **Listening state**: replace the `LinearProgressIndicator` with a
+      DONE: 56dp mic button with gradient, 56->72dp pulse ring, Skip FerrisButton.
+- [x] 37c. **Listening state**: replace the `LinearProgressIndicator` with a
       5-bar audio-level visualizer (bars 6dp wide, 3–28dp tall) driven by
       `onRmsChanged`: add an `onLevel: (Float) -> Unit` callback to
       `SpeechRecognition.listenOnce` (map rmsdB −2..10 → 0..1, smoothed with
@@ -824,14 +826,17 @@ Files: `SpeakCard.kt`, `FeedScreen.kt`.
       → change `data object Listening` to `data class Listening(val level: Float = 0f)`
       and update the 2 construction sites in `FeedScreen.kt`. Static
       3-bar idle animation if the recognizer never reports levels.
-- [ ] 37d. **Heard state**: check icon pops (`Bouncy`), transcript shown in
+      DONE: 5-bar RMS visualizer, onLevel callback in SpeechRecognition, Listening(level).
+- [x] 37d. **Heard state**: check icon pops (`Bouncy`), transcript shown in
       italic `bodyMedium` in quotes; after 2.5s the dock auto-collapses
       (slide down + fade, `Smooth`) without dismissing persistently.
       The difficulty reward animation (existing `animateDifficulty`) still
       plays at the moment of `Heard`.
-- [ ] 37e. **Unavailable state**: icon `MicOff`, one-line reason, `Tonal`
+      DONE: Bouncy check icon, quoted italic transcript, 2.5s auto-collapse LaunchedEffect.
+- [x] 37e. **Unavailable state**: icon `MicOff`, one-line reason, `Tonal`
       "Retry" + `Ghost` "Hide". Reuse existing copy strings (no new
       micro-copy).
+      DONE: Unavailable state with MicOff, retry/hide FerrisButtons.
 
 ### 38. Quiz page redo (`QuizCard`, `QuizPage`)
 

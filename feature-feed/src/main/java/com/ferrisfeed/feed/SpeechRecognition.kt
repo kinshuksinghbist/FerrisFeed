@@ -34,6 +34,7 @@ object SpeechRecognition {
         context: Context,
         onHeard: (transcript: String) -> Unit,
         onUnavailable: (reason: String) -> Unit,
+        onLevel: (Float) -> Unit = {},
     ): SpeechRecognizer? {
         if (!isAvailable(context)) {
             onUnavailable("Speech recognition is not available on this device.")
@@ -77,7 +78,10 @@ object SpeechRecognition {
 
             override fun onReadyForSpeech(params: Bundle) = Unit
             override fun onBeginningOfSpeech() = Unit
-            override fun onRmsChanged(rmsdB: Float) = Unit
+            override fun onRmsChanged(rmsdB: Float) {
+                val normalized = ((rmsdB + 2f) / 12f).coerceIn(0f, 1f)
+                onLevel(normalized)
+            }
             override fun onBufferReceived(buffer: ByteArray) = Unit
             override fun onEndOfSpeech() = Unit
             override fun onPartialResults(partialResults: Bundle) = Unit

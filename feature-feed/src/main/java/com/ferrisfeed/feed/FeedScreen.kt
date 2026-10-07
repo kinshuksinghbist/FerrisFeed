@@ -1,8 +1,14 @@
 package com.ferrisfeed.feed
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -61,6 +67,7 @@ import com.ferrisfeed.coreui.DisplayFont
 import com.ferrisfeed.coreui.FerrisColors
 import com.ferrisfeed.coreui.FerrisFeedTheme
 import com.ferrisfeed.coreui.FerrisIconButton
+import com.ferrisfeed.coreui.FerrisMotion
 import com.ferrisfeed.coreui.LocalBottomBarInset
 import com.ferrisfeed.coreui.glass
 import com.ferrisfeed.coreui.trackColor
@@ -227,11 +234,20 @@ private fun InfoPage(
     }
     // Dismissed prompt stays dismissed for this reel instance only.
     var speakHidden: Boolean by remember(reel.id) { mutableStateOf(false) }
+    var heardCollapsed: Boolean by remember(reel.id) { mutableStateOf(false) }
+
+    LaunchedEffect(speakState) {
+        if (speakState is SpeakState.Heard) {
+            delay(2500L)
+            heardCollapsed = true
+        }
+    }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         if (granted) {
-            speakState = SpeakState.Listening
+            speakState = SpeakState.Listening(0f)
             onRecognition(reel.id, false)
             recognizer = SpeechRecognition.listenOnce(
                 context,
@@ -241,6 +257,9 @@ private fun InfoPage(
                 },
                 onUnavailable = { reason ->
                     speakState = SpeakState.Unavailable(reason)
+                },
+                onLevel = { level ->
+                    speakState = SpeakState.Listening(level)
                 },
             )
         } else {
@@ -265,7 +284,7 @@ private fun InfoPage(
         val granted = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
         if (granted) {
-            speakState = SpeakState.Listening
+            speakState = SpeakState.Listening(0f)
             onRecognition(reel.id, false)
             recognizer = SpeechRecognition.listenOnce(
                 context,
@@ -275,6 +294,9 @@ private fun InfoPage(
                 },
                 onUnavailable = { reason ->
                     speakState = SpeakState.Unavailable(reason)
+                },
+                onLevel = { level ->
+                    speakState = SpeakState.Listening(level)
                 },
             )
         } else {
@@ -290,7 +312,7 @@ private fun InfoPage(
                 detectTapGestures(onDoubleTap = { onDoubleTapSave() })
             },
     ) {
-        // Content column: speak -> info with the code well contained.
+        // Content column: info with the code well contained.
         // No scroll: everything must fit, the pager handles all motion.
         Column(
             modifier = Modifier
@@ -298,20 +320,6 @@ private fun InfoPage(
                 .padding(start = 12.dp, end = 12.dp, top = 56.dp, bottom = LocalBottomBarInset.current + 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // The prompt opens the feed once (first page) instead of nagging
-            // on every reel; hiding it persists across launches.
-            if (showSpeak && !speakHidden) {
-                SpeakCard(
-                    state = speakState,
-                    phrase = reel.hook,
-                    onSpeak = { startSpeak() },
-                    onRetry = { startSpeak() },
-                    onDismiss = {
-                        speakHidden = true
-                        onDismissSpeak()
-                    },
-                )
-            }
             ReelCard(
                 track = reel.track.id,
                 level = reel.level,
@@ -330,6 +338,38 @@ private fun InfoPage(
                 isLiked = isLiked,
                 onLike = { onInteract(); onLike() },
                 onSave = { onInteract(); onSave() },
+            )
+        }
+
+        // Overlay bottom dock card for speaker prompt (P6 Item 37a, 33h)
+        val showDock = showSpeak && !speakHidden && !heardCollapsed
+        AnimatedVisibility(
+            visible = showDock,
+            enter = slideInVertically(
+                animationSpec = FerrisMotion.BouncyOffset,
+                initialOffsetY = { it },
+            ) + fadeIn(animationSpec = FerrisMotion.Quick),
+            exit = slideOutVertically(
+                animationSpec = FerrisMotion.SmoothOffset,
+                targetOffsetY = { it },
+            ) + fadeOut(animationSpec = FerrisMotion.Quick),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = LocalBottomBarInset.current + 16.dp,
+                ),
+        ) {
+            SpeakCard(
+                state = speakState,
+                phrase = reel.hook,
+                onSpeak = { startSpeak() },
+                onRetry = { startSpeak() },
+                onDismiss = {
+                    speakHidden = true
+                    onDismissSpeak()
+                },
             )
         }
     }
