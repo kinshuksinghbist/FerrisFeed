@@ -248,7 +248,7 @@ fun SearchSection(
                             topic = null,
                         )
                     },
-                    leadingDot = FerrisColors.SkyBlue,
+                    leadingDot = trackColor(Tracks.SYSTEM_DESIGN),
                 )
             }
             item(key = "advanced-filters-toggle") {
@@ -273,8 +273,8 @@ fun SearchSection(
         // Collapsible advanced filters panel (Level, Has code, Has quiz, Topics)
         AnimatedVisibility(
             visible = showAdvancedFilters,
-            enter = expandVertically(FerrisMotion.QuickOffset) + fadeIn(FerrisMotion.Quick),
-            exit = shrinkVertically(FerrisMotion.QuickOffset) + fadeOut(FerrisMotion.Quick),
+            enter = expandVertically(FerrisMotion.QuickSize) + fadeIn(FerrisMotion.Quick),
+            exit = shrinkVertically(FerrisMotion.QuickSize) + fadeOut(FerrisMotion.Quick),
         ) {
             val panelShape = RoundedCornerShape(16.dp)
             Box(

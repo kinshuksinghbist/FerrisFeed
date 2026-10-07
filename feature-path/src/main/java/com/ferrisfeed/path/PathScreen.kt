@@ -556,55 +556,40 @@ fun PathScreen(
                                         )
                                     }
 
+                                    val ringLabel = if (node.mastery > 0f) {
+                                        "${(node.mastery * 100).toInt()}%"
+                                    } else {
+                                        node.title.firstOrNull()?.uppercase() ?: "•"
+                                    }
                                     ProgressRing(
                                         progress = node.mastery,
                                         size = 56.dp,
                                         strokeWidth = 6.dp,
-                                        label = {
-                                            if (node.mastery > 0f) {
-                                                AnimatedCounter(
-                                                    value = (node.mastery * 100).toInt(),
-                                                    style = MaterialTheme.typography.labelSmall.copy(
-                                                        fontFamily = DisplayFont,
-                                                        fontWeight = FontWeight.Bold,
-                                                    ),
-                                                    color = if (isUnlocked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            } else {
-                                                Text(
-                                                    text = node.title.firstOrNull()?.uppercase() ?: "•",
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontFamily = DisplayFont,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (isUnlocked) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                                )
-                                            }
-                                        },
+                                        label = ringLabel,
                                     )
                                 }
 
-                                // Node Card (Item 40d)
-                                val nodeShape = MaterialTheme.shapes.medium
-                                val interactionSource = remember { MutableInteractionSource() }
+                                    // Node Card (Item 40d)
+                                    val nodeShape = MaterialTheme.shapes.medium
+                                    val interactionSource = remember { MutableInteractionSource() }
 
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .graphicsLayer {
-                                            if (isShaking) {
-                                                translationX = lockedShakeX.value * density
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .graphicsLayer {
+                                                if (isShaking) {
+                                                    translationX = lockedShakeX.value * density
+                                                }
                                             }
-                                        }
-                                        .staggeredEntrance(nodeIndexInStage)
-                                        .pressScale(interactionSource, pressed = 0.97f)
-                                        .clip(nodeShape)
-                                        .background(
-                                            if (isUnlocked) trackBrush(node.track, isDark).copy(alpha = 0.6f)
-                                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                            nodeShape,
-                                        )
-                                        .border(0.5.dp, glassStroke(), nodeShape)
-                                        .clickable(
+                                            .staggeredEntrance(nodeIndexInStage)
+                                            .pressScale(interactionSource, pressed = 0.97f)
+                                            .clip(nodeShape)
+                                            .then(
+                                                if (isUnlocked) Modifier.background(trackBrush(node.track, isDark), nodeShape)
+                                                else Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), nodeShape)
+                                            )
+                                            .border(0.5.dp, glassStroke(), nodeShape)
+                                            .clickable(
                                             interactionSource = interactionSource,
                                             indication = null,
                                             onClick = {
