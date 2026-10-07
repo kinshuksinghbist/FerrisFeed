@@ -36,16 +36,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.ferrisfeed.coreui.DisplayFont
 import com.ferrisfeed.coreui.FerrisFeedTheme
+import com.ferrisfeed.coreui.FerrisIconButton
 import com.ferrisfeed.coreui.LocalBottomBarInset
+import com.ferrisfeed.coreui.glass
 import com.ferrisfeed.coreui.QuizCard
 import com.ferrisfeed.coreui.QuizUiModel
 import com.ferrisfeed.coreui.ReelCard
@@ -155,6 +160,7 @@ fun FeedScreen(
                 onRecognition = { id, heard -> viewModel.onRecognition(id, heard) },
                 showSpeak = page == 0 && !speakDismissed,
                 onDismissSpeak = { viewModel.dismissSpeakPrompt() },
+                settled = pagerState.settledPage == page,
             )
         } else {
             QuizPage(
@@ -187,6 +193,7 @@ private fun InfoPage(
     onRecognition: (reelId: String, heard: Boolean) -> Unit = { _, _ -> },
     showSpeak: Boolean = true,
     onDismissSpeak: () -> Unit = {},
+    settled: Boolean = true,
 ) {
     val context = LocalContext.current
     var speakState: SpeakState by remember(reel.id) { mutableStateOf(SpeakState.Prompt) }
@@ -290,21 +297,22 @@ private fun InfoPage(
                 language = reel.language,
                 output = reel.output,
                 animateDifficulty = animateDifficulty,
+                settled = settled,
+            )
+            ReelActionRow(
+                topic = reel.topic,
+                isSaved = isSaved,
+                isLiked = isLiked,
+                onLike = { onInteract(); onLike() },
+                onSave = { onInteract(); onSave() },
             )
         }
-        ReelRail(
-            isSaved = isSaved,
-            isLiked = isLiked,
-            onLike = { onInteract(); onLike() },
-            onSave = { onInteract(); onSave() },
-            modifier = Modifier.align(Alignment.CenterEnd),
-        )
     }
 }
 
 /**
  * Quiz reel: the question gets its own page (user review 2026-10-07), with
- * the hook as the retrieval cue. Same floating rail + double-tap-save as
+ * the hook as the retrieval cue. Same action row + double-tap-save as
  * the lesson page so gestures never change meaning mid-reel.
  */
 @Composable
@@ -345,67 +353,84 @@ private fun QuizPage(
                 quiz = reel.toQuizUi(),
                 onResult = { correct, label -> onInteract(); onGrade(correct, label) },
             )
+            ReelActionRow(
+                topic = reel.topic,
+                isSaved = isSaved,
+                isLiked = isLiked,
+                onLike = { onInteract(); onLike() },
+                onSave = { onInteract(); onSave() },
+            )
         }
-        ReelRail(
-            isSaved = isSaved,
-            isLiked = isLiked,
-            onLike = { onInteract(); onLike() },
-            onSave = { onInteract(); onSave() },
-            modifier = Modifier.align(Alignment.CenterEnd),
-        )
     }
 }
 
 /**
- * Shared floating rail: overlays the content edge like Reels/TikTok instead
- * of reserving its own column, with a translucent scrim so the glyphs read
- * over any card tint. 48dp targets, 28dp glyphs.
+ * Horizontal action row placed below the card (P6 34i, 36a, 36b):
+ * Left group = like FerrisIconButton + save FerrisIconButton with Confirm haptic;
+ * Right group = glass topic capsule chip.
  */
 @Composable
-private fun ReelRail(
+private fun ReelActionRow(
+    topic: String,
     isSaved: Boolean,
     isLiked: Boolean,
     onLike: () -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.padding(end = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    val haptic = LocalHapticFeedback.current
+    val topicLabel = remember(topic) {
+        topic.replace('_', ' ').replace('-', ' ').replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(
-            onClick = onLike,
-            modifier = Modifier
-                .size(48.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
-                    shape = CircleShape,
-                ),
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            FerrisIconButton(
+                icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                 contentDescription = if (isLiked) "Unlike" else "Like",
-                tint = if (isLiked) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.size(28.dp),
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                    onLike()
+                },
+                size = 44.dp,
+                active = isLiked,
+                activeTint = MaterialTheme.colorScheme.error,
+            )
+            FerrisIconButton(
+                icon = if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                contentDescription = if (isSaved) "Unsave" else "Save",
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                    onSave()
+                },
+                size = 44.dp,
+                active = isSaved,
+                activeTint = MaterialTheme.colorScheme.primary,
             )
         }
-        IconButton(
-            onClick = onSave,
+
+        Box(
             modifier = Modifier
-                .size(48.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
-                    shape = CircleShape,
-                ),
+                .height(32.dp)
+                .glass(CircleShape)
+                .clip(CircleShape)
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                contentDescription = if (isSaved) "Unsave" else "Save",
-                tint = if (isSaved) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.size(28.dp),
+            Text(
+                text = topicLabel,
+                style = MaterialTheme.typography.labelMedium,
+                fontFamily = DisplayFont,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

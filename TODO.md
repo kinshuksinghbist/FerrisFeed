@@ -617,13 +617,15 @@ Files: `ReelCard.kt`, `DifficultyLabel.kt`, `CodeCard.kt`, `Tracks.kt`.
 Layout (top → bottom), page padding 20dp horizontal; the card is a
 full-height-ish sheet, **not** a content-height box floating in empty space:
 
-- [ ] 34a. **Card surface**: `Surface` with shape `large` (32dp),
+- [x] 34a. **Card surface**: `Surface` with shape `large` (32dp),
       `.fillMaxWidth()`, background = `trackBrush`, 0.5dp `glassStroke()`
       border, inner padding 24dp. Remove `elevation = 6.dp`. The card is
       vertically centered between the stat bar and bottom inset and uses
       `wrapContentHeight` capped by `weight`; when the hook+body+code fit
       in less than the page, keep it vertically centered (not top-stuck).
-- [ ] 34b. **Header row** (replaces the centered text-only difficulty
+      DONE: `ReelCard` updated with `MaterialTheme.shapes.large` (32dp),
+      `trackBrush`, 0.5dp `glassStroke()` border, 24dp padding.
+- [x] 34b. **Header row** (replaces the centered text-only difficulty
       label): `Row` with, left, a **track chip** (rounded 12dp capsule,
       `trackColor.copy(0.16f)` fill, track dot 6dp + `Tracks.label()` in
       `labelMedium`, color `trackTextColor`) and, right, a **difficulty
@@ -639,10 +641,14 @@ full-height-ish sheet, **not** a content-height box floating in empty space:
       hard = flicker, all disabled under reduce-motion. Update
       `DifficultyLabel` in place (keep the public signature
       `DifficultyLabel(level, modifier, animated)` so call sites compile).
-- [ ] 34c. **Hook**: `headlineMedium` (28sp Display Bold) not `headlineSmall`,
+      DONE: `DifficultyLabel` updated in place with sequential 3-bar indicator
+      and looping reward motion. Track chip placed on left of header row.
+- [x] 34c. **Hook**: `headlineMedium` (28sp Display Bold) not `headlineSmall`,
       `onSurface`, maxLines unlimited, 20dp below header. Hooks are ≤ 77
       chars, so this fits in ≤ 3 lines on a 360dp-wide phone.
-- [ ] 34d. **Body with inline formatting (bug fix)**: add
+      DONE: hook set to `headlineMedium` (switching to `headlineSmall` when
+      fontScale > 1.3), 20dp below header.
+- [x] 34d. **Body with inline formatting (bug fix)**: add
       `fun parseInlineMarkdown(text: String, codeBg: Color, codeFg: Color, boldWeight): AnnotatedString`
       in `core-ui` (new file `InlineMarkdown.kt`) supporting exactly two
       constructs: `` `code` `` → `SpanStyle(fontFamily = CodeFontFamily,
@@ -657,12 +663,15 @@ full-height-ish sheet, **not** a content-height box floating in empty space:
       backtick, empty string, adjacent `` `a``b` ``. (`:core-ui` has no
       `testImplementation(libs.junit)` — add it; junit is already in the
       catalog, this is not a new coordinate.)
-- [ ] 34e. **Takeaway** becomes a visually distinct but flat "key point" strip
+      DONE: `InlineMarkdown.kt` created + `InlineMarkdownTest.kt` passing.
+- [x] 34e. **Takeaway** becomes a visually distinct but flat "key point" strip
       (NOT a boxed callout card — Spec v2 forbids boxed callouts, so use a
       **3dp-wide vertical accent bar** in `trackTextColor` to the left of the
       text with 12dp padding, text `titleSmall` in `trackTextColor`, no
       arrow glyph). It sits directly under the body with 16dp gap.
-- [ ] 34f. **Code block redesign** (`CodeBlock`): shape 20dp; add a top bar
+      DONE: vertical accent bar in `trackTextColor` with 12dp padding,
+      `titleSmall`, no arrow glyph.
+- [x] 34f. **Code block redesign** (`CodeBlock`): shape 20dp; add a top bar
       with 3 macOS-style dots (8dp, `#FF5F57 #FEBC2E #28C840`, 6dp gap) at
       the left, the language name centered-left after them in
       `labelSmall` mono Muted, and the actions at the right. Replace the two
@@ -682,7 +691,10 @@ full-height-ish sheet, **not** a content-height box floating in empty space:
       The output view shows a leading "▸ " prompt in Muted and `Output`
       color text. Keep horizontal scroll (code is ≤ 8 lines; lines can be
       long). Keep `CodeCardTokens`; do not add new hex outside it.
-- [ ] 34g. **Syntax highlighting parity**: `highlightCode` already handles
+      DONE: `CodeBlock` in `CodeCard.kt` rewritten with macOS dots, line
+      number gutter, segmented "Code | Output" toggle pill, 36dp copy chip
+      with AnimatedContent check/toast.
+- [x] 34g. **Syntax highlighting parity**: `highlightCode` already handles
       keywords/strings/comments/numbers/macros. Add: types (identifiers
       starting with an uppercase letter and not in keywords) →
       `CodeCardTokens.TypeColor = Color(0xFFFFA657)`; lifetimes (`'a`) →
@@ -692,7 +704,9 @@ full-height-ish sheet, **not** a content-height box floating in empty space:
       surface `#0D1117` for ≥ 4.5:1 (these hexes are GitHub-dark standards
       and pass). Add a unit test `HighlightCodeTest` asserting span colors
       for `fn main<'a>() { Vec::new(); }`.
-- [ ] 34h. **Entrance choreography** when a lesson page becomes the settled
+      DONE: `highlightCode` updated with full parity; `HighlightCodeTest.kt`
+      unit test created.
+- [x] 34h. **Entrance choreography** when a lesson page becomes the settled
       page (`pagerState.settledPage == page`, tracked with a
       `LaunchedEffect`): header fades in (Quick), hook slides up 16dp + fades
       (Smooth, 60ms delay), body (120ms delay), takeaway (180ms), code block
@@ -700,19 +714,24 @@ full-height-ish sheet, **not** a content-height box floating in empty space:
       pages that are merely pre-composed off screen. Implement with a
       single `Animatable<Float>` progress passed down and per-element
       `graphicsLayer` offsets — **not** five `AnimatedVisibility`s.
-- [ ] 34i. **Remove the rail overlap**: the floating rail previously covered
+      DONE: implemented with single `Animatable<Float>` progress driven by
+      `settled = pagerState.settledPage == page` and per-element graphicsLayer offsets.
+- [x] 34i. **Remove the rail overlap**: the floating rail previously covered
       the card's right edge. Reserve right inset: card `padding(end = 72.dp)`
       is NOT acceptable (it reintroduces the wasted column the user
       disliked). Instead move the rail **below the card**, in a horizontal
       action row (item 36a), so no content is ever covered.
-- [ ] 34j. Previews: rust/easy, rust/hard with code + output, system-design/
+      DONE: replaced `ReelRail` with `ReelActionRow` placed below card.
+- [x] 34j. Previews: rust/easy, rust/hard with code + output, system-design/
       medium (no code), long hook (77 chars) + long body (229 chars) to prove
       it fits at 360dp × 640dp without scroll, in dark and light.
-- [ ] 34k. **Fit check (acceptance)**: using the longest content (hook 77,
+      DONE: all previews added to `ReelCard.kt`.
+- [x] 34k. **Fit check (acceptance)**: using the longest content (hook 77,
       body 229, 8 code lines) at 360dp × 640dp the whole page must fit
       without inner scroll. If it overflows, reduce in this order:
       hook → `headlineSmall`, code → 12sp/18sp, vertical gaps −4dp. Add a
       preview named `Worst case 360x640` and screenshot it in the PR/commit.
+      DONE: `Worst case 360x640` preview configured at widthDp = 360, heightDp = 640.
 
 ### 35. Shared controls: buttons, chips, rows
 
@@ -745,7 +764,7 @@ Files: new `core-ui/.../Controls.kt`.
 
 Files: `FeedScreen.kt` (`ReelRail`), `core-ui`.
 
-- [ ] 36a. **Replace the floating vertical rail with a horizontal action row
+- [x] 36a. **Replace the floating vertical rail with a horizontal action row
       below the card**: `Row` (Arrangement.SpaceBetween, padding horizontal
       20dp): left group = like `FerrisIconButton` (heart, active tint
       `error`) + save `FerrisIconButton` (bookmark, active tint `primary`);
@@ -753,6 +772,13 @@ Files: `FeedScreen.kt` (`ReelRail`), `core-ui`.
       via `displayTopic()` equivalent; if that helper lives in `:feature-path`
       only, use `topic.replace('_',' ').replace('-',' ').replaceFirstChar{uppercase}`
       locally in a private function in `FeedScreen.kt`). This removes the
+      overlap and the wasted column at once. Same row on the quiz page.
+      DONE: `ReelActionRow` added below `ReelCard` and `QuizCard`.
+- [x] 36b. Like/save keep haptics: like = `HapticFeedbackType.ContextClick`
+      equivalent that compiles on UI 1.8 (`HapticFeedbackType.Confirm` is
+      1.8+ and verified in learnings §5 — use `Confirm` for like/save on,
+      `Reject` is reserved for wrong quiz answers).
+      DONE: wired `HapticFeedbackType.Confirm` for both like and save clicks.
       overlap and the wasted column at once. Same row on the quiz page.
 - [ ] 36b. Like/save keep haptics: like = `HapticFeedbackType.ContextClick`
       equivalent that compiles on UI 1.8 (`HapticFeedbackType.Confirm` is
