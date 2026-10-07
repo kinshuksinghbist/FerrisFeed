@@ -705,7 +705,7 @@ full-height-ish sheet, **not** a content-height box floating in empty space:
 
 Files: new `core-ui/.../Controls.kt`.
 
-- [ ] 35a. `FerrisButton(text, onClick, modifier, style = Filled|Tonal|Ghost, enabled, leadingIcon)`:
+- [x] 35a. `FerrisButton(text, onClick, modifier, style = Filled|Tonal|Ghost, enabled, leadingIcon)`:
       height 52dp, shape `CircleShape`, `Display` labelLarge 15sp bold. Filled =
       vertical gradient `primary` → `primary` darkened 12% (use `lerp(primary, Color.Black, 0.12f)`),
       `onPrimary` text, 0.5dp white 20% top-edge highlight. Tonal =
@@ -713,15 +713,15 @@ Files: new `core-ui/.../Controls.kt`.
       `onSurfaceVariant`. All use `pressScale`. Disabled = 38% alpha, no press.
       Replace every `Button`/`TextButton` in the app (EmptyFeed Retry, Quiz
       Check, SpeakCard Skip/Retry/Hide) with it.
-- [ ] 35b. `FerrisChip(label, selected, onClick, leadingDot: Color? = null)`: height 36dp,
+- [x] 35b. `FerrisChip(label, selected, onClick, leadingDot: Color? = null)`: height 36dp,
       min touch 48dp (wrap in `minimumInteractiveComponentSize`), shape
       `CircleShape`; unselected = `.glass` + `onSurfaceVariant`; selected =
       `primary.copy(0.2f)` fill, 1dp `primary` stroke, `primary` text, with a
       check icon sliding in (`AnimatedVisibility` `expandHorizontally`).
       Replaces every `FilterChip` in `SearchScreen`.
-- [ ] 35c. `SectionHeader(title, subtitle?)`: `titleLarge` + `bodySmall`
+- [x] 35c. `SectionHeader(title, subtitle?)`: `titleLarge` + `bodySmall`
       `onSurfaceVariant`, 4dp gap, used in Path.
-- [ ] 35d. `FerrisIconButton(icon, contentDescription, onClick, size = 44.dp, active: Boolean, activeTint)`:
+- [x] 35d. `FerrisIconButton(icon, contentDescription, onClick, size = 44.dp, active: Boolean, activeTint)`:
       circular `.glass` with `pressScale`; when `active` flips to true the
       icon plays a pop (scale 1→1.35→1, `Bouncy`) and a 6-dot radial spark
       (6 tiny circles flying out 14dp and fading, 350ms; static under
@@ -856,13 +856,13 @@ Files: `QuizCard.kt`, `FeedScreen.kt` (`QuizPage`).
 
 Files: `StreakFlame.kt`, `ProgressRing.kt`, `Shimmer.kt`, new `FerrisMark.kt`.
 
-- [ ] 39a. **Ferris mark**: `FerrisMark(size, animated)` drawn in Canvas — a
+- [x] 39a. **Ferris mark**: `FerrisMark(size, animated)` drawn in Canvas — a
       simple crab silhouette (rounded body ellipse in `FerrisOrange`, two
       raised claws as rounded arcs, two small eye circles in `#0B0E14` with
       white highlights). Idle animation: claws wiggle ±8° (rotation around
       the claw base, 1400ms infinite, static under reduce-motion). Used in
       FeedLoading (33f), empty states and the Path header (40a).
-- [ ] 39b. **StreakFlame** wired for real (currently unused): chip shape
+- [x] 39b. **StreakFlame** wired for real (currently unused): chip shape
       `CircleShape` `.glass`, flame icon 20dp with a looping flicker
       (scale 1.0↔1.08 + alpha 0.9↔1.0, 900ms) when `streakDays > 0`;
       `AnimatedCounter` for the number; grey (not `Color.Gray` literal — use
@@ -871,7 +871,7 @@ Files: `StreakFlame.kt`, `ProgressRing.kt`, `Shimmer.kt`, new `FerrisMark.kt`.
       streak increases. Content description keeps "Streak: N days". Flame
       color tiers: 1–6 `FerrisOrange`, 7–29 `FerrisAmber`, 30+ gradient
       orange→red.
-- [ ] 39c. **ProgressRing**: stroke caps `StrokeCap.Round` (currently
+- [x] 39c. **ProgressRing**: stroke caps `StrokeCap.Round` (currently
       default butt), draw with `Canvas.drawArc` using a `sweepGradient`
       (track color → lighter track color) instead of
       `CircularProgressIndicator`; animate with `FerrisMotion.Smooth`
@@ -879,7 +879,7 @@ Files: `StreakFlame.kt`, `ProgressRing.kt`, `Shimmer.kt`, new `FerrisMark.kt`.
       at ≥ 80% add a one-shot ring glow (outer arc stroke 2dp wider,
       `MintCorrect.copy(0.35f)`). Keep the signature
       `ProgressRing(progress, modifier, size, strokeWidth, label)`.
-- [ ] 39d. **Skeleton parity**: `ReelSkeleton` must match the new card
+- [x] 39d. **Skeleton parity**: `ReelSkeleton` must match the new card
       geometry (header chips, 3-line hook bar, 4-line body bars, code panel
       block, 32dp radius, track gradient background). Shimmer sweep angle
       20°, 1200ms, disabled when reduce-motion (static 40% alpha bars).

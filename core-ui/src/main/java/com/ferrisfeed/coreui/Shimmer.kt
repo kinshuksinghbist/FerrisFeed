@@ -10,53 +10,64 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 /**
- * Shimmer skeleton shown while the pager prefetches the next 5 reels.
- * Uses an infinite gradient sweep; keep usage brief (prefetch path only) to save battery.
+ * Shimmer effect modifier for skeleton loading states (P6 39d).
+ * Automatically disables animation under reduce-motion and falls back to a subtle static opacity.
  */
 fun Modifier.shimmer(): Modifier = composed {
+    val reduceMotion = LocalReduceMotion.current
+    val base = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    val highlight = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f)
+
+    if (reduceMotion) {
+        return@composed this.background(base)
+    }
+
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translate by transition.animateFloat(
         initialValue = 0f,
-        targetValue = 1000f,
+        targetValue = 1200f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Restart,
         ),
-        label = "shimmer-x",
+        label = "shimmer-translate",
     )
-    val base = MaterialTheme.colorScheme.surfaceVariant
-    val highlight = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-    background(
+
+    this.background(
         Brush.linearGradient(
             colors = listOf(base, highlight, base),
-            start = Offset(translate - 300f, 0f),
-            end = Offset(translate, 100f),
+            start = Offset(translate - 350f, 0f),
+            end = Offset(translate, 120f),
         ),
     )
 }
 
 @Composable
-private fun ShimmerBar(
+fun ShimmerBar(
     modifier: Modifier = Modifier,
     height: Int = 16,
     widthFraction: Float = 1f,
@@ -70,32 +81,88 @@ private fun ShimmerBar(
     )
 }
 
-/** Full reel skeleton matching [ReelCard] proportions to avoid layout shift. */
+/** Full reel skeleton matching new [ReelCard] proportions (P6 39d). */
 @Composable
 fun ReelSkeleton(modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = RoundedCornerShape(32.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            ShimmerBar(widthFraction = 0.5f, height = 22)
-            ShimmerBar(height = 28)
-            ShimmerBar(widthFraction = 0.85f)
-            ShimmerBar(widthFraction = 0.9f)
-            ShimmerBar(widthFraction = 0.7f)
+            // Header chips row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 80.dp, height = 24.dp)
+                        .clip(CircleShape)
+                        .shimmer(),
+                )
+                Box(
+                    modifier = Modifier
+                        .size(width = 64.dp, height = 20.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .shimmer(),
+                )
+            }
+
             Spacer(Modifier.height(4.dp))
+
+            // 3-line hook
+            ShimmerBar(height = 26, widthFraction = 0.95f)
+            ShimmerBar(height = 26, widthFraction = 0.75f)
+
+            Spacer(Modifier.height(6.dp))
+
+            // 3-line body
+            ShimmerBar(height = 16, widthFraction = 1f)
+            ShimmerBar(height = 16, widthFraction = 0.9f)
+            ShimmerBar(height = 16, widthFraction = 0.65f)
+
+            Spacer(Modifier.height(8.dp))
+
+            // Code panel block
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .height(130.dp)
+                    .clip(RoundedCornerShape(20.dp))
                     .shimmer(),
             )
-            ShimmerBar(widthFraction = 0.6f, height = 20)
+        }
+    }
+}
+
+/** Path node skeleton row for Path screen loading (P6 39d). */
+@Composable
+fun PathNodeSkeleton(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Ring circle skeleton
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .shimmer(),
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            ShimmerBar(height = 18, widthFraction = 0.7f)
+            ShimmerBar(height = 14, widthFraction = 0.45f)
         }
     }
 }
@@ -104,10 +171,12 @@ fun ReelSkeleton(modifier: Modifier = Modifier) {
 @Composable
 private fun ShimmerPreview() {
     FerrisFeedTheme(darkTheme = true) {
-        ReelSkeleton(modifier = Modifier.padding(16.dp))
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            ReelSkeleton()
+            PathNodeSkeleton()
+        }
     }
 }
-
-// Unused import guard for Color (kept for future tint customization).
-@Suppress("unused")
-private val ShimmerTintFallback = Color.Transparent
