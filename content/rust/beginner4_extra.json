@@ -20,7 +20,8 @@
     "takeaway": "Use a workspace to manage multiple related crates in one repository.",
     "track": "rust",
     "trap": "Nesting full projects without a workspace root duplicates deps and slows builds.",
-    "output": "# workspace root: members app + lib share one Cargo.lock and target/\n# cargo build --workspace builds all members at once"
+    "output": "# workspace root: members app + lib share one Cargo.lock and target/\n# cargo build --workspace builds all members at once",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "**Features** toggle optional code with `#[cfg(feature = \"serde\")]`. Enable them via `cargo build --features serde` or in dependents as `dep = { version = \"1\", features = [\"serde\"] }`. Keep defaults lean.",
@@ -43,7 +44,8 @@
     "takeaway": "Gate optional dependencies behind Cargo features to keep builds lean.",
     "track": "rust",
     "trap": "Enabling all features everywhere bloats compile times and binaries.",
-    "output": "# builds with the serde feature enabled; default stays lean"
+    "output": "# builds with the serde feature enabled; default stays lean",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "`cargo check` is the fastest feedback loop — it typechecks without codegen. Use `check` while iterating, `build` for artifacts, `run` to execute, and `clippy` before commit. Check runs in seconds on big projects.",
@@ -66,7 +68,8 @@
     "takeaway": "Run cargo check while iterating because it skips codegen and stays fast.",
     "track": "rust",
     "trap": "Always running full cargo build while editing wastes minutes on codegen.",
-    "output": "# check = fast typecheck; build = codegen; run --bin app; test"
+    "output": "# check = fast typecheck; build = codegen; run --bin app; test",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "Sprinkle `println!` with labels to trace values: `println!(\"x={x:?}\")`. Print before and after a mutation to see what changed. Remove them after, or switch to `dbg!` so location prints too.",
@@ -89,7 +92,8 @@
     "takeaway": "Print labeled values before and after mutations to locate logic bugs.",
     "track": "rust",
     "trap": "Printing without labels makes it impossible to tell which line produced output.",
-    "output": "before=[1, 2]\nafter=[1, 2, 3]"
+    "output": "before=[1, 2]\nafter=[1, 2, 3]",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "`dbg!` prints file, line, and the value, then returns it. Wrap any expression: `let y = dbg!(x * 2);`. It takes ownership of the expression result and passes it through, so it fits inside chains.",
@@ -112,7 +116,8 @@
     "takeaway": "Use the dbg macro when you need values plus source location while debugging.",
     "track": "rust",
     "trap": "Leaving dbg calls in committed code spams stderr in production.",
-    "output": "// stderr: [src/main.rs:2] x * 2 = 8; y == 8\n// stderr: [src/main.rs:3] vec![1, 2] = [1, 2]; v == vec![1, 2]"
+    "output": "// stderr: [src/main.rs:2] x * 2 = 8; y == 8\n// stderr: [src/main.rs:3] vec![1, 2] = [1, 2]; v == vec![1, 2]",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "Read errors bottom-up: the `error[E0308]` code is the summary, the `--> src/main.rs:4:9` span shows where, and `expected X found Y` tells the fix. Click the code like E0308 in docs for examples.",
@@ -135,7 +140,8 @@
     "takeaway": "Read compiler errors from the span and expected type outward to find fixes.",
     "track": "rust",
     "trap": "Reading only the top line misses the span that pinpoints the real mistake.",
-    "output": "error[E0308]: mismatched types\n// expected u32, found &str"
+    "output": "error[E0308]: mismatched types\n// expected u32, found &str",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "Run `cargo fmt` before every commit to normalize whitespace and imports. Check in CI with `cargo fmt --check`. Never hand-format; let rustfmt own style so diffs stay clean.",
@@ -158,7 +164,8 @@
     "takeaway": "Run cargo fmt locally and enforce it in CI with the check flag.",
     "track": "rust",
     "trap": "Mixing hand formatting with rustfmt creates noisy diffs on every pull request.",
-    "output": "# formats in place; --check fails CI on drift; --all covers workspace"
+    "output": "# formats in place; --check fails CI on drift; --all covers workspace",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "Clippy catches logic bugs: `cargo clippy -- -D warnings` lints needless clones, wrong ranges, and perf traps. Fix lints as you go. Use `#[allow(...)]` rarely and only with a comment.",
@@ -181,7 +188,8 @@
     "takeaway": "Run Clippy often to catch logic and style bugs the compiler misses.",
     "track": "rust",
     "trap": "Silencing all Clippy lints globally hides real bugs like needless clones.",
-    "output": "# lints all targets; -D warnings denies every lint as an error"
+    "output": "# lints all targets; -D warnings denies every lint as an error",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "Every published crate gets API docs on **docs dot rs**. Search `crate_name` there, pick your version, and read signatures plus examples. Link docs in your manifest `documentation` field for discoverability.",
@@ -204,7 +212,8 @@
     "takeaway": "Look up unfamiliar crates on the hosted docs site before guessing APIs.",
     "track": "rust",
     "trap": "Reading docs for the wrong major version leads to missing-function confusion.",
-    "output": "// v stays [3, 1, 2]; clone sorted in place -> [1, 2, 3]"
+    "output": "// v stays [3, 1, 2]; clone sorted in place -> [1, 2, 3]",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "The **playground** runs Rust in your browser with no install. Paste a failing snippet, pick stable or nightly, click Run, then Share for a link. Perfect for asking questions and testing ideas.",
@@ -227,7 +236,8 @@
     "takeaway": "Prototype and share small Rust snippets using the browser playground.",
     "track": "rust",
     "trap": "Pasting secrets into a public playground share link leaks credentials.",
-    "output": "10"
+    "output": "10",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "**Editions** (2015, 2018, 2021) gate language changes without breaking old code. Set `edition = \"2021\"` in your manifest. New projects should use the latest edition for better imports and closures.",
@@ -250,7 +260,8 @@
     "takeaway": "Set the latest edition in new projects to get modern language behavior.",
     "track": "rust",
     "trap": "Staying on edition 2015 silently disables modern import and closure rules.",
-    "output": "# edition 2021 manifest for crate demo"
+    "output": "# edition 2021 manifest for crate demo",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "**Shadowing** with `let x = x ...` creates a new binding, unlike `mut`. It can even change type: `let s = \"42\"; let s = s.len();`. Useful for transforms, but shadowing in nested scopes can hide bugs.",
@@ -273,7 +284,8 @@
     "takeaway": "Use shadowing for stepwise transforms but avoid hiding bindings accidentally.",
     "track": "rust",
     "trap": "Shadowing a variable in a nested block then using the outer one surprises beginners.",
-    "output": "3"
+    "output": "3",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "`const MAX: u32 = 10;` is inlined at compile time and has no address. `static COUNT: AtomicU32` lives at a fixed memory address and can be `mut` (unsafe) or sync-safe. Prefer `const` for pure values.",
@@ -296,7 +308,8 @@
     "takeaway": "Prefer const for pure values and static only when a fixed address matters.",
     "track": "rust",
     "trap": "Using mutable statics for counters causes data races without synchronization.",
-    "output": "// MAX == 100, GREETING == \"hi\", f() == 101"
+    "output": "// MAX == 100, GREETING == \"hi\", f() == 101",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "Rust **infers** types from usage, so `let x = vec![];` fails until you push or annotate: `let x: Vec<i32> = vec![];`. Add annotations at boundaries and let inference handle locals. Turbofish `collect::<Vec<_>>()` also pins types.",
@@ -319,7 +332,8 @@
     "takeaway": "Annotate empty collections and boundaries and let inference handle the rest.",
     "track": "rust",
     "trap": "Over-annotating every local adds noise; annotate boundaries and empty collections only.",
-    "output": "// y == 0, z == [1, 2, 3, 4]"
+    "output": "// y == 0, z == [1, 2, 3, 4]",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "In debug builds, `u8` overflow **panics** (`255 + 1` aborts), but release wraps silently by default. Use `checked_add`, `wrapping_add`, or `saturating_add` to state intent. Never rely on release wrapping.",
@@ -342,7 +356,8 @@
     "takeaway": "Choose checked or saturating math explicitly instead of relying on overflow behavior.",
     "track": "rust",
     "trap": "Tests pass in release but panic in debug when overflow behavior differs.",
-    "output": "// b == None, c == 255"
+    "output": "// b == None, c == 255",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "`char` is a 4-byte Unicode scalar (`'a'`, `'🦀'`), not a byte. `bool` is `true` or `false` with `&&`, `||`, `!`. Compare chars directly and use `is_alphabetic()` helpers instead of manual ranges.",
@@ -365,7 +380,8 @@
     "takeaway": "Treat char as Unicode text and use its helper methods for classification.",
     "track": "rust",
     "trap": "Indexing strings by byte position splits multibyte chars and panics.",
-    "output": "// ok == false ('🦀' is not alphanumeric), both == false"
+    "output": "// ok == false ('🦀' is not alphanumeric), both == false",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "**Tuples** bundle fixed mixed types: `let t = (1, \"hi\", true);`. **Destructure** with `let (a, b, c) = t;` or ignore parts with `_`. Access by index `t.0` when unpacking everything is overkill.",
@@ -388,7 +404,8 @@
     "takeaway": "Destructure small tuples to name each part instead of indexing everywhere.",
     "track": "rust",
     "trap": "Deeply nested tuples hurt readability; switch to a struct with named fields.",
-    "output": "1 hi true"
+    "output": "1 hi true",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "**Arrays** `[T; N]` are fixed-size and stack-stored. **Slice** them with `&arr[1..3]` to borrow a view. Slicing checks bounds at runtime and panics if out of range — prefer `.get(i)` for safe access.",
@@ -411,7 +428,8 @@
     "takeaway": "Borrow array views with slices and use get for bounds-safe access.",
     "track": "rust",
     "trap": "Hard-coding slice endpoints from user input causes runtime panics.",
-    "output": "// mid == [2, 3], first == None"
+    "output": "// mid == [2, 3], first == None",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "Build strings with `format!` (`let s = format!(\"{x:.2}\")`), print with `println!`, and debug-print with `{:?}`. Named args `println!(\"{x}\")` beat positional `{}`. Precision like `{:.2}` rounds floats.",
@@ -434,7 +452,8 @@
     "takeaway": "Build text with format and print with println using named arguments.",
     "track": "rust",
     "trap": "Using plus-concat in a loop is quadratic; use format or push instead.",
-    "output": "pi=3.14"
+    "output": "pi=3.14",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "`//` comments explain why, `///` documents the next item for docs, and `//!` documents the whole module. Run `cargo doc --open` to preview. Good docs show an example that compiles as a test.",
@@ -457,7 +476,8 @@
     "takeaway": "Document public items with triple-slash comments that include runnable examples.",
     "track": "rust",
     "trap": "Writing what-comments instead of why-comments clutters code without adding insight.",
-    "output": "// cargo test: doctest passes — assert_eq!(add1(1), 2) holds"
+    "output": "// cargo test: doctest passes — assert_eq!(add1(1), 2) holds",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "For single-file scripts, use the `cargo-script` style frontmatter or `cargo run --bin` with a tiny manifest. Keep scripts dependency-light and pin versions. Graduate to a real project once it grows past one file.",
@@ -480,7 +500,8 @@
     "takeaway": "Keep tiny tools as single-file scripts and graduate to projects when they grow.",
     "track": "rust",
     "trap": "Growing a script to hundreds of lines without a manifest makes deps unreproducible.",
-    "output": "hi"
+    "output": "hi",
+    "topic_label": "crates & tooling"
   },
   {
     "body_md": "Compile for other platforms with `rustup target add` plus `cargo build --target aarch64-apple-darwin`. Targets bundle std for that OS and CPU. Use CI runners or Zig-linked toolchains for C compat.",
@@ -503,6 +524,7 @@
     "takeaway": "Add cross targets with rustup and build portable binaries from one machine.",
     "track": "rust",
     "trap": "Assuming cross builds handle C system libs leads to linker errors on other platforms.",
-    "output": "# lists targets; adds musl std; builds a Linux binary from macOS"
+    "output": "# lists targets; adds musl std; builds a Linux binary from macOS",
+    "topic_label": "crates & tooling"
   }
 ]

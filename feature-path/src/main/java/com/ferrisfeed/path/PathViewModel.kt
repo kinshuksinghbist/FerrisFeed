@@ -122,7 +122,12 @@ private fun TopicCount.toPathNode(track: String, mastery: Float): PathNode = Pat
     requires = prerequisitesOf(topic),
 )
 
-/** `rust_cases` -> `Rust Cases`, `ownership` -> `Ownership`. */
+/**
+ * Node title from the stored topic. Since TODO 21 the stored topic is a
+ * human label ("ownership", "data systems"); each word is title-cased for
+ * display ("Ownership", "Data Systems"), which also keeps legacy file-derived
+ * keys (`rust_cases`) readable. The stored value itself is untouched.
+ */
 private fun prettyTopic(topic: String): String = topic
     .split('_', '-')
     .filter { it.isNotBlank() }

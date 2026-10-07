@@ -20,7 +20,8 @@
     },
     "takeaway": "Design stateless handlers that scale horizontally.",
     "trap": "Storing session in server memory breaks scaling.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "REST uses resources plus verbs: GET reads, POST creates, PUT replaces, PATCH merges, DELETE removes. Return 201 with Location on create, 404 for missing, 409 for conflicts. Version via /v1.",
@@ -43,7 +44,8 @@
     },
     "takeaway": "Name resources as nouns, act with verbs.",
     "trap": "RPC-style /getPostById inside REST APIs.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "gRPC uses Protobuf over HTTP/2 with streaming. Define service in .proto, generate stubs, get typed clients in any language. Great for internal microservices needing speed and contracts.",
@@ -66,7 +68,8 @@
     },
     "takeaway": "Use gRPC for fast internal service calls.",
     "trap": "Exposing gRPC directly to browsers without gateway.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "GraphQL lets clients request exactly fields they need in one query. Server defines schema and resolvers. Solves over-fetching but needs query cost limits and persisted queries to avoid abuse.",
@@ -89,7 +92,8 @@
     },
     "takeaway": "Choose GraphQL for flexible client-driven reads.",
     "trap": "Unbounded nested queries enabling DoS.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "WebSocket upgrades HTTP to full-duplex frames. Handshake once, then both sides push. Ideal for chat and presence. Add heartbeats, resume tokens, and horizontal sticky or pub/sub fan-out.",
@@ -112,7 +116,8 @@
     },
     "takeaway": "Use WebSockets for low-latency bidirectional push.",
     "trap": "No heartbeat so dead peers linger.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "SQL gives ACID, joins, and schema; NoSQL gives flexible scale-out for keys, docs, or wide rows. Choose Postgres for relations and transactions, Dynamo-style KV for massive simple lookups.",
@@ -135,7 +140,8 @@
     },
     "takeaway": "Model queries first, then pick the store.",
     "trap": "Storing graphs in relational joins at depth 5.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "Redis is in-memory with strings, hashes, lists, sets, sorted sets, and streams. Use for cache, counters, leaderboards, and rate limits. Persist with AOF+RDB and cluster when memory exceeds one node.",
@@ -158,7 +164,8 @@
     },
     "takeaway": "Put hot, ephemeral, or ranked data in Redis.",
     "trap": "Treating cache as source of truth without TTL.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "Load balancers spread traffic: L4 by connection, L7 by URL/header. Algorithms include round-robin, least-conn, and consistent hash. Health-check backends and drain before deploy.",
@@ -180,7 +187,8 @@
     },
     "takeaway": "Balance plus health-check for resilient tiers.",
     "trap": "Sticky sessions hiding uneven load.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "CDNs cache static assets at edge PoPs near users. Origin sets Cache-Control, CDN serves hits in ms. Use versioned URLs for immutable assets and purge on deploy for HTML.",
@@ -203,7 +211,8 @@
     },
     "takeaway": "Cache immutable assets at the edge.",
     "trap": "Caching personalized HTML at edge leaks data.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "Latency vs throughput: latency is time per request, throughput is requests per second. CDN and caching cut latency; horizontal scale and batching raise throughput. Measure p95, not averages.",
@@ -225,7 +234,8 @@
     },
     "takeaway": "Track p95 latency and max throughput separately.",
     "trap": "Averaging hides tail-latency outages.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "Polling vs push: short-poll wastes requests, long-poll holds open, SSE streams one-way, WebSocket is bidirectional. Choose SSE for feeds, WebSocket for chat.",
@@ -248,7 +258,8 @@
     },
     "takeaway": "Match push primitive to directionality.",
     "trap": "Polling a feed every second from a million clients.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "API pagination: cursor-based with `after_id` scales, offset breaks on inserts. Return `next_cursor` and limit. Order by indexed (created_at, id) for stable pages.",
@@ -271,7 +282,8 @@
     },
     "takeaway": "Paginate by cursor on indexed columns.",
     "trap": "Deep OFFSET scans slowing page 1000.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "Caching levels: browser, CDN, LB, app, Redis, DB. Cache-aside reads Redis then DB on miss. Set TTLs, version keys, and invalidate on write. Stampede-protect with singleflight.",
@@ -294,7 +306,8 @@
     },
     "takeaway": "Read cache first, fill on miss with TTL.",
     "trap": "No TTL causing permanently stale reads.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "Status codes matter: 2xx success, 301/304 redirect/cache, 400 bad input, 401 unauth, 403 forbidden, 404 missing, 429 slow down, 5xx server fault. Retry only 429/5xx with backoff.",
@@ -317,7 +330,8 @@
     },
     "takeaway": "Signal precisely so retries behave correctly.",
     "trap": "Returning 200 with error JSON breaks tooling.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   },
   {
     "body_md": "Monolith vs microservices: start modular monolith, extract when teams or scale demand. Microservices add deploy freedom but need discovery, tracing, and versioned contracts.",
@@ -339,6 +353,7 @@
     },
     "takeaway": "Split by team or scaling pressure, not hype.",
     "trap": "Distributed monolith with all the costs, none of the gains.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "fundamentals"
   }
 ]

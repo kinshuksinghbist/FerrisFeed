@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Validate FerrisFeed reels under content/.
 
-Rules (TODO items 9 + content-schema.md):
+Rules (TODO items 9 + 21 + content-schema.md):
   - hook: exactly 1 line, 10..140 chars
   - body_md: <= 70 words, non-empty
   - code: <= 15 lines (when present)
   - takeaway: 1 sentence-ish (1-2 terminators, <= 30 words)
   - trap: present, non-empty
   - quiz: valid per type (mcq / tap_bug / fill_blank, legacy aliases accepted)
+  - topic_label: optional, <= 48 chars, no newlines (TODO 21)
 
 Walks content/**/*.json, excluding content/schema.json itself.
 Prints per-file errors and a summary. Exits 0 on success (or 0 files),
@@ -107,6 +108,17 @@ def validate_reel(data: object, path: Path) -> list[str]:
             errors.append("output: must be a string or null")
         elif len(output.splitlines()) > 15:
             errors.append(f"output: must be <= 15 lines, got {len(output.splitlines())}")
+
+    # --- topic_label: optional human label (TODO 21); fallback is the pack's
+    # file-derived key, so omission is valid and packs may label reels alike.
+    topic_label = data.get("topic_label", None)
+    if topic_label is not None:
+        if not isinstance(topic_label, str):
+            errors.append("topic_label: must be a string or omitted")
+        elif len(topic_label.strip()) > 48:
+            errors.append(f"topic_label: must be <= 48 chars, got {len(topic_label.strip())}")
+        elif "\n" in topic_label:
+            errors.append("topic_label: must be a single line (no newlines)")
 
     # --- takeaway: 1 sentence-ish ---
     takeaway = data.get("takeaway", "")

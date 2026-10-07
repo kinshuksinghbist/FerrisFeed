@@ -39,6 +39,11 @@
       "type": ["string", "null"],
       "description": "Expected result shown by the code-card flip: exact stdout for runnable programs, key result/error for fragments. Max 15 lines. Null when not backfilled (flip hidden)."
     },
+    "topic_label": {
+      "type": "string",
+      "maxLength": 48,
+      "description": "Human topic label for this reel, e.g. 'Ownership', 'Data systems'. Grouped on the Path roadmap; the file-derived pack key stays the fallback when omitted. Optional per reel; packs usually label every reel alike."
+    },
     "language": {
       "type": "string",
       "default": "rust",

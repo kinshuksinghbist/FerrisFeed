@@ -20,7 +20,8 @@
     },
     "takeaway": "Use random identifiers with caching and expiry for paste storage.",
     "trap": "Using sequential ids that leak volume and invite scraping.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements single-user todos with 5k writes daily. API CRUD /todos with validation in axum. Storage Postgres via sqlx with user index. Bottleneck N plus one lists, snippet pages by cursor.",
@@ -43,7 +44,8 @@
     },
     "takeaway": "Page todos by indexed cursor instead of loading full lists.",
     "trap": "Fetching all todos then filtering in application memory.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements 2k concurrent chatters with roster. API WebSocket /room/:id plus presence heartbeat. Storage Redis sets for members plus Postgres history. Bottleneck broadcast fan-out, snippet shards rooms.",
@@ -66,7 +68,8 @@
     },
     "takeaway": "Shard chat rooms and expire presence with steady heartbeats.",
     "trap": "Broadcasting every message to every connection globally.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements 50k background jobs daily with retries. API enqueue plus workers polling. Storage Postgres queue table with status index. Bottleneck double pickup, snippet uses SKIP LOCKED.",
@@ -89,7 +92,8 @@
     },
     "takeaway": "Claim queued jobs with row locks that skip locked rows.",
     "trap": "Polling without locks and running jobs twice.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements fan-out webhooks to 5k endpoints fast. API register hook plus event publish. Storage Postgres outbox plus Redis retry queue. Bottleneck slow receivers, snippet retries with backoff.",
@@ -112,7 +116,8 @@
     },
     "takeaway": "Isolate slow receivers with signed posts and bounded retries.",
     "trap": "Blocking publishers while one receiver times out.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements 20k uploads daily up to 100MB. API presigned PUT plus complete callback. Storage S3-compatible bucket with multipart. Bottleneck proxying bytes, snippet uploads direct.",
@@ -135,7 +140,8 @@
     },
     "takeaway": "Use presigned direct uploads and verify completion server side.",
     "trap": "Proxying huge files through axum memory.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements search 1M docs under 100ms. API GET /search?q with facets. Storage Tantivy index segments on disk. Bottleneck rebuild storms, snippet commits in batches.",
@@ -158,7 +164,8 @@
     },
     "takeaway": "Batch index commits and merge segments for steady search speed.",
     "trap": "Committing the index on every single document.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements per-route latency and saturation metrics. API scrape /metrics from sidecar. Storage Prometheus TSDB with labels. Bottleneck cardinality boom, snippet bounds labels.",
@@ -181,7 +188,8 @@
     },
     "takeaway": "Bound metric labels and use histograms for latency detail.",
     "trap": "Labeling metrics by user id and exploding series count.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements mobile plus web clients evolving fast. API REST for CRUD and GraphQL gateway for screens. Storage same Postgres via dataloaders. Bottleneck N plus one resolvers, snippet batches loads.",
@@ -204,7 +212,8 @@
     },
     "takeaway": "Serve screens with batched GraphQL and keep core CRUD restful.",
     "trap": "Exposing unbounded nested resolvers without batching.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements internal RPC at 20k calls per second. API protobuf service with tonic. Storage Postgres plus Redis cache. Bottleneck missing deadlines, snippet layers tower timeouts.",
@@ -227,7 +236,8 @@
     },
     "takeaway": "Wrap tonic handlers with timeouts and rate limits per method.",
     "trap": "Shipping RPCs without deadlines and overloading slow handlers.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements 100k events daily with ordering choice. API produce and consume via client. Storage Kafka log or NATS JetStream. Bottleneck replay needs, snippet picks by retention.",
@@ -250,7 +260,8 @@
     },
     "takeaway": "Pick Kafka for replay depth and NATS for light operations.",
     "trap": "Choosing by hype instead of retention and ordering needs.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements email login with sessions for 20k users. API POST /login and middleware guard. Storage Postgres users plus Redis sessions. Bottleneck timing leaks, snippet hashes with Argon2.",
@@ -273,7 +284,8 @@
     },
     "takeaway": "Hash with Argon2 and serve opaque rotating session tokens.",
     "trap": "Storing reversible passwords or endless tokens.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements list 2M rows smoothly on mobile. API GET /items?cursor with limit. Storage Postgres keyset on indexed column. Bottleneck offset drift, snippet pages by keyset.",
@@ -296,7 +308,8 @@
     },
     "takeaway": "Page by indexed sort keys to keep feeds stable and fast.",
     "trap": "Using deep offsets that slow down and duplicate rows.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements safe payment retries without double charge. API POST /pay with Idempotency-Key. Storage Postgres keyed request log. Bottleneck replay races, snippet locks per key.",
@@ -319,7 +332,8 @@
     },
     "takeaway": "Store keyed responses and replay them on conflicting retries.",
     "trap": "Retrying payments without server-side idempotency keys.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements threaded comments at 10k per post. API POST /comments and tree fetch. Storage Postgres with path index. Bottleneck recursive queries, snippet uses materialized path.",
@@ -342,7 +356,8 @@
     },
     "takeaway": "Store comment paths and fetch subtrees with paged range scans.",
     "trap": "Recursing per comment without depth or page limits.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements inbox for 100k notifications daily. API POST /notify and GET /inbox. Storage Postgres per-user table plus Redis unread. Bottleneck fan-out spikes, snippet batches writes.",
@@ -365,7 +380,8 @@
     },
     "takeaway": "Batch notification writes and cache unread counts per user.",
     "trap": "Inserting fan-out rows one by one on the hot path.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements short links at 1M monthly with clicks. API POST /links and GET /:code. Storage Postgres mapping plus Redis hot cache. Bottleneck code collisions, snippet retries unique.",
@@ -388,7 +404,8 @@
     },
     "takeaway": "Generate random codes with retry and cache hot redirects.",
     "trap": "Using predictable ids that expose growth and invite enumeration.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements audit trail for money moves. API internal record() call. Storage Postgres append-only partitioned table. Bottleneck update temptation, snippet forbids edits.",
@@ -411,7 +428,8 @@
     },
     "takeaway": "Keep audit tables append-only and partition them by time.",
     "trap": "Letting app roles update or delete audit rows.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements gateway cap 5k rps per tenant. API middleware check before handlers. Storage Redis counters with Lua. Bottleneck global contention, snippet shards by tenant.",
@@ -434,7 +452,8 @@
     },
     "takeaway": "Enforce per-tenant atomic limits with clear retry headers.",
     "trap": "Sharing one global bucket across all tenants.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements thumbnails for 30k images daily. API upload enqueue plus CDN serve. Storage object bucket plus Postgres meta. Bottleneck slow encodes, snippet queues with idempotent workers.",
@@ -457,7 +476,8 @@
     },
     "takeaway": "Encode variants asynchronously and serve them from the edge.",
     "trap": "Encoding images inline during user uploads.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   },
   {
     "body_md": "Requirements export 500k chat rows on demand. API POST /exports with download link. Storage Postgres cursor scan to object file. Bottleneck memory blowup, snippet streams pages.",
@@ -480,6 +500,7 @@
     },
     "takeaway": "Stream paged scans to object storage and share a link.",
     "trap": "Loading full history into memory before responding.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust cases"
   }
 ]

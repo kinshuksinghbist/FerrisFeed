@@ -145,6 +145,7 @@ data class PackReel(
     val track: String,
     val level: Int,
     val topic: String,
+    val topic_label: String = "",
     val hook: String,
     val bodyMd: String,
     val code: String? = null,
@@ -161,7 +162,9 @@ data class PackReel(
         id = id,
         track = track,
         level = level,
-        topic = topic,
+        // TODO 21: prefer the human label; the pack's topic key is the
+        // fallback (same rule the asset seeder applies).
+        topic = topic_label.trim().ifEmpty { topic },
         hook = hook,
         bodyMd = bodyMd,
         code = code,

@@ -20,7 +20,8 @@
     },
     "takeaway": "Hash, dedupe, cache hot redirects.",
     "trap": "Sequential IDs leaking growth rate.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "app cases"
   },
   {
     "body_md": "Twitter feed: requirements fan-out 300M users, timeline <200ms. API post, follow, timeline. Storage posts in Cassandra, graph in social DB. Bottleneck celebrity fan-out; snippet pushes async.",
@@ -43,7 +44,8 @@
     },
     "takeaway": "Push normal, pull celebrities, cache timelines.",
     "trap": "Pure pull scanning 1000 follows per read.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "app cases"
   },
   {
     "body_md": "Rate limiter: need 10k rps API protection, burst 50. API gateway check. Storage Redis buckets per key with Lua. Bottleneck central Redis; snippet uses token bucket Lua.",
@@ -66,7 +68,8 @@
     },
     "takeaway": "Centralize counters with atomic scripts.",
     "trap": "Per-node limits multiplying global allowance.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "app cases"
   },
   {
     "body_md": "Chat: need 1M concurrent WebSockets, <100ms delivery, presence. API WS connect, send, presence heartbeat. Storage messages in Cassandra, presence in Redis. Bottleneck conn fan-out; snippet uses pub/sub.",
@@ -89,7 +92,8 @@
     },
     "takeaway": "Shard connections, broadcast via pub/sub.",
     "trap": "No resume token losing messages on reconnect.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "app cases"
   },
   {
     "body_md": "S3 object store: need 11 nines, multipart uploads, presigned URLs. API PUT /object, GET range. Storage erasure-coded chunks plus metadata DB. Bottleneck metadata; snippet signs URL.",
@@ -112,7 +116,8 @@
     },
     "takeaway": "Sign URLs, store chunks with metadata index.",
     "trap": "Proxying gigabytes through app tier.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "app cases"
   },
   {
     "body_md": "Pastebin variant: requirements 10M pastes/month, TTL, burn-after-read. API POST paste, GET raw. Storage object store plus metadata Postgres. Bottleneck spam; snippet expires keys.",
@@ -135,7 +140,8 @@
     },
     "takeaway": "Expire by default, burn on demand.",
     "trap": "Predictable IDs enabling scraping.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "app cases"
   },
   {
     "body_md": "Search autocomplete: need 100ms prefix hints for 10M terms. API GET /suggest?q=. Storage trie in memory plus Kafka updates. Bottleneck rebuild; snippet queries sorted set.",
@@ -158,7 +164,8 @@
     },
     "takeaway": "Precompute ranked prefixes at write time.",
     "trap": "Hitting DB per keystroke.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "app cases"
   },
   {
     "body_md": "Notifications: requirements 50M pushes/day, dedupe, quiet hours. API enqueue event. Storage Kafka plus per-user queue. Bottleneck fan-out storms; snippet batches by user.",
@@ -181,7 +188,8 @@
     },
     "takeaway": "Batch and dedupe per user with backoff.",
     "trap": "Retry storm waking users at 3am.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "app cases"
   },
   {
     "body_md": "Ride-hailing match: need nearby drivers <500ms, surge. API request ride, update location. Storage geo index Redis GEOADD, trips in Postgres. Bottleneck geo query; snippet searches radius.",
@@ -204,7 +212,8 @@
     },
     "takeaway": "Geo-query then rank by ETA and surge.",
     "trap": "Stale locations dispatching ghost drivers.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "app cases"
   },
   {
     "body_md": "Video pipeline: requirements 4K upload, transcode, HLS. API upload, webhook done. Storage S3 raw plus CDN segments. Bottleneck transcode; snippet enqueues job.",
@@ -227,7 +236,8 @@
     },
     "takeaway": "Async transcode, segment, cache at edge.",
     "trap": "Serving 4K mp4 directly to phones.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "app cases"
   },
   {
     "body_md": "E-commerce checkout: requirements cart, pay once, inventory. API reserve, charge idempotent, confirm. Storage orders Postgres, stock Redis decrement. Bottleneck oversell; snippet uses saga.",
@@ -250,7 +260,8 @@
     },
     "takeaway": "Saga with reservation and idempotency.",
     "trap": "No fencing letting two checkouts win.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "app cases"
   },
   {
     "body_md": "Metrics pipeline: need 1M points/sec ingest, 7-day queries. API write batch, query range. Storage Kafka to ClickHouse downsampled. Bottleneck cardinality; snippet batches writes.",
@@ -273,6 +284,7 @@
     },
     "takeaway": "Batch, compress, downsample by age.",
     "trap": "Unbounded label cardinality exploding storage.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "app cases"
   }
 ]

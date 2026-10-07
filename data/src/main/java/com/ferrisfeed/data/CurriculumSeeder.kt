@@ -3,6 +3,8 @@ package com.ferrisfeed.data
 import android.content.Context
 import android.util.Log
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -52,43 +54,12 @@ class CurriculumSeeder(
                 .use { it.readText() }
             val rows = json.parseToJsonElement(raw).jsonArray
             val entities = rows.mapIndexedNotNull { index, element ->
-                runCatching { element.jsonObject.toEntity(track, topic, index) }
+                runCatching { element.jsonObject.toReelEntity(track, topic, index) }
                     .getOrNull()
             }
             if (entities.isNotEmpty()) dao.upsertAll(entities)
             entities.size
         }.getOrDefault(0)
-    }
-
-    private fun kotlinx.serialization.json.JsonObject.toEntity(
-        track: String,
-        topic: String,
-        orderIndex: Int,
-    ): ReelEntity {
-        fun text(vararg keys: String): String? =
-            keys.firstNotNullOfOrNull { key ->
-                runCatching { this[key]?.jsonPrimitive?.content }.getOrNull()
-            }
-        // Quiz is stored back as raw JSON so the UI parser and any future
-        // Rust grader share one format (see RoomReelDataSource.parseQuiz).
-        val quizElement = this["quiz"] ?: this["Quiz"]
-        return ReelEntity(
-            id = text("id") ?: error("reel without id"),
-            track = text("track") ?: track,
-            level = this["level"]?.jsonPrimitive?.intOrNull ?: 1,
-            topic = topic,
-            hook = text("hook").orEmpty(),
-            bodyMd = text("body_md", "bodyMd").orEmpty(),
-            code = text("code"),
-            output = text("output"),
-            language = text("language") ?: "rust",
-            takeaway = text("takeaway").orEmpty(),
-            trap = text("trap").orEmpty(),
-            // JsonObject.toString() is defined to emit valid JSON, which is
-            // all the UI parser needs (see RoomReelDataSource.parseQuiz).
-            quizJson = quizElement?.toString(),
-            orderIndex = orderIndex,
-        )
     }
 
     companion object {
@@ -110,4 +81,48 @@ class CurriculumSeeder(
                 .replace("-", "_")
                 .ifBlank { "general" }
     }
+}
+
+/**
+ * TODO 21: author-provided topic label wins; the file-derived key stays the
+ * fallback for older packs that omit `topic_label`. The topic column is the
+ * single grouping id: the path engine, feed filter, search filters, and
+ * mastery keys all read this exact string.
+ */
+internal fun JsonObject.toReelEntity(
+    track: String,
+    topic: String,
+    orderIndex: Int,
+): ReelEntity {
+    fun text(vararg keys: String): String? =
+        keys.firstNotNullOfOrNull { key ->
+            // JsonNull CONTENT is the literal "null" string, not a null value,
+            // so a JSON `"key": null` would otherwise be stored as "null".
+            val element = this[key]
+            if (element is JsonNull) null
+            else runCatching { element?.jsonPrimitive?.content }.getOrNull()
+        }
+    // Quiz is stored back as raw JSON so the UI parser and any future
+    // Rust grader share one format (see RoomReelDataSource.parseQuiz).
+    val quizElement = (this["quiz"] ?: this["Quiz"]).takeUnless { element -> element is JsonNull }
+    return ReelEntity(
+        id = text("id") ?: error("reel without id"),
+        track = text("track") ?: track,
+        level = this["level"]?.jsonPrimitive?.intOrNull ?: 1,
+        topic = text("topic_label")
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: topic,
+        hook = text("hook").orEmpty(),
+        bodyMd = text("body_md", "bodyMd").orEmpty(),
+        code = text("code"),
+        output = text("output"),
+        language = text("language") ?: "rust",
+        takeaway = text("takeaway").orEmpty(),
+        trap = text("trap").orEmpty(),
+        // JsonObject.toString() is defined to emit valid JSON, which is
+        // all the UI parser needs (see RoomReelDataSource.parseQuiz).
+        quizJson = quizElement?.toString(),
+        orderIndex = orderIndex,
+    )
 }

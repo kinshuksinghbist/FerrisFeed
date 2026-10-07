@@ -19,6 +19,7 @@
       "q": "After let s2 = s1 for a String, who owns it?"
     },
     "takeaway": "Moves transfer ownership so the source binding becomes unusable afterward.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Using the moved-from name again fails even though it looks alive."
   },
@@ -42,6 +43,7 @@
       "q": "Can &mut and & coexist while both live?"
     },
     "takeaway": "End mutable borrows before creating shared borrows of the same value.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Holding a mut borrow across a later shared use trips the checker."
   },
@@ -65,6 +67,7 @@
       "q": "What happens with a non-exhaustive match?"
     },
     "takeaway": "Write exhaustive matches with explicit arms for every possible case.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "A catch-all too early hides specific arms below it silently."
   },
@@ -88,6 +91,7 @@
       "q": "What does Option map do on None?"
     },
     "takeaway": "Transform optional values with map instead of manual matching everywhere.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Using map for side effects hides intent; use if-let instead."
   },
@@ -111,6 +115,7 @@
       "q": "How do map and and_then differ on Option?"
     },
     "takeaway": "Chain fallible Option steps with and_then to keep results flat.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Using map with a function returning Option nests two layers deep."
   },
@@ -134,6 +139,7 @@
       "q": "How do unwrap_or and unwrap_or_else differ?"
     },
     "takeaway": "Prefer unwrap_or_else for expensive defaults so work stays lazy.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Costly defaults inside unwrap_or run even when unneeded."
   },
@@ -157,6 +163,7 @@
       "q": "What do Result map and map_err transform?"
     },
     "takeaway": "Translate Result halves separately with map for values and map_err for errors.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Mapping the wrong half silently skips the transform you intended."
   },
@@ -180,6 +187,7 @@
       "q": "What does ? do on Err?"
     },
     "takeaway": "Propagate chained failures with question mark for early error return.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Using ? across mismatched error types fails without a From conversion."
   },
@@ -203,6 +211,7 @@
       "q": "How do v[i] and v.get(i) differ?"
     },
     "takeaway": "Access vectors with get when indices come from uncertain input.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Indexing with user input panics the whole program on bad values."
   },
@@ -226,6 +235,7 @@
       "q": "Why use the entry API?"
     },
     "takeaway": "Update maps with entry to combine lookup and insert in one step.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Contains-then-insert double lookups race and waste work under contention."
   },
@@ -249,6 +259,7 @@
       "q": "How do closures capture variables?"
     },
     "takeaway": "Inspect closure captures when ownership or thread bounds complain loudly.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Assuming closures copy values leads to borrow errors on later use."
   },
@@ -272,6 +283,7 @@
       "q": "Why does thread spawn need move closures?"
     },
     "takeaway": "Move owned data into spawned threads because borrows may outlive parents.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Forgetting move borrows locals that may vanish before the thread ends."
   },
@@ -295,6 +307,7 @@
       "q": "When does iterator map execute?"
     },
     "takeaway": "Terminate lazy iterator chains with a consumer so work actually runs.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Relying on side effects inside map means they vanish without a consumer."
   },
@@ -318,6 +331,7 @@
       "q": "How do you break Rc cycles?"
     },
     "takeaway": "Point back-edges with Weak so reference cycles can deallocate cleanly.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Linking both directions with Rc leaks the whole graph silently."
   },
@@ -341,6 +355,7 @@
       "q": "What data can cross into a spawned thread?"
     },
     "takeaway": "Give spawned threads owned static data and join handles for results.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Sharing stack borrows with detached threads risks use-after-return."
   },
@@ -364,6 +379,7 @@
       "q": "Why is block_on inside async dangerous?"
     },
     "takeaway": "Await inside async code and reserve blocking waits for sync boundaries.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Nesting blocking waits inside async tasks stalls the whole executor."
   },
@@ -387,6 +403,7 @@
       "q": "What does macro hygiene guarantee?"
     },
     "takeaway": "Trust macro hygiene for locals and qualify paths with crate anchors.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Assuming macro temps overwrite caller variables misreads expansion scope."
   },
@@ -410,6 +427,7 @@
       "q": "How do match guards interact with moves?"
     },
     "takeaway": "Match on references when guards inspect values you must keep afterward.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Matching by value with guards moves data you still need later."
   },
@@ -433,6 +451,7 @@
       "q": "Why does bare collect often fail inference?"
     },
     "takeaway": "Annotate collect targets with turbofish or bindings so inference can finish.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Leaving collect target ambiguous produces confusing inference errors."
   },
@@ -456,6 +475,7 @@
       "q": "Why is entry faster than contains plus insert?"
     },
     "takeaway": "Count with entry and in-place mutation to avoid redundant map lookups.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Cloning keys for a pre-check lookup doubles hashing cost per word."
   },
@@ -479,6 +499,7 @@
       "q": "How does a channel deadlock happen?"
     },
     "takeaway": "Order channel operations consistently to avoid cyclic blocking waits.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Blocking send and receive in mirrored order stalls both threads."
   },
@@ -502,6 +523,7 @@
       "q": "Can Rc move into a thread?"
     },
     "takeaway": "Swap reference-counted pointers to Arc before sharing across threads.",
+    "topic_label": "drills",
     "track": "rust",
     "trap": "Wrapping non-thread-safe types in Arc still fails the Send check."
   }

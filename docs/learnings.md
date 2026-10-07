@@ -348,3 +348,24 @@ everywhere instead:** pass the route argument explicitly
 setter return its rebuild `Job` so the caller can `join()` before doing
 order-dependent work (`setTopicFilter(topic)?.join()` then `focusReel(id)` —
 the new queue must exist before the focus lookup).
+
+## 23. `JsonNull.content` is the literal string "null" (TODO 21 session)
+
+kotlinx.serialization's `JsonNull` is a `JsonPrimitive`, so
+`element.jsonPrimitive.content` on a JSON `"key": null` returns the string
+`"null"` — the seeder would store the five-character word as a real value.
+The seeder's text reader now short-circuits `JsonNull` explicitly (and wraps
+`quiz` with `takeUnless { it is JsonNull }` before serializing), pinned by
+`CurriculumSeederLabelTest`. **Rule:** when reading optional primitive fields
+by hand, check `is JsonNull` before reading `content`.
+
+## 24. Content packs carry several JSON house styles — never re-format them
+
+The 22 seeded packs are pretty-printed OR single-line, ASCII-escaped OR
+unicode-literal, sorted OR authored key order, with or without trailing
+newline — and APK asset diffs must show only the new field.
+`scripts/backfill_topic_labels.py` therefore tries serializer variants
+(indent / separators / sort_keys / ensure_ascii) until the label-free re-dump
+is byte-identical to the original and refuses to write when none matches.
+**Rule:** any script that edits `content/` must prove the no-op round trip
+per file before writing.

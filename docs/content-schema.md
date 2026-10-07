@@ -11,6 +11,7 @@ renderers (`ReelCard`, `CodeCard`, `QuizCard`, `TrapCard`).
 |---|---|---|---|
 | `id` | string | yes | Kebab-case, unique. e.g. `rust-own-014`. |
 | `track` | string | yes | One of `rust`, `wasm`, `system-design`. |
+| `topic_label` | string | no | Human topic label, e.g. `ownership`, `data systems`. **≤ 48 chars**, single line, lowercase by convention (node titles title-case for display). Optional — reels in the same pack usually share one label; the pack's file-derived key is the fallback when omitted (TODO 21). |
 | `level` | int | yes | 1 (beginner) to 4 (advanced). |
 | `hook` | string | yes | **Exactly 1 line**, 10–140 chars. Curiosity gap, not a summary. |
 | `body_md` | string | yes | Markdown-lite explainer, **≤ 70 words**. Plain text + `code` spans only. |

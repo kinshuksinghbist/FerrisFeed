@@ -19,6 +19,7 @@
       "q": "Why do futures need Pin?"
     },
     "takeaway": "Pin async futures before polling so self-references stay valid across awaits.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Moving a self-referential future after polling invalidates internal pointers."
   },
@@ -42,6 +43,7 @@
       "q": "What is pin projection?"
     },
     "takeaway": "Project pins structurally instead of moving fields out of pinned structs.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Using get_mut to reach inside a pinned struct silently breaks the pin promise."
   },
@@ -65,6 +67,7 @@
       "q": "How does variance affect lifetimes?"
     },
     "takeaway": "Read invariance errors as interior mutability blocking safe lifetime shrinking.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Storing covariant refs inside invariant cells surprises lifetime shortening."
   },
@@ -88,6 +91,7 @@
       "q": "What does drop check enforce?"
     },
     "takeaway": "Design owning types so destructors never outlive the borrows they hold.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Adding a Drop impl to a borrowing type triggers unexpected drop-check errors."
   },
@@ -111,6 +115,7 @@
       "q": "What is the MaybeUninit contract?"
     },
     "takeaway": "Write every MaybeUninit slot fully before reading it as initialized.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Reading uninitialized slots even to debug-print triggers undefined behavior."
   },
@@ -134,6 +139,7 @@
       "q": "When is MaybeUninit zeroed sound?"
     },
     "takeaway": "Use zeroed only for types where all-zero bits form a legal value.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Zeroing a reference or bool-like enum creates invalid bit patterns silently."
   },
@@ -157,6 +163,7 @@
       "q": "Why use repr C?"
     },
     "takeaway": "Choose explicit representations for foreign interfaces and measure padding effects.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Reading packed fields by reference creates unaligned references and UB."
   },
@@ -180,6 +187,7 @@
       "q": "How do Release and Acquire pair?"
     },
     "takeaway": "Pair release stores with acquire loads and reserve SeqCst for global order.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Using Relaxed for flag handoff lets readers see stale data."
   },
@@ -203,6 +211,7 @@
       "q": "What is the lock-free retry pattern?"
     },
     "takeaway": "Build lock-free updates with compare-exchange loops plus backoff under contention.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Spinning without backoff on contended atomics burns CPU and slows everyone."
   },
@@ -226,6 +235,7 @@
       "q": "Why use intrusive collections?"
     },
     "takeaway": "Use intrusive lists for zero-allocation linking when unsafe costs are justified.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Moving a linked intrusive node invalidates neighbor pointers instantly."
   },
@@ -249,6 +259,7 @@
       "q": "What does GlobalAlloc do?"
     },
     "takeaway": "Swap global allocators through GlobalAlloc only after measuring real bottlenecks.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "A buggy custom allocator corrupts every allocation and defies debugging."
   },
@@ -272,6 +283,7 @@
       "q": "When does jemalloc help?"
     },
     "takeaway": "Trial jemalloc for threaded servers and tune decay only with benchmarks.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Enabling jemalloc without measuring can regress latency on small binaries."
   },
@@ -295,6 +307,7 @@
       "q": "Which loops autovectorize well?"
     },
     "takeaway": "Write simple contiguous loops so the compiler can emit SIMD instructions.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Hidden aliasing and branches silently block autovectorization."
   },
@@ -318,6 +331,7 @@
       "q": "Why use criterion over a timer?"
     },
     "takeaway": "Judge speedups with criterion statistics instead of single timing runs.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Benchmarking on a busy laptop produces bimodal noise mistaken for regressions."
   },
@@ -341,6 +355,7 @@
       "q": "How do you read a flamegraph?"
     },
     "takeaway": "Optimize the widest flamegraph plateau before touching narrow stacks.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Optimizing a tall narrow stack ignores the wide frame eating real cycles."
   },
@@ -364,6 +379,7 @@
       "q": "What does perf stat add beyond timing?"
     },
     "takeaway": "Check hardware counters with perf stat before rewriting hot code paths.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Tuning instructions while cache misses dominate wastes optimization effort."
   },
@@ -387,6 +403,7 @@
       "q": "What do LTO and single codegen units do?"
     },
     "takeaway": "Enable link-time optimization for release binaries while keeping dev builds fast.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Enabling full LTO in dev profiles makes every iteration painfully slow."
   },
@@ -410,6 +427,7 @@
       "q": "What is sccache for?"
     },
     "takeaway": "Share compilation artifacts with sccache to speed up team and CI builds.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Expecting cache hits across compiler upgrades ignores toolchain-keyed invalidation."
   },
@@ -433,6 +451,7 @@
       "q": "What do cargo audit and deny check?"
     },
     "takeaway": "Scan dependencies for advisories in CI and treat warnings as failures.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Ignoring advisory warnings for months ships known vulnerabilities to users."
   },
@@ -456,6 +475,7 @@
       "q": "What makes builds reproducible?"
     },
     "takeaway": "Pin toolchains and dependencies so release binaries rebuild bit-identically.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Embedding absolute paths and timestamps breaks hash equality across machines."
   },
@@ -479,6 +499,7 @@
       "q": "What is profile-guided optimization?"
     },
     "takeaway": "Apply profile-guided optimization to hot binaries using representative workloads.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Training PGO on toy inputs mis-optimizes the paths production actually hits."
   },
@@ -502,6 +523,7 @@
       "q": "What does heap profiling reveal?"
     },
     "takeaway": "Profile heap usage first and fix allocation hotspots with measured changes.",
+    "topic_label": "advanced misc",
     "track": "rust",
     "trap": "Hand-pooling objects before profiling adds complexity without proven gains."
   }

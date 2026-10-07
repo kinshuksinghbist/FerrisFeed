@@ -20,7 +20,8 @@
     },
     "takeaway": "Declare routes with typed extractors for safety.",
     "trap": "Cloning heavy state per request instead of Arc.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "Tower layers add timeout, retry, rate-limit, CORS, and tracing. Order matters: `Trace` outside, `Timeout` inside. Reuse same stack for tests to catch policy bugs early.",
@@ -43,7 +44,8 @@
     },
     "takeaway": "Compose reliability policies as layers.",
     "trap": "Wrong layer order timing out tracing spans.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "Pool with bb8 or deadpool: set max_size near `(cores*2)+spindles`, plus connection timeout. Checkout per request, never hold across await sleeps. Monitor wait time as saturation signal.",
@@ -66,7 +68,8 @@
     },
     "takeaway": "Bound pools and watch checkout latency.",
     "trap": "max_connections exceeding DB max_connections.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "sqlx gives compile-checked queries with `query!` and async Postgres. Run migrations at boot, use transactions for multi-write, and `QueryBuilder` for dynamic filters without string concat.",
@@ -89,7 +92,8 @@
     },
     "takeaway": "Get type-safe SQL with async performance.",
     "trap": "Offline builds without DATABASE_URL for query! macros.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "Cache-aside in Rust: check Redis via `redis::aio`, fall back to sqlx, then `SETEX`. Use versioned keys and spawn invalidation on write. Wrap with singleflight via `tokio::sync`.",
@@ -112,7 +116,8 @@
     },
     "takeaway": "Shield reads with expiring cache entries.",
     "trap": "Forgetting invalidation leaving stale profiles.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "Tracing with `tracing` plus OpenTelemetry exports spans to Jaeger. Instrument handlers, propagate `trace_id` in headers, and add `#[instrument]` on DB and Kafka calls.",
@@ -135,7 +140,8 @@
     },
     "takeaway": "Emit structured spans with propagated IDs.",
     "trap": "Logging PII inside spans.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "Graceful shutdown: catch SIGTERM, stop accepting, drain 30s, then close pools. In axum use `with_graceful_shutdown` and tokio cancellation tokens for background Kafka tasks.",
@@ -158,7 +164,8 @@
     },
     "takeaway": "Drain connections before exiting.",
     "trap": "Zero grace period dropping uploads mid-write.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "Config via `config` crate plus env: base.yaml, prod overrides, `APP__DB_URL` env. Validate at startup with serde; fail fast on missing secrets. Never bake creds into image.",
@@ -181,7 +188,8 @@
     },
     "takeaway": "Validate typed config at boot.",
     "trap": "Panicking on optional local-only settings.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "Multi-stage Dockerfile: rust:bookworm builds with cargo-chef caching, then copies binary to distroless. Runs as nonroot, exposes 8080, sets RUST_LOG. Result under 50MB.",
@@ -204,7 +212,8 @@
     },
     "takeaway": "Ship minimal images with cached builds.",
     "trap": "Running as root with debug symbols inside.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "Health endpoints: `/healthz` for liveness, `/readyz` checking DB+Redis+Kafka. Return 200 only when ready; Kubernetes removes unready pods. Keep checks fast and dependency-scoped.",
@@ -227,7 +236,8 @@
     },
     "takeaway": "Expose lightweight liveness and readiness probes.",
     "trap": "Readiness doing expensive full-table scan.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "Error handling: `thiserror` for libs, `anyhow` for bins, map to HTTP with `IntoResponse`. Return 400 for validation, 404 for missing, 503 for downstream. Log with trace id, no unwrap in handlers.",
@@ -250,7 +260,8 @@
     },
     "takeaway": "Model errors and map to correct codes.",
     "trap": "500 for user input errors triggering false alarms.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "Auth: validate JWT in middleware, inject `Claims` extractor, check scopes per route. Cache JWKS, enforce expiry plus audience, and rate-limit login. Never trust client roles blindly.",
@@ -273,7 +284,8 @@
     },
     "takeaway": "Authenticate once, authorize everywhere.",
     "trap": "Skipping audience check accepting foreign tokens.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "Testing: `cargo test` for pure logic, `axum-test` or `tower::ServiceExt::oneshot` for routes, testcontainers for Postgres/Redis. Seed fixtures, assert status plus JSON, run migrations in setup.",
@@ -296,7 +308,8 @@
     },
     "takeaway": "Test handlers through the tower stack.",
     "trap": "Shared DB state causing flaky parallel tests.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "Rate limit with tower-governor or Redis token bucket. Key by IP plus user, return 429 with Retry-After, exempt health checks. Test burst vs sustained separately.",
@@ -319,7 +332,8 @@
     },
     "takeaway": "Throttle upstream with clear backoff signals.",
     "trap": "Global limit blocking health probes.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   },
   {
     "body_md": "Deploy: GH Actions builds, runs sqlx migrate check, pushes image, rolls Kubernetes with HPA on p95. Canary 5% first, auto-rollback on error budget burn. Tag images by SHA.",
@@ -342,6 +356,7 @@
     },
     "takeaway": "Automate test, image, canary, and rollback.",
     "trap": "Running non-backward-compatible migration first.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "rust backend"
   }
 ]

@@ -19,7 +19,8 @@
     },
     "takeaway": "Use 2PC only for short atomic multi-shard writes.",
     "trap": "2PC across regions stalling on one slow node.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "distributed"
   },
   {
     "body_md": "Saga splits transactions into local steps with compensating actions. Choreography emits events; orchestration drives steps. On failure run compensations backwards. Design each step idempotent.",
@@ -42,7 +43,8 @@
     },
     "takeaway": "Make every step retryable and compensatable.",
     "trap": "Non-compensatable step like sent email.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "distributed"
   },
   {
     "body_md": "Raft elects a leader, replicates log entries, commits on majority. Terms prevent split-brain; heartbeats detect failure. Use etcd or TikV rather than hand-rolling consensus.",
@@ -64,7 +66,8 @@
     },
     "takeaway": "Rely on proven stores for leader election.",
     "trap": "Even node counts increasing tie risk.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "distributed"
   },
   {
     "body_md": "G-Counter CRDT increments on any replica and merges by max per node. Sum gives total without coordination. Ideal for likes and distributed counters with eventual convergence.",
@@ -87,7 +90,8 @@
     },
     "takeaway": "Use CRDTs for coordination-free merges.",
     "trap": "Trying decrement on G-Counter; use PN-Counter.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "distributed"
   },
   {
     "body_md": "Exactly-once is impossible alone; achieve effectively-once with idempotent consumers plus transactional offsets. Kafka transactions tie offset commit to output, deduped by key downstream.",
@@ -110,7 +114,8 @@
     },
     "takeaway": "Pair at-least-once transport with dedupe.",
     "trap": "Assuming producer acks alone guarantee once.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "distributed"
   },
   {
     "body_md": "Backpressure signals overload upstream: bounded queues, `try_send` with drop or shed, and `429 + Retry-After`. In Rust use tokio mpsc with capacity plus tower concurrency limits.",
@@ -133,7 +138,8 @@
     },
     "takeaway": "Bound, shed, and signal pressure upstream.",
     "trap": "Unbounded channels OOMing under spike.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "distributed"
   },
   {
     "body_md": "Fan-out: push writes to all followers (fast reads, hot celebrities) vs pull reads on demand (cheap writes). Hybrid: push for normal users, pull for celebrities with many followers.",
@@ -156,7 +162,8 @@
     },
     "takeaway": "Split fan-out strategy by follower count.",
     "trap": "Pure push melting on a viral post.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "distributed"
   },
   {
     "body_md": "Clock skew breaks ordering; use Hybrid Logical Clocks or Snowflake IDs (timestamp+node+seq). Sort by (ts, seq) and tolerate drift with bounded wait before serving reads.",
@@ -179,7 +186,8 @@
     },
     "takeaway": "Generate sortable unique IDs, not wall-clock reliance.",
     "trap": "NTP jump reordering recent posts.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "distributed"
   },
   {
     "body_md": "Lease vs lock: leases expire so crashes recover; locks need fencing tokens to avoid split-brain writes. Use short TTL leases in Redis/etcd for leader or job ownership.",
@@ -202,7 +210,8 @@
     },
     "takeaway": "Expire ownership and fence stale writers.",
     "trap": "Long lease delaying failover for minutes.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "distributed"
   },
   {
     "body_md": "Hot partitions kill scale: random prefix or split key spreads heat. Monitor partition throughput, add salt `hotkey#rand`, and pre-split ranges before launches.",
@@ -225,7 +234,8 @@
     },
     "takeaway": "Spread heat, aggregate on read.",
     "trap": "Salting without read aggregation breaks counts.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "distributed"
   },
   {
     "body_md": "Poison messages crash consumers in loops. Dead-letter after N retries with headers preserving error, alert on DLQ growth, and replay after fix with backoff. Never block partition forever.",
@@ -248,7 +258,8 @@
     },
     "takeaway": "Dead-letter and replay bad events safely.",
     "trap": "No alerting so DLQ grows unnoticed.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "distributed"
   },
   {
     "body_md": "Zero-downtime deploys: health gates, connection draining, rolling updates with two versions live. Migrations must be expand-contract: add column, dual-write, backfill, then contract.",
@@ -271,6 +282,7 @@
     },
     "takeaway": "Make every deploy compatible with previous version.",
     "trap": "Dropping column before readers upgrade.",
-    "track": "system-design"
+    "track": "system-design",
+    "topic_label": "distributed"
   }
 ]
