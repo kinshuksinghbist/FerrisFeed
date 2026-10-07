@@ -158,6 +158,7 @@ fun PathScreen(
     }
 
     val columns = remember(nodes) { layoutByDepth(nodes) }
+    val byId = remember(nodes) { nodes.associateBy { it.id } }
     val isSearchingOrFiltering = hasActiveBrowse(state.query, state.filters)
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -229,16 +230,7 @@ fun PathScreen(
                                     progress = continueNode.mastery,
                                     size = 72.dp,
                                     strokeWidth = 8.dp,
-                                    label = {
-                                        AnimatedCounter(
-                                            value = (continueNode.mastery * 100).toInt(),
-                                            style = MaterialTheme.typography.titleMedium.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                fontFamily = DisplayFont,
-                                            ),
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                        )
-                                    },
+                                    label = "${(continueNode.mastery * 100).toInt()}%",
                                 )
 
                                 Column(modifier = Modifier.weight(1f)) {
@@ -450,8 +442,6 @@ fun PathScreen(
                 }
 
                 // Vertical Journey Roadmap Timeline (Item 40c & 40d)
-                val byId = remember(nodes) { nodes.associateBy { it.id } }
-
                 columns.forEachIndexed { stageIndex, stageNodes ->
                     // Stage divider header (Item 40c)
                     item(key = "stage-header-$stageIndex") {
