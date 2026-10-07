@@ -70,14 +70,17 @@ class SearchRepository(private val dao: ReelDao) {
 data class SearchFilters(
     /** "rust" | "system-design" | null (all). WASM is dormant. */
     val track: String? = null,
+    // Levels run 1..4 per the content schema (4 = advanced). The default
+    // spans the whole range so unfiltered browse never hides advanced
+    // reels; PathViewModel.MIN/MAX_LEVEL mirror these bounds.
     val minLevel: Int = 1,
-    val maxLevel: Int = 3,
+    val maxLevel: Int = 4,
     val topic: String? = null,
     /** null = either, true = must have code, false = must not. */
     val hasCode: Boolean? = null,
     val hasQuiz: Boolean? = null,
 ) {
     fun isEmpty(): Boolean =
-        track == null && minLevel == 1 && maxLevel == 3 &&
+        track == null && minLevel == 1 && maxLevel == 4 &&
             topic == null && hasCode == null && hasQuiz == null
 }
