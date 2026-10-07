@@ -3,6 +3,7 @@ package com.ferrisfeed.feed
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.lifecycle.ViewModel
@@ -25,6 +26,7 @@ import kotlin.random.Random
 
 private val KEY_LAST_INDEX = intPreferencesKey("feed_last_index")
 private val KEY_LAST_ID = longPreferencesKey("feed_last_id_hash")
+private val KEY_SPEAK_DISMISSED = booleanPreferencesKey("speak_prompt_dismissed")
 
 data class FeedUiState(
     val reels: List<Reel> = emptyList(),
@@ -74,6 +76,10 @@ class FeedViewModel @Inject constructor(
     private val index = MutableStateFlow(0)
     private val loading = MutableStateFlow(true)
 
+    private val speakDismissedInternal = MutableStateFlow(false)
+    /** True once the user hides the speaker prompt; persisted and feed-wide. */
+    val speakDismissed: StateFlow<Boolean> = speakDismissedInternal
+
     /** Topic-only feed filter (Route.TopicFeed); null = the full mixed queue. */
     private val topicFilter = MutableStateFlow<String?>(null)
 
@@ -116,6 +122,7 @@ class FeedViewModel @Inject constructor(
             loading.value = true
             savedIds.value = repository.savedIds()
             likedIds.value = repository.likedIds()
+            speakDismissedInternal.value = dataStore.data.first()[KEY_SPEAK_DISMISSED] ?: false
             // First run: Room is still seeding from bundled JSON, so wait for
             // the first non-empty snapshot instead of reading once and
             // concluding the feed is empty. 30s cap, then show empty state.
@@ -331,6 +338,16 @@ class FeedViewModel @Inject constructor(
      */
     fun onRecognition(reelId: String, heard: Boolean) {
         interactedWithCurrent = true
+    }
+
+    /** Hides the speaker prompt everywhere and remembers it across launches. */
+    fun dismissSpeakPrompt() {
+        speakDismissedInternal.value = true
+        viewModelScope.launch {
+            dataStore.edit { prefs ->
+                prefs[KEY_SPEAK_DISMISSED] = true
+            }
+        }
     }
 
     fun restoreIndex(): StateFlow<Int> = index

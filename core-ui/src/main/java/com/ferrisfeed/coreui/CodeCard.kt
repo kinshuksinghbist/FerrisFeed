@@ -16,11 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.SwapVert
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -73,16 +72,20 @@ object CodeCardTokens {
 }
 
 /**
- * Code snippet card (Spec v2): header has language label + copy + flip, and
- * nothing else. No Run button, no font slider (fixed 12.5sp mono), no second
- * copy row.
+ * Code snippet well (user review 2026-10-07): the snippet lives INSIDE the
+ * info card, not as a separate card. [CodeBlock] is a self-contained dark
+ * well — header (language label + copy + flip) over highlighted code or
+ * output — with no outer Card and no elevation, so it sits inside
+ * [ReelCard] without a card-in-card look.
  *
- * The flip button appears only when [output] is non-null and swaps the body
- * between the highlighted code and the expected result, with a small icon
- * rotation for affordance. Copy always copies the code.
+ * Header has copy + flip and nothing else: no Run button, no font slider
+ * (fixed 12.5sp mono), no second copy row. The flip button appears only
+ * when [output] is non-null and swaps the body between the highlighted
+ * code and the expected result, with a small icon rotation for affordance.
+ * Copy always copies the code.
  */
 @Composable
-fun CodeCard(
+fun CodeBlock(
     code: String,
     language: String,
     output: String?,
@@ -93,8 +96,8 @@ fun CodeCard(
     // ClipEntry plumbing is host-version sensitive. The framework API here is
     // available on every supported API level with no deprecation warning.
     val context = LocalContext.current
-    var copied by remember { mutableStateOf(false) }
-    var flipped by remember { mutableStateOf(false) }
+    var copied by remember(code) { mutableStateOf(false) }
+    var flipped by remember(code) { mutableStateOf(false) }
     val flipRotation by animateFloatAsState(
         targetValue = if (flipped) 180f else 0f,
         animationSpec = tween(durationMillis = 300),
@@ -102,11 +105,10 @@ fun CodeCard(
     )
     val highlighted = remember(code, language) { highlightCode(code, language) }
 
-    Card(
+    Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = CodeCardTokens.Container),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        color = CodeCardTokens.Container,
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             // Header: language + copy + flip (flip only when output exists).
@@ -245,11 +247,11 @@ fun highlightCode(code: String, language: String): AnnotatedString {
     }
 }
 
-@Preview(name = "CodeCard dark", showBackground = true, backgroundColor = 0xFF0B0E14)
+@Preview(name = "CodeBlock dark", showBackground = true, backgroundColor = 0xFF0B0E14)
 @Composable
-private fun CodeCardPreview() {
+private fun CodeBlockPreview() {
     FerrisFeedTheme(darkTheme = true) {
-        CodeCard(
+        CodeBlock(
             code = "fn main() {\n    let mut s = String::from(\"hi\");\n    takes(&s); // borrow, no move\n    println!(\"{s}\");\n}\n",
             language = "rust",
             output = "hi\n",

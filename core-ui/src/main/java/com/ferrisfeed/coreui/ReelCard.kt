@@ -19,7 +19,8 @@ import androidx.compose.ui.unit.dp
  * Unified reel info card (Spec v2).
  *
  * Layout, top to bottom, nothing else: centered [DifficultyLabel] -> hook
- * (headline) -> body -> takeaway as a plain closing line. The container
+ * (headline) -> body -> takeaway as a plain closing line -> code well
+ * contained in the same card. The container
  * carries a low-alpha wash of the track color (orange Rust, sky-blue
  * System Design) instead of any pill or badge.
  *
@@ -36,6 +37,9 @@ import androidx.compose.ui.unit.dp
  * caller keeps it false until speech recognition completes, so the motion
  * rewards the capture instead of competing with it; text is always composed
  * immediately (capture never blocks readiness, `doherty-threshold`).
+ *
+ * Code (user review 2026-10-07): the snippet is contained in this card via
+ * [CodeBlock] — never a separate card — with copy + flip-to-output.
  */
 @Composable
 fun ReelCard(
@@ -44,6 +48,9 @@ fun ReelCard(
     hook: String,
     body: String,
     takeaway: String,
+    code: String? = null,
+    language: String = "rust",
+    output: String? = null,
     modifier: Modifier = Modifier,
     animateDifficulty: Boolean = true,
 ) {
@@ -80,6 +87,15 @@ fun ReelCard(
                     text = "\u2192 $takeaway",
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                     color = takeawayColor,
+                )
+            }
+
+            if (!code.isNullOrBlank()) {
+                Spacer(Modifier.height(12.dp))
+                CodeBlock(
+                    code = code,
+                    language = language,
+                    output = output,
                 )
             }
         }

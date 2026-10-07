@@ -1,5 +1,6 @@
 package com.ferrisfeed.feed
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -36,12 +38,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import com.ferrisfeed.coreui.CodeCard
 import com.ferrisfeed.coreui.FerrisFeedTheme
 import com.ferrisfeed.coreui.QuizCard
 import com.ferrisfeed.coreui.QuizUiModel
@@ -57,14 +59,16 @@ import androidx.compose.ui.tooling.preview.Preview
  * - Full-screen [VerticalPager], one reel per page. No inner vertical scroll
  *   anywhere: the pager owns all vertical motion, and a low snap threshold
  *   means even a small swipe commits to the next page.
- * - Each page is ONE unified card stack: speaker prompt ([SpeakCard]) ->
- *   info ([ReelCard]) -> code ([CodeCard] with flip-to-output) -> quiz
- *   inline ([QuizCard]). Quiz answers are the sole SRS signal via
- *   [FeedViewModel.onGrade]. The lesson text composes immediately; speech
- *   only gates the difficulty reward motion (`animateDifficulty`).
- * - Like/save live on an Instagram-style right rail (48dp targets);
- *   double-tap anywhere toggles save. No buttons, sheets, or hints inside
- *   the content column.
+ * - Two pages per reel: the lesson (speaker prompt ([SpeakCard]) on the
+ *   first reel only -> info ([ReelCard]) with the code well contained
+ *   inside it, flip-to-output included) and then the quiz on its own page
+ *   ([QuizCard] with the hook as the cue). Quiz answers are the sole SRS
+ *   signal via [FeedViewModel.onGrade]. The lesson text composes
+ *   immediately; speech only gates the difficulty reward motion
+ *   (`animateDifficulty`).
+ * - Like/save float on a translucent right rail over the content edge
+ *   (48dp targets); double-tap anywhere toggles save. No buttons, sheets,
+ *   or hints inside the content column.
  */
 @Composable
 fun FeedScreen(
@@ -74,6 +78,7 @@ fun FeedScreen(
     focusedReelId: String? = null,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val speakDismissed by viewModel.speakDismissed.collectAsState()
 
     if (state.isLoading && state.reels.isEmpty()) {
         Box(modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
@@ -92,21 +97,31 @@ fun FeedScreen(
         return
     }
 
+    // Two pages per reel: even = lesson (info + contained code), odd = quiz.
+    // The ViewModel still thinks in reels; this screen maps page <-> reel.
+    val pageCount = state.reels.size * 2
     val pagerState = rememberPagerState(
-        initialPage = state.currentIndex.coerceIn(0, maxOf(0, state.reels.size - 1)),
-        pageCount = { state.reels.size },
+        initialPage = (state.currentIndex * 2).coerceIn(0, maxOf(0, pageCount - 1)),
+        pageCount = { pageCount },
     )
 
-    // ViewModel <- pager position (skip first emission which is the restore).
+    // ViewModel <- pager position, deduped per reel so lesson -> quiz on the
+    // same reel reports once instead of logging a phantom skip on its lesson.
+    var lastReportedReel by remember { mutableStateOf(-1) }
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
-            viewModel.onPageChanged(page)
+            val reelIndex = page / 2
+            if (reelIndex != lastReportedReel) {
+                lastReportedReel = reelIndex
+                viewModel.onPageChanged(reelIndex)
+            }
         }
     }
     // Pager <- ViewModel restores (e.g. process recreation keeps DataStore index).
     LaunchedEffect(state.currentIndex) {
-        if (pagerState.currentPage != state.currentIndex) {
-            pagerState.scrollToPage(state.currentIndex)
+        val target = state.currentIndex * 2
+        if (pagerState.currentPage != target) {
+            pagerState.scrollToPage(target)
         }
     }
     // Deep-link / search entry point: jump once the queue is loaded.
@@ -124,34 +139,53 @@ fun FeedScreen(
             snapPositionalThreshold = 0.25f,
         ),
     ) { page ->
-        val reel = state.reels.getOrNull(page) ?: return@VerticalPager
+        val reel = state.reels.getOrNull(page / 2) ?: return@VerticalPager
         val isSaved = state.savedIds.contains(reel.id)
         val isLiked = state.likedIds.contains(reel.id)
-        ReelPage(
-            reel = reel,
-            isSaved = isSaved,
-            isLiked = isLiked,
-            onLike = { viewModel.onLike(reel.id, !isLiked) },
-            onSave = { viewModel.onSave(reel.id, !isSaved) },
-            onDoubleTapSave = { viewModel.onToggleSave(reel.id) },
-            onGrade = { correct, label -> viewModel.onGrade(reel.id, correct, label) },
-            onInteract = { viewModel.onInteract() },
-            onRecognition = { id, heard -> viewModel.onRecognition(id, heard) },
-        )
+        if (page % 2 == 0) {
+            InfoPage(
+                reel = reel,
+                isSaved = isSaved,
+                isLiked = isLiked,
+                onLike = { viewModel.onLike(reel.id, !isLiked) },
+                onSave = { viewModel.onSave(reel.id, !isSaved) },
+                onDoubleTapSave = { viewModel.onToggleSave(reel.id) },
+                onInteract = { viewModel.onInteract() },
+                onRecognition = { id, heard -> viewModel.onRecognition(id, heard) },
+                showSpeak = page == 0 && !speakDismissed,
+                onDismissSpeak = { viewModel.dismissSpeakPrompt() },
+            )
+        } else {
+            QuizPage(
+                reel = reel,
+                isSaved = isSaved,
+                isLiked = isLiked,
+                onLike = { viewModel.onLike(reel.id, !isLiked) },
+                onSave = { viewModel.onSave(reel.id, !isSaved) },
+                onDoubleTapSave = { viewModel.onToggleSave(reel.id) },
+                onGrade = { correct, label -> viewModel.onGrade(reel.id, correct, label) },
+                onInteract = { viewModel.onInteract() },
+            )
+        }
     }
 }
 
+/**
+ * Lesson page: speaker prompt (first reel only) + info card with the code
+ * well contained inside it. No quiz here — it lives on [QuizPage].
+ */
 @Composable
-private fun ReelPage(
+private fun InfoPage(
     reel: Reel,
     isSaved: Boolean,
     isLiked: Boolean,
     onLike: () -> Unit,
     onSave: () -> Unit,
     onDoubleTapSave: () -> Unit,
-    onGrade: (Boolean, String) -> Unit,
     onInteract: () -> Unit,
     onRecognition: (reelId: String, heard: Boolean) -> Unit = { _, _ -> },
+    showSpeak: Boolean = true,
+    onDismissSpeak: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var speakState: SpeakState by remember(reel.id) { mutableStateOf(SpeakState.Prompt) }
@@ -223,21 +257,26 @@ private fun ReelPage(
                 detectTapGestures(onDoubleTap = { onDoubleTapSave() })
             },
     ) {
-        // Content column: speak -> info -> code -> quiz. No scroll:
-        // everything must fit, the pager handles all motion.
+        // Content column: speak -> info with the code well contained.
+        // No scroll: everything must fit, the pager handles all motion.
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 12.dp, end = 68.dp, top = 20.dp, bottom = 20.dp),
+                .padding(start = 12.dp, end = 12.dp, top = 20.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (!speakHidden) {
+            // The prompt opens the feed once (first page) instead of nagging
+            // on every reel; hiding it persists across launches.
+            if (showSpeak && !speakHidden) {
                 SpeakCard(
                     state = speakState,
                     phrase = reel.hook,
                     onSpeak = { startSpeak() },
                     onRetry = { startSpeak() },
-                    onDismiss = { speakHidden = true },
+                    onDismiss = {
+                        speakHidden = true
+                        onDismissSpeak()
+                    },
                 )
             }
             ReelCard(
@@ -246,52 +285,127 @@ private fun ReelPage(
                 hook = reel.hook,
                 body = reel.bodyMd,
                 takeaway = reel.takeaway,
+                code = reel.code,
+                language = reel.language,
+                output = reel.output,
                 animateDifficulty = animateDifficulty,
             )
-            if (reel.code != null) {
-                CodeCard(
-                    code = reel.code,
-                    language = reel.language,
-                    output = reel.output,
-                )
-            }
+        }
+        ReelRail(
+            isSaved = isSaved,
+            isLiked = isLiked,
+            onLike = { onInteract(); onLike() },
+            onSave = { onInteract(); onSave() },
+            modifier = Modifier.align(Alignment.CenterEnd),
+        )
+    }
+}
+
+/**
+ * Quiz reel: the question gets its own page (user review 2026-10-07), with
+ * the hook as the retrieval cue. Same floating rail + double-tap-save as
+ * the lesson page so gestures never change meaning mid-reel.
+ */
+@Composable
+private fun QuizPage(
+    reel: Reel,
+    isSaved: Boolean,
+    isLiked: Boolean,
+    onLike: () -> Unit,
+    onSave: () -> Unit,
+    onDoubleTapSave: () -> Unit,
+    onGrade: (Boolean, String) -> Unit,
+    onInteract: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(reel.id) {
+                detectTapGestures(onDoubleTap = { onDoubleTapSave() })
+            },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 12.dp, end = 12.dp, top = 20.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Prove it",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = reel.hook,
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onBackground,
+            )
             QuizCard(
                 quiz = reel.toQuizUi(),
                 onResult = { correct, label -> onInteract(); onGrade(correct, label) },
             )
         }
-        // Right action rail, vertically centered like Reels/TikTok.
-        Column(
+        ReelRail(
+            isSaved = isSaved,
+            isLiked = isLiked,
+            onLike = { onInteract(); onLike() },
+            onSave = { onInteract(); onSave() },
+            modifier = Modifier.align(Alignment.CenterEnd),
+        )
+    }
+}
+
+/**
+ * Shared floating rail: overlays the content edge like Reels/TikTok instead
+ * of reserving its own column, with a translucent scrim so the glyphs read
+ * over any card tint. 48dp targets, 28dp glyphs.
+ */
+@Composable
+private fun ReelRail(
+    isSaved: Boolean,
+    isLiked: Boolean,
+    onLike: () -> Unit,
+    onSave: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(end = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        IconButton(
+            onClick = onLike,
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .size(48.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+                    shape = CircleShape,
+                ),
         ) {
-            IconButton(
-                onClick = { onInteract(); onLike() },
-                modifier = Modifier.size(48.dp),
-            ) {
-                Icon(
-                    imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = if (isLiked) "Unlike" else "Like",
-                    tint = if (isLiked) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-            IconButton(
-                onClick = { onInteract(); onSave() },
-                modifier = Modifier.size(48.dp),
-            ) {
-                Icon(
-                    imageVector = if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                    contentDescription = if (isSaved) "Unsave" else "Save",
-                    tint = if (isSaved) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(28.dp),
-                )
-            }
+            Icon(
+                imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                contentDescription = if (isLiked) "Unlike" else "Like",
+                tint = if (isLiked) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        IconButton(
+            onClick = onSave,
+            modifier = Modifier
+                .size(48.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+                    shape = CircleShape,
+                ),
+        ) {
+            Icon(
+                imageVector = if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                contentDescription = if (isSaved) "Unsave" else "Save",
+                tint = if (isSaved) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.size(28.dp),
+            )
         }
     }
 }

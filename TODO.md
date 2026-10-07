@@ -282,8 +282,28 @@ Store copy already promises a placement test (`docs/play-listing.md`).
       static proofs below. Execute on hardware before store submit and
       paste the seed count + screenshots into the 27d captions.
 
-## Limitations / next session
+### 29. Post-close-out revision (user review 2026-10-07)
 
+The shipped card tested badly with the user: the speaker prompt nagged on
+every reel, the rail reserved a full column, and lesson + code + quiz in
+one card read cramped. Reversal of the 24c inline-quiz rule, recorded
+here so the flip-flop is deliberate, not drift.
+
+- [x] 29a. Quiz is its own reel: pager shows two pages per reel (even =
+      lesson, odd = quiz with the hook as cue). ViewModel still thinks in
+      reels; `FeedScreen` maps page <-> reel and dedupes `onPageChanged`
+      per reel so lesson → quiz logs no phantom skip. `focusReel`/restore
+      land on the lesson page.
+- [x] 29b. Code is contained in the info card: `CodeCard` became the
+      elevation-free `CodeBlock` well rendered inside `ReelCard` (no
+      card-in-card); flip still hidden when `output` is null.
+- [x] 29c. Rail floats over the content edge (translucent circular scrims,
+      shared `ReelRail` on both pages); speaker prompt shows on the first
+      reel only and hiding persists in DataStore.
+- [x] 29d. `docs/feed-ux.md` + `docs/play-listing.md` rewritten to the
+      two-page structure; full CI + green required again.
+
+## Limitations / next session
 - **Runtime smoke was not executed**: there is no JDK, Android SDK, or emulator in this
   workspace, so "first-launch seed" and "topic feed" are verified statically (asset listing +
   seeder input matching + compile), not by launching the APK. Run the app once on a device to

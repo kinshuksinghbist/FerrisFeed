@@ -5,24 +5,30 @@ are the `core-ui` cards. This doc is the interaction contract QA tests against.
 It replaces the v1 doomscroll spec: **one reel is ONE card**, the quiz is inline,
 and quiz answers are the only grading signal.
 
-## Layout — one reel, one vertically-swipeable screen
+## Layout — one reel, two pages (user review 2026-10-07)
 
-A full-screen `VerticalPager` shows exactly one reel per page. The page is a
-single `Column`, top to bottom, **with no inner vertical scroll**:
+A full-screen `VerticalPager` shows one reel per TWO pages (lesson, then
+quiz). Each page is a single `Column`, top to bottom, **with no inner
+vertical scroll**:
 
-1. **Unified info card** (`ReelCard`) — centered animated difficulty label →
-   hook (headline) → body → takeaway as the closing line (track-colored, no
-   boxed callout). The card's container is washed with the track color
-   (orange Rust, sky-blue System Design) instead of carrying a pill/badge.
-2. **Code card** (`CodeCard`) when the reel has code — header is language label
-   + copy icon + flip icon (flip appears only when `output` is non-null).
-   Fixed 12.5sp mono; horizontal scroll for long lines is allowed, vertical is
-   not.
-3. **Quiz inline** (`QuizCard`) — MCQ / tap-the-bug / fill-blank. Answering is
-   the sole SRS/XP/streak signal (`FeedViewModel.onGrade`).
+1. **Lesson page** (`InfoPage`) — speaker prompt (`SpeakCard`, first reel
+   only, hiding persists) → unified info card (`ReelCard`): centered
+   animated difficulty label → hook (headline) → body → takeaway as the
+   closing line (track-colored, no boxed callout) → code well contained in
+   the same card when the reel has code (language + copy + flip-to-output;
+   flip hidden when `output` is null). The card's container is washed with
+   the track color (orange Rust, sky-blue System Design) instead of
+   carrying a pill/badge. Fixed 12.5sp mono; horizontal scroll for long
+   lines is allowed, vertical is not.
+2. **Quiz page** (`QuizPage`) — "Prove it" + the hook as the retrieval cue
+   + `QuizCard` (MCQ / tap-the-bug / fill-blank). Answering is the sole
+   SRS/XP/streak signal (`FeedViewModel.onGrade`).
 
-Like/save live on a right-edge action rail, vertically centered, 48dp targets.
-There are no action rows inside the card, no bottom sheet, no peek overlay.
+Like/save float on a shared translucent right-edge rail over the content
+edge (48dp circular scrims, vertically centered, identical on both pages
+so gestures never change meaning mid-reel). Double-tap anywhere toggles
+save. There are no action rows inside the cards, no bottom sheet, no peek
+overlay.
 
 ## Difficulty label
 
@@ -67,7 +73,7 @@ phrase is the hook itself, so no schema work (house rule 22d).
 
 | Gesture | Location | Effect |
 |---|---|---|
-| Vertical swipe | anywhere | Next / previous reel. Low positional threshold (`snapPositionalThreshold = 0.25`) so even a small swipe commits. |
+| Vertical swipe | anywhere | Next / previous page: lesson → quiz → next lesson. Low positional threshold (`snapPositionalThreshold = 0.25`) so even a small swipe commits. |
 | Double-tap | reel page | Toggle **Save** (bookmark). Invisible — no hints, no chrome. |
 | Tap heart | right rail | Toggle **Like**. |
 | Tap bookmark | right rail | Toggle **Save**. |
