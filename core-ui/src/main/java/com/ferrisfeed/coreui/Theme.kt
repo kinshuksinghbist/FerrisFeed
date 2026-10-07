@@ -12,6 +12,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Brush
@@ -200,6 +201,9 @@ val LocalTrackColors = staticCompositionLocalOf {
         systemDesign = FerrisColors.SkyBlueSysDesign,
     )
 }
+
+/** Bottom bar inset provided by the app shell for floating navigation bar padding (P6 32c). */
+val LocalBottomBarInset = compositionLocalOf { 0.dp }
 
 /**
  * Track wash tokens (TODO 23, shaped by `design-token`).

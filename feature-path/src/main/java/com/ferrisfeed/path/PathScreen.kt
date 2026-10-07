@@ -33,6 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ferrisfeed.coreui.FerrisColors
 import com.ferrisfeed.coreui.FerrisFeedTheme
+import com.ferrisfeed.coreui.LocalBottomBarInset
 import com.ferrisfeed.coreui.ProgressRing
 import com.ferrisfeed.coreui.Tracks
 import com.ferrisfeed.coreui.trackColor
@@ -76,7 +77,7 @@ fun PathScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, top = 56.dp, end = 16.dp, bottom = LocalBottomBarInset.current + 16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         item(key = "header") {

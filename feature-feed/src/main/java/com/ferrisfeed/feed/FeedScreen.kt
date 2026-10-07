@@ -45,6 +45,7 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.ferrisfeed.coreui.FerrisFeedTheme
+import com.ferrisfeed.coreui.LocalBottomBarInset
 import com.ferrisfeed.coreui.QuizCard
 import com.ferrisfeed.coreui.QuizUiModel
 import com.ferrisfeed.coreui.ReelCard
@@ -262,7 +263,7 @@ private fun InfoPage(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 12.dp, end = 12.dp, top = 20.dp, bottom = 20.dp),
+                .padding(start = 12.dp, end = 12.dp, top = 56.dp, bottom = LocalBottomBarInset.current + 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // The prompt opens the feed once (first page) instead of nagging
@@ -327,7 +328,7 @@ private fun QuizPage(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 12.dp, end = 12.dp, top = 20.dp, bottom = 20.dp),
+                .padding(start = 12.dp, end = 12.dp, top = 56.dp, bottom = LocalBottomBarInset.current + 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
@@ -438,7 +439,7 @@ private fun EmptyFeed(onRetry: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(start = 24.dp, top = 56.dp, end = 24.dp, bottom = LocalBottomBarInset.current + 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

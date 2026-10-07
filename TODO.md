@@ -478,7 +478,7 @@ New file `core-ui/src/main/java/com/ferrisfeed/coreui/Motion.kt`:
 
 Files: `app/.../MainActivity.kt` (+ new `AppShell.kt` in `:app`).
 
-- [ ] 32a. **Replace the stock `NavigationBar`** with a custom floating pill
+- [x] 32a. **Replace the stock `NavigationBar`** with a custom floating pill
       `FerrisNavBar`: width `wrapContent` min 220dp, height 64dp, shape
       `CircleShape`, `.glass(CircleShape)`, soft shadow
       `Modifier.shadow(16.dp, CircleShape, ambientColor/spotColor = Color.Black.copy(0.35f))`,
@@ -494,19 +494,25 @@ Files: `app/.../MainActivity.kt` (+ new `AppShell.kt` in `:app`).
       Icon swap outlined→filled with a 1.0→1.15→1.0 scale pop
       (`FerrisMotion.Bouncy`) on selection and a `HapticFeedbackType.TextHandleMove`
       tick. Add `contentDescription` + `Role.Tab` + `selected` semantics.
-- [ ] 32b. **Hide the nav bar while a topic feed is open** (`Route.TopicFeed`
+      DONE: `FerrisNavBar` in `app/.../AppShell.kt` with sliding indicator,
+      `Role.Tab`, bouncy icon scale pop, haptic tick, and previews.
+- [x] 32b. **Hide the nav bar while a topic feed is open** (`Route.TopicFeed`
       / `Route.ReelDetail`): `AnimatedVisibility(slideInVertically{it}+fadeIn,
       slideOutVertically{it}+fadeOut)` and show a back chip instead (item 33d),
       so the back stack is reachable (today back only works via system back).
       The bar stays visible everywhere else (including the quiz page);
-      only those two routes hide it.
-- [ ] 32c. **Content padding contract**: because the bar floats, pages must
+      only those two routes hide it. DONE: `AnimatedVisibility` with
+      `QuickOffset` slides nav bar off-screen on detail routes, and `BackChipBar`
+      appears at the top.
+- [x] 32c. **Content padding contract**: because the bar floats, pages must
       reserve `bottomInset = 64dp + 12dp + navigationBars` at the bottom so
       nothing is hidden behind it. Expose it via
       `val LocalBottomBarInset = compositionLocalOf { 0.dp }` provided by the
       shell; FeedScreen, QuizPage, PathScreen (LazyColumn `contentPadding`
       bottom) and EmptyFeed read it. Top: `statusBars` inset + 8dp.
-- [ ] 32d. **Persistent top stat bar** `StatBar` overlaying the top of Feed and
+      DONE: `LocalBottomBarInset` provided in `MainActivity.kt` and consumed
+      in `PathScreen`, `FeedScreen` (`InfoPage`, `QuizPage`, `EmptyFeed`).
+- [x] 32d. **Persistent top stat bar** `StatBar` overlaying the top of Feed and
       Path (not of TopicFeed): left = `StreakFlame` (item 38), right = XP
       chip (`GoldXp` bolt icon + `AnimatedCounter`), center empty on Feed,
       title on Path. Height 44dp, horizontal padding 16dp, `.glass` capsule
@@ -516,7 +522,9 @@ Files: `app/.../MainActivity.kt` (+ new `AppShell.kt` in `:app`).
       exposing `StateFlow<Stats(xp,streak)>` (initial 0,0). When XP
       increases, the chip pops (scale 1→1.18→1 `Bouncy`) and a floating
       "+15" (or "+5") text rises 24dp and fades over 700ms (item 36d).
-- [ ] 32e. **Navigation transitions**: configure `NavDisplay` `transitionSpec`
+      DONE: `StatsViewModel` created in `:app`, `StatBar` with streak flame,
+      XP chip, scale pop, and rising "+XP" toast in `AppShell.kt`.
+- [x] 32e. **Navigation transitions**: configure `NavDisplay` `transitionSpec`
       /`popTransitionSpec`/`predictivePopTransitionSpec` (these parameters
       exist in `navigation3-ui` alpha08 — grep the artifact's API before
       writing; if a parameter name differs, use what compiles and note it in
@@ -524,15 +532,20 @@ Files: `app/.../MainActivity.kt` (+ new `AppShell.kt` in `:app`).
       (0.96→1). Push into topic feed: slide in from right 30% + fade,
       350 ms `FastOutSlowIn`; pop reverses. **Do not** use `backStack.clear()`
       hack for tabs if it breaks the transition — keep behavior identical.
-- [ ] 32f. Edge-to-edge polish: status/nav bar icon colors follow theme
+      DONE: wired `transitionSpec` and `popTransitionSpec` on `NavDisplay`
+      in `MainActivity.kt`; tab changes preserve root entry without clearing.
+- [x] 32f. Edge-to-edge polish: status/nav bar icon colors follow theme
       (`enableEdgeToEdge(statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT), navigationBarStyle = same)`
       in `MainActivity`); window background in `themes.xml` set to `#0B0E14`
       (night) / `#FFFBF2` (day) so there is no white flash on cold start.
-- [ ] 32g. **Splash**: use the platform splash screen theme attributes in
+      DONE: `SystemBarStyle.auto` configured in `MainActivity.onCreate`;
+      `ferris_splash_bg` configured for night `#0B0E14` and day `#FFFBF2`.
+- [x] 32g. **Splash**: use the platform splash screen theme attributes in
       `themes.xml` (`android:windowSplashScreenBackground` = `#0B0E14`,
       `android:windowSplashScreenAnimatedIcon` = the existing
       `ic_launcher_foreground`) under `values-v31`; no new dependency
       (do NOT add `androidx.core:core-splashscreen`).
+      DONE: `values-v31/themes.xml` added with windowSplashScreen attributes.
 
 ### 33. Feed screen: pacing, progress, chrome, loading and empty states
 
