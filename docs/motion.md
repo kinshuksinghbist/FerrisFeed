@@ -4,17 +4,20 @@ Motion budget: every animation must hold 120Hz on a Pixel 6 with the
 baseline profile installed. If it drops frames in Macrobenchmark, it ships
 off by default behind a "Reduce motion" respect flag.
 
-## 1. Shared-element feed -> deep-dive sheet
+## 1. Motion vocabulary (`FerrisMotion`)
 
-- Feed pager item -> bottom-sheet deep dive uses Compose shared-element
-  (`sharedElement {}` + `animateBounds`) on the hook text + track pill.
-- The sheet expands from the tapped card's bounds (not a generic
-  slide-up), so the eye never loses context. Duration 300ms,
-  `spring(stiffness = 400f, dampingRatio = 0.9f)` — snappy, one gentle
-  overshoot, no bounce loop.
-- Predictive back: sheet participates in `PredictiveBackHandler`; swiping
-  back previews the feed pager underneath at 0.7 scale + dim, and cancel
-  returns to the sheet without losing scroll or quiz state.
+Defined centrally in `Motion.kt` (P6 31a). Never inline ad-hoc `tween(...)` numbers in screens.
+
+| Token | Spec | Primary Use |
+|---|---|---|
+| `Snappy` | `spring(dampingRatio = 0.8f, stiffness = 500f)` | Press feedback (`pressScale`), toggles, active indicators |
+| `Bouncy` | `spring(dampingRatio = 0.55f, stiffness = 380f)` | Celebrations, like/save pop, XP badge, icon bursts |
+| `Smooth` | `tween(durationMillis = 350, easing = FastOutSlowInEasing)` | Content reveals, card settlement, page transitions |
+| `Quick` | `tween(durationMillis = 150, easing = LinearOutSlowInEasing)` | Micro-interactions, counter digit slides, color transitions |
+| `StaggerMs` | `45ms` | Per-item entrance delay for staggered lists (`staggeredEntrance`) |
+
+All looping and decorative animations respect `LocalReduceMotion` (bound to system `ANIMATOR_DURATION_SCALE == 0f`). Functional transitions fall back to 100ms quick fades.
+
 
 ## 2. Confetti on mastery
 

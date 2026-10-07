@@ -12,6 +12,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -274,6 +275,15 @@ fun FerrisFeedTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
+    val reduceMotion = remember(context) {
+        runCatching {
+            android.provider.Settings.Global.getFloat(
+                context.contentResolver,
+                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f,
+            ) == 0f
+        }.getOrDefault(false)
+    }
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -281,7 +291,10 @@ fun FerrisFeedTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
-    CompositionLocalProvider(LocalTrackColors provides LocalTrackColors.current) {
+    CompositionLocalProvider(
+        LocalTrackColors provides LocalTrackColors.current,
+        LocalReduceMotion provides reduceMotion,
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = FerrisTypography,

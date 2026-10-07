@@ -431,7 +431,7 @@ here so the flip-flop is deliberate, not drift.
 
 New file `core-ui/src/main/java/com/ferrisfeed/coreui/Motion.kt`:
 
-- [ ] 31a. `object FerrisMotion` with exactly these specs:
+- [x] 31a. `object FerrisMotion` with exactly these specs:
       - `val Snappy = spring<Float>(dampingRatio = 0.8f, stiffness = 500f)`
         (press, toggles)
       - `val Bouncy = spring<Float>(dampingRatio = 0.55f, stiffness = 380f)`
@@ -440,30 +440,30 @@ New file `core-ui/src/main/java/com/ferrisfeed/coreui/Motion.kt`:
         (content reveals)
       - `val Quick = tween<Float>(durationMillis = 150, easing = LinearOutSlowInEasing)`
       - `const val StaggerMs = 45` (per-item delay in staggered lists)
-- [ ] 31b. `val LocalReduceMotion = staticCompositionLocalOf { false }`; in
+- [x] 31b. `val LocalReduceMotion = staticCompositionLocalOf { false }`; in
       `FerrisFeedTheme` provide it from
       `Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f`.
       Add `@Composable fun rememberInfinite…` guards by simply not starting an
       `InfiniteTransition` when it is true (render the static end-state).
-- [ ] 31c. `fun Modifier.pressScale(interactionSource: MutableInteractionSource, pressed: Float = 0.94f): Modifier`
+- [x] 31c. `fun Modifier.pressScale(interactionSource: MutableInteractionSource, pressed: Float = 0.94f): Modifier`
       — animates `scaleX/scaleY` with `FerrisMotion.Snappy` inside
       `graphicsLayer`, driven by `interactionSource.collectIsPressedAsState()`.
       Apply to every custom clickable (rail buttons, quiz options, path
       nodes, chips, nav items, buttons).
-- [ ] 31d. `fun Modifier.glass(shape: Shape): Modifier` = `background(glassColor(), shape)` +
+- [x] 31d. `fun Modifier.glass(shape: Shape): Modifier` = `background(glassColor(), shape)` +
       `border(0.5.dp, glassStroke(), shape)`. (No blur — fake glass with
       alpha + hairline only.)
-- [ ] 31e. `fun Modifier.staggeredEntrance(index: Int): Modifier` — on first
+- [x] 31e. `fun Modifier.staggeredEntrance(index: Int): Modifier` — on first
       composition fades `alpha 0→1` and `translationY 24dp→0` using
       `FerrisMotion.Smooth` after a delay of `index.coerceAtMost(8) *
       StaggerMs` ms; plays once per composition (use `rememberSaveable`
       flag so scrolling back does not replay). Skips (shows immediately)
       when `LocalReduceMotion`.
-- [ ] 31f. `@Composable fun AnimatedCounter(value: Int, style: TextStyle, color: Color)` — per-digit
+- [x] 31f. `@Composable fun AnimatedCounter(value: Int, style: TextStyle, color: Color)` — per-digit
       vertical slide (`AnimatedContent` keyed per character, slide up when
       increasing, down when decreasing, `Quick`). Used for XP, streak,
       percent.
-- [ ] 31g. `@Composable fun ConfettiBurst(trigger: Int, modifier: Modifier)` implementing the existing
+- [x] 31g. `@Composable fun ConfettiBurst(trigger: Int, modifier: Modifier)` implementing the existing
       spec in `docs/motion.md` §2: Canvas particle burst, 60 particles
       (not 120 — low-end phones), 900 ms, colors orange `#FF6B35` /
       mint `#00D9A6` / amber `#FFC857` / lavender `#B8A6FF`, each particle a
@@ -471,7 +471,7 @@ New file `core-ui/src/main/java/com/ferrisfeed/coreui/Motion.kt`:
       whenever `trigger` (an Int counter) changes and is > 0. Pure Canvas +
       `Animatable<Float>`; no per-frame allocations (precompute particle
       arrays in `remember(trigger)`). Does nothing under reduce-motion.
-- [ ] 31h. Update `docs/motion.md`: rewrite §1 (deep-dive sheet no longer
+- [x] 31h. Update `docs/motion.md`: rewrite §1 (deep-dive sheet no longer
       exists — delete it) and add the vocabulary table from 31a; keep §2–§5.
 
 ### 32. App shell: floating glass nav bar, top stat bar, screen transitions
