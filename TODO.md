@@ -779,12 +779,7 @@ Files: `FeedScreen.kt` (`ReelRail`), `core-ui`.
       1.8+ and verified in learnings §5 — use `Confirm` for like/save on,
       `Reject` is reserved for wrong quiz answers).
       DONE: wired `HapticFeedbackType.Confirm` for both like and save clicks.
-      overlap and the wasted column at once. Same row on the quiz page.
-- [ ] 36b. Like/save keep haptics: like = `HapticFeedbackType.ContextClick`
-      equivalent that compiles on UI 1.8 (`HapticFeedbackType.Confirm` is
-      1.8+ and verified in learnings §5 — use `Confirm` for like/save on,
-      `Reject` is reserved for wrong quiz answers).
-- [ ] 36c. **Correct-answer confetti** (per `docs/motion.md` §2 intent but
+- [x] 36c. **Correct-answer confetti** (per `docs/motion.md` §2 intent but
       scaled for per-answer joy): on a correct quiz answer fire
       `ConfettiBurst` ONLY if the user answered correctly on the first try
       AND the topic's mastery crossed 0.85 — otherwise fire a **small
@@ -794,12 +789,17 @@ Files: `FeedScreen.kt` (`ReelRail`), `core-ui`.
       `progressStore.getMastery(topic)` goes from < 0.85 to ≥ 0.85 inside
       `onGrade`); collect it in `FeedScreen` and bump a confetti trigger
       counter. Respect `LocalReduceMotion`.
-- [ ] 36d. **XP gain toast**: `FeedViewModel` exposes
+      DONE: `OptionSparkle` (12 mint particles, 600ms) on correct MCQ selection,
+      `mastered` SharedFlow in `FeedViewModel` crossing 0.85, and `ConfettiBurst`
+      triggered in `FeedScreen`.
+- [x] 36d. **XP gain toast**: `FeedViewModel` exposes
       `val xpGains: SharedFlow<Int>` (emit 15 / 5 in `onGrade` after
       `addXp`). `FeedScreen`/shell shows a floating "+15 XP" pill
       (`GoldXp` text, `.glass`, `NumberStyle`) near the XP chip: rises 24dp
       + fades out 800ms; stacked gains queue (new one replaces). This is
       the only XP feedback — do not add sounds.
+      DONE: `xpGains` SharedFlow emitted in `FeedViewModel`, wired with `StatBar`
+      floating "+XP" toast in `AppShell.kt`.
 
 ### 37. Speaker prompt (`SpeakCard`) — stop nagging, add life
 
@@ -837,20 +837,24 @@ Files: `SpeakCard.kt`, `FeedScreen.kt`.
 
 Files: `QuizCard.kt`, `FeedScreen.kt` (`QuizPage`).
 
-- [ ] 38a. **Page layout**: top "PROVE IT" overline (`labelMedium`,
+- [x] 38a. **Page layout**: top "PROVE IT" overline (`labelMedium`,
       letter-spacing 2sp, `primary`), hook in `headlineSmall`
       `onSurface.copy(0.7f)` (it is the retrieval cue, so quieter than the
       question), the **question in `headlineMedium`** (it is the
       hero of this page), then options. Remove the outer `Card` wrapper —
       options sit directly on the page background (cleaner, bigger).
-- [ ] 38b. **MCQ options**: each is a row card, min height 64dp, shape
+      DONE: "PROVE IT" overline + hook retrieval cue + headlineMedium hero question
+      + options directly on background.
+- [x] 38b. **MCQ options**: each is a row card, min height 64dp, shape
       `medium`, `.glass`, 16dp padding, with a left **letter badge**
       (32dp circle, `A–D` in `titleSmall`, `onSurface.copy(0.1f)` fill) and
       option text in `bodyLarge`. Entrance: `staggeredEntrance(index)` each
       time the quiz page settles. Press: `pressScale(0.97f)`. 12dp gap.
       Use `CodeFontFamily` when the option contains `(`, `&`, `::` or `<`
       (extend the current rule).
-- [ ] 38c. **Answer reveal animation** (the "zing"): on tap, the chosen row
+      DONE: min height 64dp, glass background, 32dp circle letter badge,
+      staggeredEntrance(index), pressScale(0.97f), 12dp gap, CodeFontFamily condition.
+- [x] 38c. **Answer reveal animation** (the "zing"): on tap, the chosen row
       immediately shows a 150ms tint; then correct → row fills mint
       (`MintContainerDark` in dark, `tertiaryContainer` in light — **fix the
       current bug that uses a dark-only mint container in light mode**),
@@ -861,23 +865,29 @@ Files: `QuizCard.kt`, `FeedScreen.kt` (`QuizPage`).
       correct row is revealed with a mint outline after a 250ms delay.
       Non-chosen, non-correct rows fade to 45% alpha. All state changes use
       `animateColorAsState(Quick)`.
-- [ ] 38d. **Explanation panel**: slides up from below + fades
+      DONE: per-theme mint container fix, badge check/X swap, 1.5dp mint border,
+      horizontal error shake (±8dp, 320ms), 250ms delayed correct outline, 45% alpha fade.
+- [x] 38d. **Explanation panel**: slides up from below + fades
       (`AnimatedVisibility(slideInVertically{it/3} + fadeIn)`), `.glass`
       panel, header "Correct" with check or "Not quite" with lightbulb icon,
       `titleSmall`, explanation `bodyMedium`. Replace the plain
       "Correct ✓ — nice." copy with **"Correct"** / **"Not quite — here's why"**
       (drop the unicode check/dash glyphs, the icon carries it).
-- [ ] 38e. **Next affordance**: after answering, show a swipe cue (no button —
+      DONE: slide-up glass panel with Check/Lightbulb icons and updated copy.
+- [x] 38e. **Next affordance**: after answering, show a swipe cue (no button —
       one-gesture rule): a bouncing chevron-up + "Swipe for next"
       (same component as 33e) that appears 600ms after the answer. Does not
       auto-advance.
-- [ ] 38f. **Tap-the-bug variant**: line cards become a code panel
+      DONE: `SwipeCue` bouncing 10dp up (900ms loop) fading in 600ms after answer.
+- [x] 38f. **Tap-the-bug variant**: line cards become a code panel
       (single dark `CodeCardTokens.Container` surface) with line numbers; the
       tapped line highlights with a left 3dp accent bar and a
       `Keyword`-color tint (wrong) / mint tint (bug found); the bug line is
       revealed with a pulsing mint outline (2 pulses, 300ms each). Hint text
       "Tap the line with the bug." becomes a pill at the top of the panel.
-- [ ] 38g. **Fill-in-blank variant**: show prefix + inline input + suffix as
+      DONE: unified dark code panel, hint pill, line numbers gutter, 3dp accent bar,
+      pulsing mint outline on error.
+- [x] 38g. **Fill-in-blank variant**: show prefix + inline input + suffix as
       one code panel: the `OutlinedTextField` replaced by a
       `BasicTextField` with mono text and a bottom-border accent that glows
       (animated `primary` → mint/red on submit); keyboard action `Done`
@@ -887,9 +897,12 @@ Files: `QuizCard.kt`, `FeedScreen.kt` (`QuizPage`).
       arrival jarrs the pager); the field focuses on tap.
       The page must not be covered by the keyboard: add `imePadding()` to
       the QuizPage column.
-- [ ] 38h. **Hard guard**: `resultSent` already ensures one grade per
+      DONE: unified code panel, BasicTextField with glowing bottom border,
+      KeyboardActions(onDone), FerrisButton pinned above keyboard with imePadding().
+- [x] 38h. **Hard guard**: `resultSent` already ensures one grade per
       question; keep it. Do not change `onResult` semantics or
       `FeedViewModel.onGrade` signature.
+      DONE: single grade per question guarded by `resultSent`, signature untouched.
 
 ### 39. Brand mark, streak flame, progress ring, skeletons
 

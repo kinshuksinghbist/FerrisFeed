@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.PagerDefaults
@@ -17,6 +18,10 @@ import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -33,6 +38,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -45,11 +51,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.ferrisfeed.coreui.ConfettiBurst
 import com.ferrisfeed.coreui.DisplayFont
+import com.ferrisfeed.coreui.FerrisColors
 import com.ferrisfeed.coreui.FerrisFeedTheme
 import com.ferrisfeed.coreui.FerrisIconButton
 import com.ferrisfeed.coreui.LocalBottomBarInset
@@ -138,45 +147,57 @@ fun FeedScreen(
         if (focusedReelId != null) viewModel.focusReel(focusedReelId)
     }
 
-    VerticalPager(
-        state = pagerState,
-        modifier = modifier.fillMaxSize(),
-        beyondViewportPageCount = 5, // prefetch next 5 compositions
-        // Low positional threshold: small drags still commit to next page.
-        flingBehavior = PagerDefaults.flingBehavior(
-            state = pagerState,
-            snapPositionalThreshold = 0.25f,
-        ),
-    ) { page ->
-        val reel = state.reels.getOrNull(page / 2) ?: return@VerticalPager
-        val isSaved = state.savedIds.contains(reel.id)
-        val isLiked = state.likedIds.contains(reel.id)
-        if (page % 2 == 0) {
-            InfoPage(
-                reel = reel,
-                isSaved = isSaved,
-                isLiked = isLiked,
-                onLike = { viewModel.onLike(reel.id, !isLiked) },
-                onSave = { viewModel.onSave(reel.id, !isSaved) },
-                onDoubleTapSave = { viewModel.onToggleSave(reel.id) },
-                onInteract = { viewModel.onInteract() },
-                onRecognition = { id, heard -> viewModel.onRecognition(id, heard) },
-                showSpeak = page == 0 && !speakDismissed,
-                onDismissSpeak = { viewModel.dismissSpeakPrompt() },
-                settled = pagerState.settledPage == page,
-            )
-        } else {
-            QuizPage(
-                reel = reel,
-                isSaved = isSaved,
-                isLiked = isLiked,
-                onLike = { viewModel.onLike(reel.id, !isLiked) },
-                onSave = { viewModel.onSave(reel.id, !isSaved) },
-                onDoubleTapSave = { viewModel.onToggleSave(reel.id) },
-                onGrade = { correct, label -> viewModel.onGrade(reel.id, correct, label) },
-                onInteract = { viewModel.onInteract() },
-            )
+    var confettiTrigger by remember { mutableIntStateOf(0) }
+    LaunchedEffect(viewModel) {
+        viewModel.mastered.collect {
+            confettiTrigger++
         }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        VerticalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+            beyondViewportPageCount = 5, // prefetch next 5 compositions
+            // Low positional threshold: small drags still commit to next page.
+            flingBehavior = PagerDefaults.flingBehavior(
+                state = pagerState,
+                snapPositionalThreshold = 0.25f,
+            ),
+        ) { page ->
+            val reel = state.reels.getOrNull(page / 2) ?: return@VerticalPager
+            val isSaved = state.savedIds.contains(reel.id)
+            val isLiked = state.likedIds.contains(reel.id)
+            if (page % 2 == 0) {
+                InfoPage(
+                    reel = reel,
+                    isSaved = isSaved,
+                    isLiked = isLiked,
+                    onLike = { viewModel.onLike(reel.id, !isLiked) },
+                    onSave = { viewModel.onSave(reel.id, !isSaved) },
+                    onDoubleTapSave = { viewModel.onToggleSave(reel.id) },
+                    onInteract = { viewModel.onInteract() },
+                    onRecognition = { id, heard -> viewModel.onRecognition(id, heard) },
+                    showSpeak = page == 0 && !speakDismissed,
+                    onDismissSpeak = { viewModel.dismissSpeakPrompt() },
+                    settled = pagerState.settledPage == page,
+                )
+            } else {
+                QuizPage(
+                    reel = reel,
+                    isSaved = isSaved,
+                    isLiked = isLiked,
+                    settled = pagerState.settledPage == page,
+                    onLike = { viewModel.onLike(reel.id, !isLiked) },
+                    onSave = { viewModel.onSave(reel.id, !isSaved) },
+                    onDoubleTapSave = { viewModel.onToggleSave(reel.id) },
+                    onGrade = { correct, label -> viewModel.onGrade(reel.id, correct, label) },
+                    onInteract = { viewModel.onInteract() },
+                )
+            }
+        }
+
+        ConfettiBurst(trigger = confettiTrigger, modifier = Modifier.fillMaxSize())
     }
 }
 
@@ -323,39 +344,72 @@ private fun QuizPage(
     reel: Reel,
     isSaved: Boolean,
     isLiked: Boolean,
+    settled: Boolean,
     onLike: () -> Unit,
     onSave: () -> Unit,
     onDoubleTapSave: () -> Unit,
     onGrade: (Boolean, String) -> Unit,
     onInteract: () -> Unit,
 ) {
+    val trackColor = remember(reel.track) {
+        if (reel.track.id == "rust") FerrisColors.RustOrange else FerrisColors.SysDesignBlue
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(reel.id) {
                 detectTapGestures(onDoubleTap = { onDoubleTapSave() })
+            }
+            .drawBehind {
+                // Faint radial glow behind question (P6 33c)
+                val radius = size.width * 0.70f
+                val center = Offset(size.width / 2f, size.height * 0.30f)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(trackColor.copy(alpha = 0.18f), Color.Transparent),
+                        center = center,
+                        radius = radius,
+                    ),
+                    radius = radius,
+                    center = center,
+                )
             },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 12.dp, end = 12.dp, top = 56.dp, bottom = LocalBottomBarInset.current + 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .imePadding()
+                .padding(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = 56.dp,
+                    bottom = LocalBottomBarInset.current + 16.dp,
+                ),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            // PROVE IT overline (P6 38a)
             Text(
-                text = "Prove it",
-                style = MaterialTheme.typography.labelLarge,
+                text = "PROVE IT",
+                style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 2.sp),
+                fontFamily = DisplayFont,
                 color = MaterialTheme.colorScheme.primary,
             )
+            // Hook as quiet retrieval cue (P6 38a)
             Text(
                 text = reel.hook,
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.headlineSmall,
+                fontFamily = DisplayFont,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             )
+            // Quiz options & variants
             QuizCard(
                 quiz = reel.toQuizUi(),
+                settled = settled,
                 onResult = { correct, label -> onInteract(); onGrade(correct, label) },
+                modifier = Modifier.weight(1f, fill = false),
             )
+            // Action row below card (P6 36a)
             ReelActionRow(
                 topic = reel.topic,
                 isSaved = isSaved,

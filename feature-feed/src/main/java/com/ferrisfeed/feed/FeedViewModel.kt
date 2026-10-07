@@ -13,9 +13,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -82,6 +85,14 @@ class FeedViewModel @Inject constructor(
 
     /** Topic-only feed filter (Route.TopicFeed); null = the full mixed queue. */
     private val topicFilter = MutableStateFlow<String?>(null)
+
+    private val _xpGains = MutableSharedFlow<Int>(extraBufferCapacity = 8)
+    /** Emits XP delta on each graded quiz (15 correct, 5 incorrect). */
+    val xpGains: SharedFlow<Int> = _xpGains.asSharedFlow()
+
+    private val _mastered = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    /** Emits topic name whenever mastery crosses >= 0.85 from below (P6 36c). */
+    val mastered: SharedFlow<String> = _mastered.asSharedFlow()
 
     /** Last full (unfiltered) reel list, so a topic filter can be applied and reverted. */
     private var allReels: List<Reel> = emptyList()
@@ -319,8 +330,15 @@ class FeedViewModel @Inject constructor(
             repository.recordGrade(reelId, correct, label)
             val topic = repository.getReel(reelId)?.topic?.ifBlank { null }
                 ?: return@launch
+            val prevMastery = progressStore.getMastery(topic)
             progressStore.recordQuizResult(topic, correct)
-            progressStore.addXp(if (correct) 15 else 5)
+            val newMastery = progressStore.getMastery(topic)
+            val xpGain = if (correct) 15 else 5
+            progressStore.addXp(xpGain)
+            _xpGains.emit(xpGain)
+            if (correct && prevMastery < 0.85f && newMastery >= 0.85f) {
+                _mastered.emit(topic)
+            }
         }
     }
 
