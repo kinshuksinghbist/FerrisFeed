@@ -68,6 +68,135 @@
       directories exactly match the two asset directories present, and the 22 files hold 376
       reels (498 total minus the 116 dormant WASM reels). 19 topics result, so the Path screen
       has real nodes with real counts.
+## P5. The plan of record for the redesign — TODO
+
+> Priorities run top to bottom: 21–22 unlock everything after them, the
+> card redo (24) is the centerpiece, and Play-readiness (28) is last —
+> it meets a store deadline but blocks no creative work.
+> Constraints carried over from Spec v2: one card, one gesture, quiz
+> inline and the sole grading signal; WASM stays dormant (Rust +
+> System Design only); no new dependencies; DB stays at v2 (migrate
+> only if an item truly forces it); AGP 8.9.2 / Gradle 8.11.1 /
+> compileSdk 36 remain locked (learnings §3).
+> Design judgment: `docs/design-skills.md` maps skills to files —
+> reach for the named skill on each item and say in the commit body
+> which skill shaped the decision.
+
+### 21. Path-node identity: human topic labels (first — unblocks 22, 27)
+
+The top Limitations entry: node titles come from file-derived keys
+("Extra", "Drills", "Beginner") and read coarse.
+
+- [ ] 21a. Add an optional `topic` label field to the reel schema
+      (`docs/content-schema.md`) + validator (plain text, ≤ 48 chars);
+      backfill all seeded reels; the file-derived key stays as the
+      fallback when the label is absent.
+- [ ] 21b. Extend the seeder/topic constants so topic keys carry both
+      key and label; re-group `ReelDao.countByTopic` by label in a
+      query-only projection (learnings §20), no schema migration.
+- [ ] 21c. Point Path nodes and `SearchSection` filters at labels;
+      `Route.TopicFeed` keeps working off the same key.
+- [ ] 21d. Validate the grouping with `card-sort-analysis` and
+      structure it with `information-architecture`; check node-row
+      legibility in both themes with `critique-color`.
+
+### 22. Feed IA + naming for the redesigned card (second)
+
+- [ ] 22a. Write the design note: the spoken phrase opens the card,
+      hook + body is the value, and the quiz grades topical recall —
+      the question that grades the learning is not optional chrome
+      (design-skills.md); assessment stays inside the card.
+- [ ] 22b. Keep both entry routes intact: topic feeds from Path nodes
+      (`Route.TopicFeed` — filter passed from the route, its rebuild
+      `Job` awaited before `focusReel`, learnings §22) and the resumed
+      main feed that keeps its earlier position.
+- [ ] 22c. Map the swipe → speak → answer loop with `journey-map` and
+      `user-flow-diagram`; the card may not accumulate on-screen
+      furniture under the new flow (`law-of-proximity`,
+      `visual-hierarchy`).
+- [ ] 22d. Any data this reveals becomes a 21/27 item only — no
+      schema work inside UI items (house rule).
+
+### 23. Track identity + tint system hardening (Theme.kt / track wash)
+
+Orange #FF6B35 = Rust, sky-blue = System Design; the wash must stay
+readable in both themes (dark OLED #0B0E14).
+
+- [ ] 23a. Contrast audit: text over tints ≥ 4.5:1 in light and dark;
+      run as `accessibility-audit` + `critique-color`.
+- [ ] 23b. Extract the washes into design tokens (`design-token`) so
+      inline colors stop drifting; `dark-mode-design` for the OLED
+      pass; equal luminance distance for both tracks per theme.
+- [ ] 23c. Audit core-ui for accumulated UI drift with
+      `design-debt-audit` + `design-token-audit`; fold the fixes into
+      the card redo (24).
+
+### 24. The card — speaker-opening flow redo (the centerpiece)
+
+Implementation stays offline-first: platform `SpeechRecognizer` + the
+`RECORD_AUDIO` permission only — no new dependencies, no cloud calls.
+
+- [ ] 24a. Spec the interaction first (`reel-card-composition` +
+      `micro-interaction-spec`): phrase prompt → capture gesture →
+      recognized-text reveal → hook + body → code → quiz. No inner
+      scroll; all motion inside the 300ms budget (`docs/motion.md`).
+- [ ] 24b. The difficulty label keeps its animated cue but plays only
+      after recognition completes; apply `loading-states` +
+      `doherty-threshold` so capture never blocks text readiness.
+- [ ] 24c. Author the new states and micro-copy with `ux-writing`;
+      empty/retry shapes follow the existing pattern (no skeleton
+      loops); quiz grading remains the only SRS/XP/streak signal
+      (`onGrade`, `feed-ux.md`).
+
+### 25. Code card + output flip survive the redo
+
+- [ ] 25a. Copy + flip + output stay as-is (`CodeCard.kt`); the flip
+      stays hidden for the 13 `output: null` reels (Spec v2).
+- [ ] 25b. The takeaway stays the closing line (no boxed callouts);
+      post-redo affordance check with `critique-affordance`.
+- [ ] 25c. Keep 12.5sp mono readable with `readable-measure` +
+      `critique-typography`; code contrast at that size is part of
+      the 23a audit.
+
+### 26. First-run + placement test (deferred until 21–25 land)
+
+Store copy already promises a placement test (`docs/play-listing.md`).
+
+- [ ] 26a. Drafts only: smallest flow with `onboarding-design` +
+      `form-design`, framed with `jobs-to-be-done`; no screens until
+      the draft survives review.
+- [ ] 26b. Author placement items from the seeded reel bank; plan the
+      study with `usability-test-plan` + task scenarios with
+      `test-scenario`.
+- [ ] 26c. Prototype first reviewed with `/visual-critique:critique-screen`;
+      ship after it passes, on the normal Friday train.
+
+### 27. Success metrics + store alignment (post-redo)
+
+- [ ] 27a. Define metrics before instrumenting (`metrics-definition`):
+      recognition start/complete, quiz grade rate, taps per topic,
+      plus the dwell/skip signals `feed-ux.md` already logs.
+- [ ] 27b. Ship a weekly card-analytics digest that reads existing
+      events only (`docs/analytics.md`) — no new vendor backend, and
+      the opt-out from `docs/privacy-policy.md` is respected.
+- [ ] 27c. Read the first data with `behavioural-analytics`; anything
+      built to compare variants goes through `a-b-test-design` first.
+- [ ] 27d. `docs/play-listing.md` must stop describing the old UI:
+      update the demo script and captions to the redesigned card,
+      re-shoot screenshots, re-check copy with `ux-writing` +
+      `content-strategy`.
+
+### 28. Known gaps cleared along the way (learnings §15)
+
+- [ ] 28a. `targetSdk` 35 (Play's expectation for listings): the AGP
+      8.9.2 / Gradle 8.11.1 / compileSdk 36 triple stays locked, so
+      this is a single `targetSdk` bump + full CI + APK asset check
+      (learnings §17), not an SDK-level upgrade.
+- [ ] 28b. Register the widget receiver + refresh worker (the §15
+      gap list in `docs/learnings.md`).
+- [ ] 28c. One device pass before any of this ships: first-launch
+      seed count, topic-feed tap-through, and a TalkBack walk planned
+      with `accessibility-test-plan`; record the evidence here.
 
 ## Limitations / next session
 
