@@ -85,17 +85,31 @@ always means "change reel" — the old nested-scroll fight is structurally gone.
 - **Empty vs loading**: seeding failures render an explicit empty state with a
   Retry button (`retryLoad()`), never an infinite skeleton.
 
-## Path tab + search (S7)
+## Path tab + browse (S7, TODO 22)
 
 - Bottom nav is Feed + Path only. The Search tab and `Route.Search` are gone.
-- Search is a section at the top of the Path screen: query field + track/level/
-  has-code/has-quiz chips + result rows. Results render as items of the same
-  `LazyColumn` as the roadmap (one scroller; nothing nestable).
+- The top of the Path screen is the browse section: query field + chips for
+  **topic / track / level / has-code / has-quiz** + result rows. Results render
+  as items of the same `LazyColumn` as the roadmap (one scroller; nothing
+  nestable). A "Clear filters" chip appears whenever any chip is set.
+- Topic-first IA: with an empty query and no chips the section shows a
+  **Browse by topic** directory — every roadmap topic as a row with its reel
+  count, entry level, and mastery. The topic chips in the row above come from
+  the same live topic list, so a chip can never lead to an empty shelf.
+- One topic identity everywhere (TODO 21): roadmap node, browse chip, result
+  caption, and `Route.TopicFeed(topicId)` all address the exact stored topic
+  string. Result rows caption their topic so a hit says where it lives.
+- Selecting a track resets the topic chip (and vice versa is scoped per
+  track), so the chip row never mixes topics across tracks.
 - Roadmap nodes are real: one per topic with reels in Room
   (`ReelDao.countByTopic` → count + lowest level) with mastery from
   `ProgressStore` (2%/idle-day decay). A fresh install honestly shows 0%.
-- Tapping a node opens `Route.TopicFeed(topicId)` — that topic's reels only,
-  quiz + info mixed, same card as the main feed.
+- Tapping a node or a directory row opens `Route.TopicFeed(topicId)` — that
+  topic's reels only, quiz + info mixed, same card as the main feed. Browsing
+  a topic via chips shows the same reels as flat rows instead.
+- Empty results under an active query or scope say why and how to widen
+  ("Nothing matches those filters yet — clear one to widen the net."), never
+  a bare "0 results". The resting state is the directory, not a blank list.
 
 ## Accessibility
 

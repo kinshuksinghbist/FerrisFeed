@@ -40,7 +40,11 @@ data class PathUiState(
  * shows 0% everywhere on a fresh install and fills in as quizzes are answered.
  *
  * Search is the same Room FTS path the old Search tab used; it moved here so
- * the bottom nav only has Feed + Path.
+ * the bottom nav only has Feed + Path. TODO 22 makes Browse topic-first:
+ * a blank query with a topic filter browses that topic's reels (the same
+ * stored topic string the roadmap nodes and Route.TopicFeed key on), so the
+ * three entries into a topic — roadmap node, browse chip, tooling feed —
+ * share one id and one mental model.
  */
 @HiltViewModel
 class PathViewModel @Inject constructor(
@@ -89,13 +93,7 @@ class PathViewModel @Inject constructor(
             val hits = runCatching {
                 searchRepository.search(
                     query = query,
-                    filters = DataSearchFilters(
-                        track = filters.track,
-                        minLevel = filters.level ?: 1,
-                        maxLevel = filters.level ?: 4,
-                        hasCode = filters.hasCode,
-                        hasQuiz = filters.hasQuiz,
-                    ),
+                    filters = filters.toDataFilters(),
                 )
             }.getOrDefault(emptyList())
             _state.update {
@@ -103,7 +101,32 @@ class PathViewModel @Inject constructor(
             }
         }
     }
+
+    companion object {
+        /** Level bounds for the Room filter query (1..4 per content schema). */
+        const val MIN_LEVEL = 1
+        const val MAX_LEVEL = 4
+    }
 }
+
+/**
+ * UI filter -> Room filter. Kept pure and unit-testable: a topic must survive
+ * this mapping verbatim (it is an exact-match column value per TODO 21), and
+ * an unset level spans the whole 1..4 range so “browse” with no level chip
+ * sees every reel of the topic.
+ */
+internal fun SearchFilters.toDataFilters(): DataSearchFilters = DataSearchFilters(
+    track = track,
+    minLevel = level ?: PathViewModel.MIN_LEVEL,
+    maxLevel = level ?: PathViewModel.MAX_LEVEL,
+    hasCode = hasCode,
+    hasQuiz = hasQuiz,
+    topic = topic,
+)
+
+/** Anything the user narrowed (query text or any chip) counts as an active browse. */
+internal fun hasActiveBrowse(query: String, filters: SearchFilters): Boolean =
+    query.isNotBlank() || filters.isScoped()
 
 /**
  * Prerequisite edges come from the canonical DAG so the roadmap keeps locking
@@ -138,6 +161,9 @@ private fun ReelEntity.toSearchResult(): SearchResult = SearchResult(
     id = id,
     track = track,
     level = level,
+    // TODO 22: every hit names its topic so the card says where it lives in
+    // the curriculum; the string is the exact roadmap id (TODO 21).
+    topic = topic,
     hook = hook,
     takeaway = takeaway,
     hasCode = hasCode,

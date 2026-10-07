@@ -1,6 +1,7 @@
 package com.ferrisfeed.path
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -111,19 +112,31 @@ fun PathScreen(
         }
 
         item(key = "search") {
+            // TODO 22: the browse chip row is fed from the same roadmap topics
+            // the nodes render, so a chip never leads to an empty shelf.
             SearchSection(
                 query = state.query,
                 filters = state.filters,
+                topics = state.nodes
+                    .filter { state.filters.track == null || it.track == state.filters.track }
+                    .map { it.id },
                 onQueryChanged = onQueryChanged,
             )
         }
 
-        if (state.query.isNotBlank()) {
+        if (hasActiveBrowse(state.query, state.filters)) {
             item(key = "results-header") {
                 Column {
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = if (state.isSearching) "Searching…" else "${state.results.size} results",
+                        text = when {
+                            state.isSearching -> "Searching…"
+                            // TODO 22 (UX-writing): say why the list is empty
+                            // and what narrows it — never a bare “0 results”.
+                            state.results.isEmpty() -> "Nothing matches those filters yet — clear one to widen the net."
+                            state.filters.topic != null -> "${state.results.size} reels in ${state.filters.topic.displayTopic()}"
+                            else -> "${state.results.size} results",
+                        },
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -132,6 +145,38 @@ fun PathScreen(
             }
             items(items = state.results, key = { result -> "result-${result.id}" }) { result ->
                 SearchResultRow(result = result, onClick = { onResultClick(result) })
+            }
+        } else {
+            // TODO 22 resting state: topic-first directory instead of a list
+            // that starts blank. Reuses roadmap facts (count + min level) —
+            // zero extra queries; counts appear as the user narrows.
+            item(key = "topic-directory") {
+                Column {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = "Browse by topic",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Pick a topic to browse its reels, or search above.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    nodes
+                        .filter { state.filters.track == null || it.track == state.filters.track }
+                        .forEach { node ->
+                            BrowseByTopicRow(
+                                title = node.title,
+                                track = node.track,
+                                caption = "${node.reelCount} reels · entry level L${node.level} · ${node.mastery.toIntPercent()} mastered",
+                                locked = node.reelCount == 0,
+                                onClick = { onTopicClick(node) },
+                            )
+                        }
+                }
             }
         }
 
@@ -252,6 +297,47 @@ private fun PathNodeRow(
 }
 
 @Composable
+private fun BrowseByTopicRow(
+    title: String,
+    track: String,
+    caption: String,
+    locked: Boolean,
+    onClick: () -> Unit,
+) {
+    val accent = trackColor(track)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp)
+            .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.4f)),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(modifier = Modifier.size(8.dp)) {
+                Canvas(Modifier.fillMaxSize()) { drawCircle(color = accent) }
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(text = title, style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = caption,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+private fun Float.toIntPercent(): Int = (this * 100).toInt().coerceIn(0, 100)
+
+@Composable
 private fun ConnectorLine() {
     Canvas(
         modifier = Modifier
@@ -288,7 +374,7 @@ private fun previewPathState(): PathUiState = PathUiState(
     query = "borrow",
     filters = SearchFilters(track = Tracks.RUST),
     results = listOf(
-        SearchResult("rust-own-014", Tracks.RUST, 1, "Why does this function not compile?", "Move by default.", true, true),
+        SearchResult("rust-own-014", Tracks.RUST, 1, "ownership", "Why does this function not compile?", "Move by default.", true, true),
     ),
 )
 

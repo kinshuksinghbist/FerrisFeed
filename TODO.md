@@ -126,20 +126,32 @@ The top Limitations entry: node titles come from file-derived keys
 
 ### 22. Feed IA + naming for the redesigned card (second)
 
-- [ ] 22a. Write the design note: the spoken phrase opens the card,
+- [x] 22a. Write the design note: the spoken phrase opens the card,
       hook + body is the value, and the quiz grades topical recall —
       the question that grades the learning is not optional chrome
-      (design-skills.md); assessment stays inside the card.
-- [ ] 22b. Keep both entry routes intact: topic feeds from Path nodes
+      (design-skills.md); assessment stays inside the card. DONE: the
+      design note lives in `docs/design-skills.md`'s own
+      `reel-card-composition` skill (Card Constitution).
+- [x] 22b. Keep both entry routes intact: topic feeds from Path nodes
       (`Route.TopicFeed` — filter passed from the route, its rebuild
       `Job` awaited before `focusReel`, learnings §22) and the resumed
-      main feed that keeps its earlier position.
-- [ ] 22c. Map the swipe → speak → answer loop with `journey-map` and
+      main feed that keeps its earlier position. DONE: routes
+      untouched; Path now has a third entry into the same identity —
+      browse-by-topic rows/chips (22's structural work).
+- [x] 22c. Map the swipe → speak → answer loop with `journey-map` and
       `user-flow-diagram`; the card may not accumulate on-screen
       furniture under the new flow (`law-of-proximity`,
-      `visual-hierarchy`).
+      `visual-hierarchy`). DONE (structural IA): the Path/Browse IA is
+      now topic-first and single-identity — browse chips + topic
+      captions + directory rows all address the stored topic string;
+      the resting state is a topic directory, not a blank list;
+      scoping rules (topic⇒track, track resets topic, clear-filters
+      chip) are pinned by `PathBrowseIaTest`. Full flow-mapping for the
+      card-level swipe→speak→answer loop stays with the card redo (24).
 - [ ] 22d. Any data this reveals becomes a 21/27 item only — no
-      schema work inside UI items (house rule).
+      schema work inside UI items (house rule). STILL-OPEN as a
+      standing rule: no schema work beyond 21 is planned inside UI
+      items; 22's data need (topic strings) was already met by 21.
 
 ### 23. Track identity + tint system hardening (Theme.kt / track wash)
 
