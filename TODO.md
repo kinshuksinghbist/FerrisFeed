@@ -1135,6 +1135,69 @@ blocks) → `32` (shell) → `34, 38, 37, 36` (feed pages; 36 needs 35d) → `33
 40 are the biggest — split each across multiple commits (34a–c, 34d, 34e–g,
 34h–k). If CI goes red, fix before continuing; never stack items on a red run.
 
+## P7. Radical Dual-Philosophy Design, Profile Hub, Tactile Depth & Interactive Code Studio — IN PROGRESS
+
+> Comprehensive expansion addressing user directives:
+> 1. Complete removal of voice feature and audio permissions.
+> 2. Tactile 3D card depth & radical dual design philosophy (Studio Glass vs Neo-Brutalist HUD).
+> 3. Profile tab with working streak tracker, stats grid, design switcher, saved reels, and topic mastery breakdown.
+> 4. Interactive code builder matching `cs-refresh.png` with inline slots and tactile 3D block tray.
+> 5. Premium modern adaptive app icon.
+> 6. Human, context-rich question and explainer content rewrites.
+> 7. Smooth progress bar (no % 5 snapping) & robust question state caching without re-render flicker.
+> 8. Thoughtfully sequenced incremental course paths and Path screen topic reel explorer.
+
+### 42. Voice Removal — DONE
+- [x] 42a. Remove `RECORD_AUDIO` permission from `app/src/main/AndroidManifest.xml`.
+- [x] 42b. Delete `SpeakCard.kt` and `SpeechRecognition.kt`.
+- [x] 42c. Remove all voice/speak references, `SpeakState`, permissions launcher, and dismiss logic from `FeedScreen.kt` and `FeedViewModel.kt`.
+- [x] 42d. Clean up docs and test references.
+
+### 43. Tactile 3D Depth & Radical Dual-Philosophy Design System — DONE
+- [x] 43a. Create `DesignPhilosophy` system (`StudioGlass` vs `NeoBrutalism`) in `core-ui`.
+- [x] 43b. Implement `Modifier.tactileDepth()`: layered specular highlights + 3D rim lighting for Studio Glass; bold 2.5dp solid border + 4dp hard offset shadow + mechanical press translation for Neo-Brutalism.
+- [x] 43c. Give lesson cards, quiz cards, and control buttons tangible physical depth and 3D height.
+- [x] 43d. Ensure both philosophies are fully accessible with high contrast ratios and reduce-motion support.
+
+### 44. Interactive Code Builder (Inline Slots & 3D Blocks - `cs-refresh.png`) — DONE
+- [x] 44a. Implement multi-line code panel with line-number gutter and interactive inline code slots in `QuizCard.kt`.
+- [x] 44b. Active slot focus styling, empty slot indicators (`[ ]`), and filled slot chips with syntax highlighting.
+- [x] 44c. Dock / keyboard tray with backspace `⌫`, slot navigation `<` / `>`, and raised tactile 3D block buttons.
+- [x] 44d. Enforce strict correct-block-only slot entry with horizontal rejection shake and `Reject` haptics on errors.
+
+### 45. Premium Modern App Icon — DONE
+- [x] 45a. Redesign `ic_launcher_foreground.xml` and adaptive icon resources with a stylized Ferris crab mark with code brackets (`{ 🦀 }`).
+
+### 46. Human, Informative Question & Explainer Rewrites — DONE
+- [x] 46a. Rewrite telegraphic, robotic questions across curriculum packs to read conversational, informative, and context-rich.
+- [x] 46b. Ensure every question presents a clear statement/scenario with meaningful options and educational explainers.
+- [x] 46c. Validate all modified packs with `python3 scripts/validate_reels.py` (30/30 files, 498 reels passed).
+
+### 47. Progress Bar Smoothing & Question State Caching — DONE
+- [x] 47a. Replace modulo 5 wraparound in `SessionProgressBar` with smooth queue/topic progress tracking.
+- [x] 47b. Cache answered quiz states in `FeedViewModel` and `QuizCard` so swiping back preserves results without re-render flicker.
+
+### 48. Real Working Streak System — DONE
+- [x] 48a. Update `ProgressStore.kt` with calendar epoch day activity tracking (`recordDailyActivity`).
+- [x] 48b. Accurately increment streaks across consecutive days, maintain for same-day activity, and reset on lapses.
+- [x] 48c. Standardize on animated Streak Flame and wire to StatBar and Profile.
+
+### 49. Profile Tab & Saved Reels — DONE
+- [x] 49a. Add `Route.Profile` and Profile tab to `FerrisNavBar` (3-tab navigation: Feed, Path, Profile).
+- [x] 49b. Build `ProfileScreen.kt`: User rank header, Streak Flame card with 7-day activity indicators, and stats grid.
+- [x] 49c. Add Design Philosophy Switcher in Profile to toggle between Studio Glass and Neo-Brutalist HUD live.
+- [x] 49d. Add "Saved Reels" section with bookmark list and tap-to-review.
+- [x] 49e. Add Topic Mastery breakdown: "Topics I'm Good At" (≥ 70%) and "Topics to Practice" (< 50%).
+
+### 50. Incremental Course Paths & Path Screen Course Explorer — DONE
+- [x] 50a. Structure incremental paths for Rust Course and System Design Course in `LearningPathEngine.TOPIC_GRAPH`.
+- [x] 50b. Add Topic Reel Explorer to Path screen (`TopicExplorerSheet`) to allow reviewing all previous reels in any topic.
+- [x] 50c. Persist last viewed reel ID to resume feed exactly from where user left off.
+
+### 51. Verification, Accessibility, and CI Watch — IN PROGRESS
+- [ ] 51a. Run reel validation and cargo test locally.
+- [ ] 51b. Push to GitHub Actions CI and verify green build and unit tests.
+
 ## Limitations / next session
 - **Runtime smoke was not executed**: there is no JDK, Android SDK, or emulator in this
   workspace, so "first-launch seed" and "topic feed" are verified statically (asset listing +

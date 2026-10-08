@@ -36,6 +36,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lightbulb
@@ -130,11 +131,13 @@ fun QuizCard(
     onResult: (correct: Boolean, label: String) -> Unit,
     modifier: Modifier = Modifier,
     settled: Boolean = true,
+    initialAnswered: Boolean = false,
+    initialWasCorrect: Boolean = false,
 ) {
-    var answered by remember(quiz) { mutableStateOf(false) }
-    var wasCorrect by remember(quiz) { mutableStateOf(false) }
-    var resultSent by remember(quiz) { mutableStateOf(false) }
-    var showSwipeCue by remember(quiz) { mutableStateOf(false) }
+    var answered by remember(quiz.question, initialAnswered) { mutableStateOf(initialAnswered) }
+    var wasCorrect by remember(quiz.question, initialWasCorrect) { mutableStateOf(initialWasCorrect) }
+    var resultSent by remember(quiz.question, initialAnswered) { mutableStateOf(initialAnswered) }
+    var showSwipeCue by remember(quiz.question, initialAnswered) { mutableStateOf(initialAnswered) }
     val haptics = LocalHapticFeedback.current
 
     fun submit(correct: Boolean, label: String) {
@@ -149,7 +152,7 @@ fun QuizCard(
     }
 
     LaunchedEffect(answered) {
-        if (answered) {
+        if (answered && !showSwipeCue) {
             delay(600)
             showSwipeCue = true
         }
@@ -685,9 +688,10 @@ private fun FillBlankBody(
 }
 
 /**
- * Interactive click-to-code block assembly.
- * Displays the code snippet with assembly slots. Only the correct next block
- * will enter into the code; wrong blocks trigger a horizontal shake rejection.
+ * Interactive click-to-code block assembly matching cs-refresh.png (P7 Item 44).
+ * Displays code snippet with line numbers gutter and interactive inline assembly slots.
+ * Control dock provides backspace ⌫ and slot navigation.
+ * Only the correct next block will enter into the active slot; wrong blocks trigger rejection shake.
  */
 @Composable
 private fun BlocksBody(
@@ -725,18 +729,25 @@ private fun BlocksBody(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Code panel displaying prefix, assembled slots, and suffix
+    val prefixLines = remember(quiz.prefix) {
+        if (quiz.prefix.isNotBlank()) quiz.prefix.lines() else emptyList()
+    }
+    val suffixLines = remember(quiz.suffix) {
+        if (quiz.suffix.isNotBlank()) quiz.suffix.lines() else emptyList()
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        // Code container with line numbers gutter & inline slots (cs-refresh.png)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .tactileDepth(MaterialTheme.shapes.medium, depth = 6.dp)
                 .clip(MaterialTheme.shapes.medium)
                 .background(CodeCardTokens.Container)
-                .border(0.5.dp, glassStroke(), MaterialTheme.shapes.medium)
                 .padding(16.dp),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                // Header with macOS dots
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Header with macOS dots + output tab
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -748,214 +759,281 @@ private fun BlocksBody(
                         Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF28C840)))
                     }
                     Text(
-                        text = "rust",
+                        text = "▶ CODE BUILDER",
                         style = MaterialTheme.typography.labelSmall,
                         fontFamily = CodeFontFamily,
-                        color = CodeCardTokens.Muted,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
 
-                if (quiz.prefix.isNotBlank()) {
-                    Text(
-                        text = highlightCode(quiz.prefix, language = "rust"),
-                        style = TextStyle(fontFamily = CodeFontFamily, fontSize = 13.sp, lineHeight = 20.sp),
-                    )
-                }
+                var currentLineNum = 1
 
-                // Assembled code slots row
-                FlowRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.25f))
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    // Render already placed blocks
-                    placedBlocks.forEach { token ->
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(FerrisColors.MintCorrect.copy(alpha = 0.2f))
-                                .border(1.dp, FerrisColors.MintCorrect, RoundedCornerShape(6.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                        ) {
-                            Text(
-                                text = token,
-                                style = TextStyle(
-                                    fontFamily = CodeFontFamily,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = FerrisColors.MintCorrect,
-                                ),
-                            )
-                        }
+                // 1. Prefix code lines
+                prefixLines.forEach { line ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            text = currentLineNum.toString().padStart(2, ' '),
+                            style = TextStyle(fontFamily = CodeFontFamily, fontSize = 12.sp, color = CodeCardTokens.LineNumber),
+                        )
+                        Text(
+                            text = highlightCode(line, language = "rust"),
+                            style = TextStyle(fontFamily = CodeFontFamily, fontSize = 13.sp, lineHeight = 20.sp),
+                        )
                     }
+                    currentLineNum++
+                }
 
-                    // Active next slot
-                    if (placedBlocks.size < quiz.targetBlocks.size) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                                .border(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.primary,
-                                    RoundedCornerShape(6.dp),
-                                )
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
-                        ) {
-                            Text(
-                                text = "___",
-                                style = TextStyle(
-                                    fontFamily = CodeFontFamily,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                ),
-                            )
-                        }
-
-                        // Remaining slots placeholders
-                        val remaining = quiz.targetBlocks.size - placedBlocks.size - 1
-                        repeat(remaining) {
+                // 2. Interactive slot assembly line (inline slots inside code)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = currentLineNum.toString().padStart(2, ' '),
+                        style = TextStyle(fontFamily = CodeFontFamily, fontSize = 12.sp, color = CodeCardTokens.LineNumber),
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        // Render placed blocks
+                        placedBlocks.forEachIndexed { pIdx, token ->
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(Color.Transparent)
-                                    .border(
-                                        0.5.dp,
-                                        CodeCardTokens.Muted.copy(alpha = 0.4f),
-                                        RoundedCornerShape(6.dp),
-                                    )
+                                    .background(FerrisColors.MintCorrect.copy(alpha = 0.20f))
+                                    .border(1.dp, FerrisColors.MintCorrect, RoundedCornerShape(6.dp))
+                                    .clickable(enabled = !answered) {
+                                        // Tap on placed block to remove up to here
+                                        haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                                        placedBlocks = placedBlocks.take(pIdx)
+                                    }
                                     .padding(horizontal = 8.dp, vertical = 4.dp),
                             ) {
                                 Text(
-                                    text = "…",
+                                    text = token,
                                     style = TextStyle(
                                         fontFamily = CodeFontFamily,
                                         fontSize = 13.sp,
-                                        color = CodeCardTokens.Muted.copy(alpha = 0.4f),
+                                        fontWeight = FontWeight.Bold,
+                                        color = FerrisColors.MintCorrect,
                                     ),
                                 )
                             }
                         }
+
+                        // Active target slot
+                        if (placedBlocks.size < quiz.targetBlocks.size) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+                                    .border(
+                                        1.5.dp,
+                                        MaterialTheme.colorScheme.primary,
+                                        RoundedCornerShape(6.dp),
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                            ) {
+                                Text(
+                                    text = "[ ? ]",
+                                    style = TextStyle(
+                                        fontFamily = CodeFontFamily,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    ),
+                                )
+                            }
+
+                            // Remaining empty slots
+                            val remaining = quiz.targetBlocks.size - placedBlocks.size - 1
+                            repeat(remaining) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color.Transparent)
+                                        .border(
+                                            0.5.dp,
+                                            CodeCardTokens.Muted.copy(alpha = 0.4f),
+                                            RoundedCornerShape(6.dp),
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                ) {
+                                    Text(
+                                        text = "[   ]",
+                                        style = TextStyle(
+                                            fontFamily = CodeFontFamily,
+                                            fontSize = 13.sp,
+                                            color = CodeCardTokens.Muted.copy(alpha = 0.4f),
+                                        ),
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
+                currentLineNum++
 
-                if (quiz.suffix.isNotBlank()) {
-                    Text(
-                        text = highlightCode(quiz.suffix, language = "rust"),
-                        style = TextStyle(fontFamily = CodeFontFamily, fontSize = 13.sp, lineHeight = 20.sp),
-                    )
+                // 3. Suffix code lines
+                suffixLines.forEach { line ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            text = currentLineNum.toString().padStart(2, ' '),
+                            style = TextStyle(fontFamily = CodeFontFamily, fontSize = 12.sp, color = CodeCardTokens.LineNumber),
+                        )
+                        Text(
+                            text = highlightCode(line, language = "rust"),
+                            style = TextStyle(fontFamily = CodeFontFamily, fontSize = 13.sp, lineHeight = 20.sp),
+                        )
+                    }
+                    currentLineNum++
                 }
             }
         }
 
-        // Bottom bank of blocks to click
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Slot Control Dock (Backspace ⌫, slot counter, Reset)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.35f))
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(
-                    text = if (answered) "Code assembled" else "Tap blocks to code:",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = DisplayFont,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (placedBlocks.isNotEmpty() && !answered) {
-                    Text(
-                        text = "Reset",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontFamily = DisplayFont,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .clickable {
-                                placedBlocks = emptyList()
+                // Backspace button (cs-refresh.png)
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .glass(RoundedCornerShape(8.dp))
+                        .clickable(enabled = placedBlocks.isNotEmpty() && !answered) {
+                            if (placedBlocks.isNotEmpty()) {
+                                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                                placedBlocks = placedBlocks.dropLast(1)
                             }
-                            .padding(4.dp),
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Backspace,
+                        contentDescription = "Delete last block",
+                        tint = if (placedBlocks.isNotEmpty()) MaterialTheme.colorScheme.primary else CodeCardTokens.Muted.copy(alpha = 0.4f),
+                        modifier = Modifier.size(18.dp),
                     )
                 }
+
+                Text(
+                    text = if (answered) "Completed ✓" else "Slot ${placedBlocks.size.coerceAtMost(quiz.targetBlocks.size - 1) + 1} of ${quiz.targetBlocks.size}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = CodeFontFamily,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                allBankBlocks.forEachIndexed { bankIdx, blockToken ->
-                    val timesInPlaced = placedBlocks.count { it == blockToken }
-                    val timesInBankBeforeThis = allBankBlocks.take(bankIdx).count { it == blockToken }
-                    val isUsed = timesInPlaced > timesInBankBeforeThis
-                    val isShaking = bankIdx == shakingIndex
-                    val interactionSource = remember { MutableInteractionSource() }
+            if (placedBlocks.isNotEmpty() && !answered) {
+                Text(
+                    text = "Reset",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = DisplayFont,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clickable {
+                            placedBlocks = emptyList()
+                        }
+                        .padding(4.dp),
+                )
+            }
+        }
 
-                    val borderStroke = when {
-                        isShaking -> BorderStroke(1.5.dp, MaterialTheme.colorScheme.error)
-                        isUsed -> BorderStroke(0.5.dp, glassStroke().copy(alpha = 0.2f))
-                        else -> BorderStroke(1.dp, glassStroke())
-                    }
+        // Bottom bank of 3D tactile blocks (cs-refresh.png)
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            allBankBlocks.forEachIndexed { bankIdx, blockToken ->
+                val timesInPlaced = placedBlocks.count { it == blockToken }
+                val timesInBankBeforeThis = allBankBlocks.take(bankIdx).count { it == blockToken }
+                val isUsed = timesInPlaced > timesInBankBeforeThis
+                val isShaking = bankIdx == shakingIndex
+                val interactionSource = remember { MutableInteractionSource() }
 
-                    Box(
-                        modifier = Modifier
-                            .graphicsLayer {
-                                if (isShaking) {
-                                    translationX = shakeX.value * density
-                                }
+                val borderStroke = when {
+                    isShaking -> BorderStroke(2.dp, MaterialTheme.colorScheme.error)
+                    isUsed -> BorderStroke(0.5.dp, glassStroke().copy(alpha = 0.2f))
+                    else -> BorderStroke(1.5.dp, glassStroke())
+                }
+
+                Box(
+                    modifier = Modifier
+                        .graphicsLayer {
+                            if (isShaking) {
+                                translationX = shakeX.value * density
                             }
-                            .pressScale(interactionSource, pressed = 0.94f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .glass(RoundedCornerShape(12.dp))
-                            .border(borderStroke, RoundedCornerShape(12.dp))
-                            .clickable(
-                                interactionSource = interactionSource,
-                                indication = null,
-                                role = Role.Button,
-                                enabled = !isUsed && !answered,
-                            ) {
-                                val nextExpected = quiz.targetBlocks.getOrNull(placedBlocks.size)
-                                if (blockToken == nextExpected) {
-                                    // Correct block! Only correct block enters
-                                    val updated = placedBlocks + blockToken
-                                    placedBlocks = updated
-                                    haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-                                    if (updated.size == quiz.targetBlocks.size) {
-                                        onSubmit(updated.joinToString(" "))
-                                    }
-                                } else {
-                                    // Wrong block! Rejected with shake and Reject haptic
-                                    haptics.performHapticFeedback(HapticFeedbackType.Reject)
-                                    shakingIndex = bankIdx
+                        }
+                        .tactileClickable(interactionSource)
+                        .tactileDepth(RoundedCornerShape(10.dp), depth = 4.dp, cornerRadius = 10.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .border(borderStroke, RoundedCornerShape(10.dp))
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null,
+                            role = Role.Button,
+                            enabled = !isUsed && !answered,
+                        ) {
+                            val nextExpected = quiz.targetBlocks.getOrNull(placedBlocks.size)
+                            if (blockToken == nextExpected) {
+                                // Correct block! Enters code
+                                val updated = placedBlocks + blockToken
+                                placedBlocks = updated
+                                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                                if (updated.size == quiz.targetBlocks.size) {
+                                    onSubmit(updated.joinToString(" "))
                                 }
+                            } else {
+                                // Wrong block! Rejected with shake and Reject haptic
+                                haptics.performHapticFeedback(HapticFeedbackType.Reject)
+                                shakingIndex = bankIdx
                             }
-                            .semantics {
-                                role = Role.Button
-                                if (isShaking) {
-                                    liveRegion = LiveRegionMode.Polite
-                                    stateDescription = "incorrect"
-                                } else if (isUsed) {
-                                    stateDescription = "placed"
-                                }
+                        }
+                        .semantics {
+                            role = Role.Button
+                            if (isShaking) {
+                                liveRegion = LiveRegionMode.Polite
+                                stateDescription = "incorrect"
+                            } else if (isUsed) {
+                                stateDescription = "placed"
                             }
-                            .defaultMinSize(minHeight = 48.dp)
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = blockToken,
-                            style = TextStyle(
-                                fontFamily = CodeFontFamily,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isUsed) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
-                                else MaterialTheme.colorScheme.onSurface,
-                            ),
-                        )
-                    }
+                        }
+                        .defaultMinSize(minHeight = 48.dp)
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = blockToken,
+                        style = TextStyle(
+                            fontFamily = CodeFontFamily,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isUsed) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                            else MaterialTheme.colorScheme.onSurface,
+                        ),
+                    )
                 }
             }
         }

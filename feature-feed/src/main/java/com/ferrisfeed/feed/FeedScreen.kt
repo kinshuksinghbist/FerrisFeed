@@ -80,10 +80,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import com.ferrisfeed.coreui.ConfettiBurst
 import com.ferrisfeed.coreui.DisplayFont
 import com.ferrisfeed.coreui.FerrisButton
@@ -99,8 +95,6 @@ import com.ferrisfeed.coreui.QuizCard
 import com.ferrisfeed.coreui.QuizUiModel
 import com.ferrisfeed.coreui.ReelCard
 import com.ferrisfeed.coreui.ReelSkeleton
-import com.ferrisfeed.coreui.SpeakCard
-import com.ferrisfeed.coreui.SpeakState
 import com.ferrisfeed.coreui.SwipeCue
 import com.ferrisfeed.coreui.glass
 import com.ferrisfeed.coreui.staggeredEntrance
@@ -110,21 +104,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Doomscroll feed (Spec v2 + TODO 24 speaker opening).
+ * Doomscroll feed (Spec v2 + P7 pure visual & interactive overhaul).
  *
  * - Full-screen [VerticalPager], one reel per page. No inner vertical scroll
  *   anywhere: the pager owns all vertical motion, and a low snap threshold
  *   means even a small swipe commits to the next page.
- * - Two pages per reel: the lesson (speaker prompt ([SpeakCard]) on the
- *   first reel only -> info ([ReelCard]) with the code well contained
+ * - Two pages per reel: the lesson ([ReelCard] with the code well contained
  *   inside it, flip-to-output included) and then the quiz on its own page
  *   ([QuizCard] with the hook as the cue). Quiz answers are the sole SRS
- *   signal via [FeedViewModel.onGrade]. The lesson text composes
- *   immediately; speech only gates the difficulty reward motion
- *   (`animateDifficulty`).
- * - Like/save float on a translucent right rail over the content edge
- *   (48dp targets); double-tap anywhere toggles save. No buttons, sheets,
- *   or hints inside the content column.
+ *   signal via [FeedViewModel.onGrade].
+ * - Like/save float below the card on [ReelActionRow]; double-tap anywhere toggles save.
  */
 @Composable
 fun FeedScreen(
@@ -136,7 +125,6 @@ fun FeedScreen(
     title: String? = null,
 ) {
     val state by viewModel.uiState.collectAsState()
-    val speakDismissed by viewModel.speakDismissed.collectAsState()
     val swipeHintSeen by viewModel.swipeHintSeen.collectAsState()
 
     if (state.isLoading && state.reels.isEmpty()) {
@@ -259,9 +247,6 @@ fun FeedScreen(
                         onSave = { viewModel.onSave(reel.id, !isSaved) },
                         onDoubleTapSave = { offset -> handleDoubleTapSave(reel.id, isSaved, offset) },
                         onInteract = { viewModel.onInteract() },
-                        onRecognition = { id, heard -> viewModel.onRecognition(id, heard) },
-                        showSpeak = page == 0 && !speakDismissed,
-                        onDismissSpeak = { viewModel.dismissSpeakPrompt() },
                         settled = pagerState.settledPage == page,
                     )
                 } else {
@@ -270,6 +255,7 @@ fun FeedScreen(
                         isSaved = isSaved,
                         isLiked = isLiked,
                         settled = pagerState.settledPage == page,
+                        answeredState = state.answeredQuizzes[reel.id],
                         onLike = { viewModel.onLike(reel.id, !isLiked) },
                         onSave = { viewModel.onSave(reel.id, !isSaved) },
                         onDoubleTapSave = { offset -> handleDoubleTapSave(reel.id, isSaved, offset) },
@@ -280,9 +266,10 @@ fun FeedScreen(
             }
         }
 
-        // 5-segment session queue progress indicator under stat bar (P6 33a)
+        // Smooth continuous session queue progress indicator under stat bar
         SessionProgressBar(
             currentPage = pagerState.currentPage,
+            totalPages = pageCount,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 48.dp),
@@ -359,8 +346,8 @@ fun FeedScreen(
 }
 
 /**
- * Lesson page: speaker prompt (first reel only) + info card with the code
- * well contained inside it. No quiz here — it lives on [QuizPage].
+ * Lesson page: info card ([ReelCard]) with the code well contained inside it.
+ * No quiz here — it lives on [QuizPage].
  */
 @Composable
 private fun InfoPage(
@@ -371,90 +358,9 @@ private fun InfoPage(
     onSave: () -> Unit,
     onDoubleTapSave: (Offset) -> Unit,
     onInteract: () -> Unit,
-    onRecognition: (reelId: String, heard: Boolean) -> Unit = { _, _ -> },
-    showSpeak: Boolean = true,
-    onDismissSpeak: () -> Unit = {},
     settled: Boolean = true,
 ) {
-    val context = LocalContext.current
     val trackColor = trackColor(reel.track.id)
-    var speakState: SpeakState by remember(reel.id) { mutableStateOf(SpeakState.Prompt) }
-    var recognizer: android.speech.SpeechRecognizer? by remember(reel.id) {
-        mutableStateOf(null)
-    }
-    // Dismissed prompt stays dismissed for this reel instance only.
-    var speakHidden: Boolean by remember(reel.id) { mutableStateOf(false) }
-    var heardCollapsed: Boolean by remember(reel.id) { mutableStateOf(false) }
-
-    LaunchedEffect(speakState) {
-        if (speakState is SpeakState.Heard) {
-            delay(2500L)
-            heardCollapsed = true
-        }
-    }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        if (granted) {
-            speakState = SpeakState.Listening(0f)
-            onRecognition(reel.id, false)
-            recognizer = SpeechRecognition.listenOnce(
-                context,
-                onHeard = { transcript ->
-                    speakState = SpeakState.Heard(transcript)
-                    onRecognition(reel.id, true)
-                },
-                onUnavailable = { reason ->
-                    speakState = SpeakState.Unavailable(reason)
-                },
-                onLevel = { level ->
-                    speakState = SpeakState.Listening(level)
-                },
-            )
-        } else {
-            speakState = SpeakState.Unavailable(
-                "Microphone permission is off — reading works the same.",
-            )
-        }
-    }
-    DisposableEffect(reel.id) {
-        onDispose {
-            runCatching { recognizer?.destroy() }
-            recognizer = null
-        }
-    }
-    fun startSpeak() {
-        if (!SpeechRecognition.isAvailable(context)) {
-            speakState = SpeakState.Unavailable(
-                "Speech recognition is not available on this device.",
-            )
-            return
-        }
-        val granted = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
-            PackageManager.PERMISSION_GRANTED
-        if (granted) {
-            speakState = SpeakState.Listening(0f)
-            onRecognition(reel.id, false)
-            recognizer = SpeechRecognition.listenOnce(
-                context,
-                onHeard = { transcript ->
-                    speakState = SpeakState.Heard(transcript)
-                    onRecognition(reel.id, true)
-                },
-                onUnavailable = { reason ->
-                    speakState = SpeakState.Unavailable(reason)
-                },
-                onLevel = { level ->
-                    speakState = SpeakState.Listening(level)
-                },
-            )
-        } else {
-            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        }
-    }
-    // Recognition complete gates ONLY the difficulty reward motion (TODO 24b).
-    val animateDifficulty = speakState is SpeakState.Heard
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -491,7 +397,7 @@ private fun InfoPage(
                 code = reel.code,
                 language = reel.language,
                 output = reel.output,
-                animateDifficulty = animateDifficulty,
+                animateDifficulty = settled,
                 settled = settled,
             )
             ReelActionRow(
@@ -500,38 +406,6 @@ private fun InfoPage(
                 isLiked = isLiked,
                 onLike = { onInteract(); onLike() },
                 onSave = { onInteract(); onSave() },
-            )
-        }
-
-        // Overlay bottom dock card for speaker prompt (P6 Item 37a, 33h)
-        val showDock = showSpeak && !speakHidden && !heardCollapsed
-        AnimatedVisibility(
-            visible = showDock,
-            enter = slideInVertically(
-                animationSpec = FerrisMotion.BouncyOffset,
-                initialOffsetY = { it },
-            ) + fadeIn(animationSpec = FerrisMotion.Quick),
-            exit = slideOutVertically(
-                animationSpec = FerrisMotion.SmoothOffset,
-                targetOffsetY = { it },
-            ) + fadeOut(animationSpec = FerrisMotion.Quick),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = LocalBottomBarInset.current + 16.dp,
-                ),
-        ) {
-            SpeakCard(
-                state = speakState,
-                phrase = reel.hook,
-                onSpeak = { startSpeak() },
-                onRetry = { startSpeak() },
-                onDismiss = {
-                    speakHidden = true
-                    onDismissSpeak()
-                },
             )
         }
     }
@@ -548,6 +422,7 @@ private fun QuizPage(
     isSaved: Boolean,
     isLiked: Boolean,
     settled: Boolean,
+    answeredState: Boolean?,
     onLike: () -> Unit,
     onSave: () -> Unit,
     onDoubleTapSave: (Offset) -> Unit,
@@ -555,6 +430,7 @@ private fun QuizPage(
     onInteract: () -> Unit,
 ) {
     val trackColor = trackColor(reel.track.id)
+    val quizUi = remember(reel.id) { reel.toQuizUi() }
 
     Box(
         modifier = Modifier
@@ -605,8 +481,10 @@ private fun QuizPage(
             )
             // Quiz options & variants
             QuizCard(
-                quiz = reel.toQuizUi(),
+                quiz = quizUi,
                 settled = settled,
+                initialAnswered = answeredState != null,
+                initialWasCorrect = answeredState ?: false,
                 onResult = { correct, label -> onInteract(); onGrade(correct, label) },
                 modifier = Modifier.weight(1f, fill = false),
             )
@@ -725,66 +603,49 @@ private fun Reel.toQuizUi(): QuizUiModel = when (quiz.type) {
 }
 
 /**
- * 5-segment session queue progress indicator under stat bar (P6 33a).
- * Shows position in 5-reel session queue window.
+ * Smooth continuous session queue progress indicator under stat bar.
+ * Replaces the jarring modulo 5 reset with smooth, uninterrupted queue progress.
  */
 @Composable
 private fun SessionProgressBar(
     currentPage: Int,
+    totalPages: Int,
     modifier: Modifier = Modifier,
 ) {
-    val currentReel = currentPage / 2
-    val isQuiz = currentPage % 2 == 1
-    val segmentInWindow = currentReel % 5
-
+    val progress = if (totalPages <= 1) 1f else (currentPage.toFloat() / (totalPages - 1).coerceAtLeast(1)).coerceIn(0f, 1f)
     val currentFill by animateFloatAsState(
-        targetValue = if (isQuiz) 1f else 0.5f,
+        targetValue = progress,
         animationSpec = FerrisMotion.Smooth,
-        label = "segmentFill",
+        label = "feedQueueProgress",
     )
+    val currentLesson = (currentPage / 2) + 1
+    val totalLessons = (totalPages / 2).coerceAtLeast(1)
 
-    Row(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(3.dp)
+            .height(3.5.dp)
             .padding(horizontal = 16.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
             .semantics(mergeDescendants = true) {
-                contentDescription = "Reel ${segmentInWindow + 1} of 5"
+                contentDescription = "Lesson $currentLesson of $totalLessons"
             },
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        val primaryColor = MaterialTheme.colorScheme.primary
-        val futureColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-
-        for (i in 0 until 5) {
-            Box(
-                modifier = Modifier
-                    .clearAndSetSemantics {}
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .clip(CircleShape)
-                    .background(futureColor),
-            ) {
-                when {
-                    i < segmentInWindow -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(primaryColor),
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(fraction = currentFill)
+                .clip(CircleShape)
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.tertiary,
                         )
-                    }
-                    i == segmentInWindow -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(fraction = currentFill)
-                                .background(primaryColor),
-                        )
-                    }
-                    else -> Unit
-                }
-            }
-        }
+                    )
+                ),
+        )
     }
 }
 

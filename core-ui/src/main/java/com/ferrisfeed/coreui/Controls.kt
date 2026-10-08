@@ -86,15 +86,24 @@ fun FerrisButton(
         FerrisButtonStyle.Ghost -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
+    val philosophy = LocalDesignPhilosophy.current
+    val buttonShape = if (philosophy == DesignPhilosophy.NeoBrutalism) RoundedCornerShape(12.dp) else CircleShape
+
     val backgroundModifier = when (style) {
-        FerrisButtonStyle.Filled -> Modifier
-            .background(
-                brush = Brush.verticalGradient(listOf(primary, darkPrimary)),
-                shape = CircleShape,
-            )
-            .border(0.5.dp, Color.White.copy(alpha = 0.2f), CircleShape)
+        FerrisButtonStyle.Filled -> when (philosophy) {
+            DesignPhilosophy.StudioGlass -> Modifier
+                .background(
+                    brush = Brush.verticalGradient(listOf(primary, darkPrimary)),
+                    shape = buttonShape,
+                )
+                .border(0.5.dp, Color.White.copy(alpha = 0.25f), buttonShape)
+            DesignPhilosophy.NeoBrutalism -> Modifier
+                .tactileDepth(buttonShape, depth = 3.dp, cornerRadius = 12.dp)
+                .background(primary, buttonShape)
+        }
         FerrisButtonStyle.Tonal -> Modifier
-            .background(primary.copy(alpha = 0.16f), CircleShape)
+            .background(primary.copy(alpha = 0.16f), buttonShape)
+            .then(if (philosophy == DesignPhilosophy.NeoBrutalism) Modifier.border(2.dp, primary, buttonShape) else Modifier)
         FerrisButtonStyle.Ghost -> Modifier
     }
 
@@ -102,8 +111,8 @@ fun FerrisButton(
         modifier = modifier
             .defaultMinSize(minWidth = 88.dp, minHeight = 52.dp)
             .alpha(if (enabled) 1f else 0.38f)
-            .then(if (enabled) Modifier.pressScale(interactionSource) else Modifier)
-            .clip(CircleShape)
+            .then(if (enabled) Modifier.tactileClickable(interactionSource) else Modifier)
+            .clip(buttonShape)
             .then(backgroundModifier)
             .clickable(
                 interactionSource = interactionSource,

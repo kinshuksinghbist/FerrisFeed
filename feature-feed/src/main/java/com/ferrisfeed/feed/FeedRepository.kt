@@ -68,6 +68,7 @@ interface ReelLocalDataSource {
     suspend fun setLiked(reelId: String, liked: Boolean)
     suspend fun savedIds(): Set<String>
     suspend fun likedIds(): Set<String>
+    fun observeSavedIds(): Flow<Set<String>> = kotlinx.coroutines.flow.emptyFlow()
     suspend fun recordGrade(reelId: String, correct: Boolean, label: String)
 }
 
@@ -84,6 +85,7 @@ interface FeedRepository {
     suspend fun setLiked(reelId: String, liked: Boolean)
     suspend fun savedIds(): Set<String>
     suspend fun likedIds(): Set<String>
+    fun observeSavedIds(): Flow<Set<String>> = kotlinx.coroutines.flow.emptyFlow()
     suspend fun recordGrade(reelId: String, correct: Boolean, label: String)
 }
 
@@ -102,6 +104,8 @@ class DefaultFeedRepository(
     override fun observeAllReels(): Flow<List<Reel>> = local.observeReels()
 
     override suspend fun allReels(): List<Reel> = local.allReels()
+
+    override fun observeSavedIds(): Flow<Set<String>> = local.observeSavedIds()
 
     /** Also merges live SRS updates so due flags stay fresh without reshuffling. */
     fun observeMergedQueue(): Flow<List<Reel>> = local.observeReels().map { all ->

@@ -58,6 +58,9 @@ sealed interface Route : NavKey {
     data object Path : Route
 
     @Serializable
+    data object Profile : Route
+
+    @Serializable
     data class ReelDetail(val reelId: String) : Route
 
     /** Topic-only feed reached from a roadmap node (quiz + info mixed). */
@@ -79,9 +82,13 @@ class MainActivity : ComponentActivity() {
             ?.takeIf { it.scheme == "ferrisfeed" && it.host == "reel" }
             ?.lastPathSegment
         setContent {
+            val statsViewModel: StatsViewModel = hiltViewModel()
+            val currentPhilosophy by statsViewModel.designPhilosophy.collectAsState()
             FerrisFeedTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    FerrisFeedNavHost(initialReelId = deepLinkedReel)
+                CompositionLocalProvider(com.ferrisfeed.coreui.LocalDesignPhilosophy provides currentPhilosophy) {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        FerrisFeedNavHost(initialReelId = deepLinkedReel)
+                    }
                 }
             }
         }
@@ -89,8 +96,8 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Feed + Path app shell with floating glass nav bar, persistent top stat bar,
- * and custom route transitions (Spec v2 + P6 32).
+ * Feed + Path + Profile app shell with floating glass nav bar, persistent top stat bar,
+ * and custom route transitions (Spec v2 + P6 32 + P7 Profile).
  */
 @Composable
 fun FerrisFeedNavHost(initialReelId: String?) {
@@ -101,6 +108,7 @@ fun FerrisFeedNavHost(initialReelId: String?) {
     val currentTop = backStack.lastOrNull()
     val selectedTab: Route = when (currentTop) {
         is Route.Path -> Route.Path
+        is Route.Profile -> Route.Profile
         else -> Route.Feed
     }
 
@@ -124,9 +132,9 @@ fun FerrisFeedNavHost(initialReelId: String?) {
                 transitionSpec = {
                     val initialKey = initialState as? Route
                     val targetKey = targetState as? Route
-                    if ((initialKey is Route.Feed && targetKey is Route.Path) ||
-                        (initialKey is Route.Path && targetKey is Route.Feed)
-                    ) {
+                    val isTabSwitch = (initialKey is Route.Feed || initialKey is Route.Path || initialKey is Route.Profile) &&
+                        (targetKey is Route.Feed || targetKey is Route.Path || targetKey is Route.Profile)
+                    if (isTabSwitch) {
                         (fadeIn(animationSpec = tween(200)) + scaleIn(animationSpec = tween(200), initialScale = 0.96f)) togetherWith
                             (fadeOut(animationSpec = tween(200)) + scaleOut(animationSpec = tween(200), targetScale = 1.04f))
                     } else {
@@ -183,6 +191,18 @@ fun FerrisFeedNavHost(initialReelId: String?) {
                                 onQueryChanged = viewModel::onQueryChanged,
                                 onResultClick = { result -> backStack.add(Route.ReelDetail(result.id)) },
                                 onTopicClick = { node -> backStack.add(Route.TopicFeed(node.id)) },
+                                onExploreTopic = viewModel::exploreTopic,
+                            )
+                        }
+                        is Route.Profile -> NavEntry(key) {
+                            val profileViewModel: ProfileViewModel = hiltViewModel()
+                            val profileState by profileViewModel.state.collectAsState()
+                            ProfileScreen(
+                                state = profileState,
+                                onSelectPhilosophy = profileViewModel::setDesignPhilosophy,
+                                onOpenReel = { reelId -> backStack.add(Route.ReelDetail(reelId)) },
+                                onTopicClick = { topicId -> backStack.add(Route.TopicFeed(topicId)) },
+                                onRemoveSaved = profileViewModel::removeSaved,
                             )
                         }
                         else -> error("Unknown route $key")
@@ -215,7 +235,11 @@ fun FerrisFeedNavHost(initialReelId: String?) {
                 } else {
                     StatBar(
                         stats = userStats,
-                        title = if (selectedTab is Route.Path) "Path" else null,
+                        title = when (selectedTab) {
+                            is Route.Path -> "Path"
+                            is Route.Profile -> "Profile"
+                            else -> null
+                        },
                     )
                 }
             }

@@ -28,6 +28,8 @@ data class PathUiState(
     val filters: SearchFilters = SearchFilters(),
     val results: List<SearchResult> = emptyList(),
     val isSearching: Boolean = false,
+    val exploringTopic: PathNode? = null,
+    val exploringReels: List<SearchResult> = emptyList(),
 )
 
 /**
@@ -61,6 +63,18 @@ class PathViewModel @Inject constructor(
 
     init {
         refresh()
+    }
+
+    /** Loads all reels for a specific topic to allow exploring and reviewing previous reels. */
+    fun exploreTopic(node: PathNode?) {
+        if (node == null) {
+            _state.update { it.copy(exploringTopic = null, exploringReels = emptyList()) }
+            return
+        }
+        viewModelScope.launch {
+            val reels = dao.getByTopic(node.id).map { it.toSearchResult() }
+            _state.update { it.copy(exploringTopic = node, exploringReels = reels) }
+        }
     }
 
     /** Rebuilds the roadmap from Room + persisted mastery. */

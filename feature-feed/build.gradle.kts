@@ -43,8 +43,7 @@ dependencies {
 
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    // Speaker-opening permission launcher (TODO 24): same catalog entry the
-    // :app module already uses — no new coordinate.
+    // Activity compose for activity context & back handlers
     implementation(libs.androidx.activity.compose)
 
     implementation(libs.navigation3.runtime)

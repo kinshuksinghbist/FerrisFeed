@@ -102,8 +102,8 @@ fun ReelCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.large)
-            .border(0.5.dp, glassStroke(), MaterialTheme.shapes.large),
+            .tactileDepth(MaterialTheme.shapes.large, depth = 8.dp)
+            .clip(MaterialTheme.shapes.large),
         shape = MaterialTheme.shapes.large,
         color = Color.Transparent,
     ) {

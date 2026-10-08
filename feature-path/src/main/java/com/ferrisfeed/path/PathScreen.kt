@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -75,7 +77,9 @@ import com.ferrisfeed.coreui.glass
 import com.ferrisfeed.coreui.glassStroke
 import com.ferrisfeed.coreui.pressScale
 import com.ferrisfeed.coreui.staggeredEntrance
+import com.ferrisfeed.coreui.tactileDepth
 import com.ferrisfeed.coreui.trackBrush
+import com.ferrisfeed.coreui.trackColor
 
 /** Single roadmap node. [requires] lists topic ids that must be started first (DAG edges). */
 data class PathNode(
@@ -99,6 +103,7 @@ fun PathScreen(
     onQueryChanged: (String, SearchFilters) -> Unit,
     onResultClick: (SearchResult) -> Unit,
     onTopicClick: (PathNode) -> Unit,
+    onExploreTopic: (PathNode?) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val nodes = state.nodes
@@ -256,11 +261,21 @@ fun PathScreen(
                                     )
                                 }
 
-                                FerrisButton(
-                                    text = "Resume",
-                                    style = FerrisButtonStyle.Filled,
-                                    onClick = { onTopicClick(continueNode) },
-                                )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    FerrisButton(
+                                        text = "Explore",
+                                        style = FerrisButtonStyle.Outlined,
+                                        onClick = { onExploreTopic(continueNode) },
+                                    )
+                                    FerrisButton(
+                                        text = "Resume",
+                                        style = FerrisButtonStyle.Filled,
+                                        onClick = { onTopicClick(continueNode) },
+                                    )
+                                }
                             }
 
                             // Overall mastery bar
@@ -629,54 +644,77 @@ fun PathScreen(
                                             else -> MaterialTheme.colorScheme.primary
                                         }
 
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(CircleShape)
-                                                .background(statusBg)
-                                                .padding(horizontal = 10.dp, vertical = 4.dp),
-                                            contentAlignment = Alignment.Center,
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                                         ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            if (isUnlocked) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(CircleShape)
+                                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                                        .clickable { onExploreTopic(node) }
+                                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                                    contentAlignment = Alignment.Center,
+                                                ) {
+                                                    Text(
+                                                        text = "Explore",
+                                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                                        fontFamily = DisplayFont,
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                    )
+                                                }
+                                            }
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(CircleShape)
+                                                    .background(statusBg)
+                                                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                                                contentAlignment = Alignment.Center,
                                             ) {
-                                                when {
-                                                    !isUnlocked -> {
-                                                        Icon(
-                                                            imageVector = Icons.Filled.Lock,
-                                                            contentDescription = "Locked",
-                                                            tint = statusColor,
-                                                            modifier = Modifier.size(13.dp),
-                                                        )
-                                                        Text(
-                                                            text = "Locked",
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            fontFamily = DisplayFont,
-                                                            color = statusColor,
-                                                        )
-                                                    }
-                                                    node.mastery >= 0.8f -> {
-                                                        Icon(
-                                                            imageVector = Icons.Filled.Check,
-                                                            contentDescription = "Mastered",
-                                                            tint = statusColor,
-                                                            modifier = Modifier.size(13.dp),
-                                                        )
-                                                        Text(
-                                                            text = "Mastered",
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            fontFamily = DisplayFont,
-                                                            color = statusColor,
-                                                        )
-                                                    }
-                                                    else -> {
-                                                        Text(
-                                                            text = "${(node.mastery * 100).toInt()}%",
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            fontFamily = DisplayFont,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = statusColor,
-                                                        )
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                ) {
+                                                    when {
+                                                        !isUnlocked -> {
+                                                            Icon(
+                                                                imageVector = Icons.Filled.Lock,
+                                                                contentDescription = "Locked",
+                                                                tint = statusColor,
+                                                                modifier = Modifier.size(13.dp),
+                                                            )
+                                                            Text(
+                                                                text = "Locked",
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                fontFamily = DisplayFont,
+                                                                color = statusColor,
+                                                            )
+                                                        }
+                                                        node.mastery >= 0.8f -> {
+                                                            Icon(
+                                                                imageVector = Icons.Filled.Check,
+                                                                contentDescription = "Mastered",
+                                                                tint = statusColor,
+                                                                modifier = Modifier.size(13.dp),
+                                                            )
+                                                            Text(
+                                                                text = "Mastered",
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                fontFamily = DisplayFont,
+                                                                color = statusColor,
+                                                            )
+                                                        }
+                                                        else -> {
+                                                            Text(
+                                                                text = "${(node.mastery * 100).toInt()}%",
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                fontFamily = DisplayFont,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = statusColor,
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
@@ -695,6 +733,183 @@ fun PathScreen(
             trigger = confettiTrigger,
             modifier = Modifier.fillMaxSize(),
         )
+
+        // Topic Reel Explorer overlay sheet for reviewing previous reels (P7)
+        if (state.exploringTopic != null) {
+            TopicExplorerSheet(
+                node = state.exploringTopic,
+                reels = state.exploringReels,
+                onClose = { onExploreTopic(null) },
+                onTopicClick = onTopicClick,
+                onResultClick = onResultClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TopicExplorerSheet(
+    node: PathNode,
+    reels: List<SearchResult>,
+    onClose: () -> Unit,
+    onTopicClick: (PathNode) -> Unit,
+    onResultClick: (SearchResult) -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.65f))
+            .clickable(onClick = onClose),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.82f)
+                .clickable(enabled = false) {}
+                .tactileDepth(MaterialTheme.shapes.extraLarge, 8.dp)
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(20.dp),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                // Drag handle
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .width(36.dp)
+                        .height(4.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)),
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "EXPLORE TOPIC",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = DisplayFont,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = node.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontFamily = DisplayFont,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = "${node.reelCount} reels · ${(node.mastery * 100).toInt()}% Mastered",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    FerrisButton(
+                        text = "Study All",
+                        style = FerrisButtonStyle.Filled,
+                        onClick = {
+                            onClose()
+                            onTopicClick(node)
+                        },
+                    )
+                }
+
+                Text(
+                    text = "Tap any reel below to review concepts or jump directly to it:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    itemsIndexed(reels, key = { _, r -> "explore-${r.id}" }) { idx, reel ->
+                        TopicReelItemCard(
+                            index = idx + 1,
+                            reel = reel,
+                            onClick = {
+                                onClose()
+                                onResultClick(reel)
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TopicReelItemCard(
+    index: Int,
+    reel: SearchResult,
+    onClick: () -> Unit,
+) {
+    val trackCol = trackColor(reel.track)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            .border(0.5.dp, glassStroke(), MaterialTheme.shapes.medium)
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(trackCol.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "$index",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = trackCol,
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = reel.hook,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontFamily = DisplayFont,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                if (reel.takeaway.isNotBlank()) {
+                    Text(
+                        text = reel.takeaway,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+            }
+
+            Icon(
+                imageVector = Icons.Filled.PlayArrow,
+                contentDescription = "Review Reel",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
 }
 

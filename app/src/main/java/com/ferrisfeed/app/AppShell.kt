@@ -28,8 +28,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -105,25 +108,36 @@ fun FerrisNavBar(
                 selectedIcon = Icons.Filled.Timeline,
                 unselectedIcon = Icons.Outlined.Timeline,
             ),
+            NavItemData(
+                route = Route.Profile,
+                label = "Profile",
+                selectedIcon = Icons.Filled.Person,
+                unselectedIcon = Icons.Outlined.Person,
+            ),
         )
     }
 
-    val selectedIndex = if (selectedRoute is Route.Path) 1 else 0
+    val selectedIndex = when (selectedRoute) {
+        is Route.Profile -> 2
+        is Route.Path -> 1
+        else -> 0
+    }
 
-    var item0Offset by remember { mutableStateOf(0.dp) }
-    var item0Width by remember { mutableStateOf(0.dp) }
-    var item1Offset by remember { mutableStateOf(0.dp) }
-    var item1Width by remember { mutableStateOf(0.dp) }
+    val itemOffsets = remember { mutableStateMapOf<Int, Dp>() }
+    val itemWidths = remember { mutableStateMapOf<Int, Dp>() }
 
     val density = LocalDensity.current
 
+    val currentOffset = itemOffsets[selectedIndex] ?: 0.dp
+    val currentWidth = itemWidths[selectedIndex] ?: 0.dp
+
     val indicatorOffset by animateDpAsState(
-        targetValue = if (selectedIndex == 0) item0Offset else item1Offset,
+        targetValue = currentOffset,
         animationSpec = FerrisMotion.SnappyDp,
         label = "nav-indicator-offset",
     )
     val indicatorWidth by animateDpAsState(
-        targetValue = if (selectedIndex == 0) item0Width else item1Width,
+        targetValue = currentWidth,
         animationSpec = FerrisMotion.SnappyDp,
         label = "nav-indicator-width",
     )
@@ -138,7 +152,7 @@ fun FerrisNavBar(
             )
             .glass(CircleShape)
             .clip(CircleShape)
-            .defaultMinSize(minWidth = 220.dp)
+            .defaultMinSize(minWidth = 260.dp)
             .height(64.dp)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
@@ -181,15 +195,10 @@ fun FerrisNavBar(
                             val pos = coordinates.positionInParent()
                             val xDp = with(density) { pos.x.toDp() }
                             val wDp = with(density) { coordinates.size.width.toDp() }
-                            if (index == 0) {
-                                item0Offset = xDp
-                                item0Width = wDp
-                            } else {
-                                item1Offset = xDp
-                                item1Width = wDp
-                            }
+                            itemOffsets[index] = xDp
+                            itemWidths[index] = wDp
                         }
-                        .defaultMinSize(minWidth = 96.dp, minHeight = 48.dp)
+                        .defaultMinSize(minWidth = 84.dp, minHeight = 48.dp)
                         .clip(CircleShape)
                         .pressScale(interactionSource)
                         .clickable(

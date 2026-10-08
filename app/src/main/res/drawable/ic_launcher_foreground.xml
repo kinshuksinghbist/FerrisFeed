@@ -4,16 +4,110 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Ferris orange crab-shell mark on transparent foreground layer.
-         minSdk 26, so adaptive icons cover every supported device. -->
+
+    <!-- Ambient glowing halo behind Ferris -->
     <path
         android:fillColor="#FF6B35"
-        android:pathData="M54,18C34,18 20,34 20,56C20,78 34,92 54,92C74,92 88,78 88,56C88,34 74,18 54,18Z" />
+        android:fillAlpha="0.12"
+        android:pathData="M54,54m-34,0a34,34 0,1 1,68 0a34,34 0,1 1,-68 0" />
+
+    <!-- Left code brace { -->
     <path
-        android:fillColor="#0B0E14"
-        android:pathData="M44,44L64,44L64,50L50,50L50,66L44,66L44,44Z M58,58L72,58L72,64L58,64L58,58Z" />
+        android:fillColor="#FFC857"
+        android:pathData="M27,42C25,42 24,43 24,45L24,50C24,52 22,53 20,54C22,55 24,56 24,58L24,63C24,65 25,66 27,66L28,66L28,64L27,64C26.5,64 26,63.5 26,62.5L26,58C26,56.5 24.5,55 23,54C24.5,53 26,51.5 26,50L26,45.5C26,44.5 26.5,44 27,44L28,44L28,42Z" />
+
+    <!-- Right code brace } -->
+    <path
+        android:fillColor="#FFC857"
+        android:pathData="M81,42C83,42 84,43 84,45L84,50C84,52 86,53 88,54C86,55 84,56 84,58L84,63C84,65 83,66 81,66L80,66L80,64L81,64C81.5,64 82,63.5 82,62.5L82,58C82,56.5 83.5,55 85,54C83.5,53 82,51.5 82,50L82,45.5C82,44.5 81.5,44 81,44L80,44L80,42Z" />
+
+    <!-- Left walking legs -->
+    <path
+        android:strokeColor="#FF6B35"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M38,68L31,73 M39,72L34,78" />
+
+    <!-- Right walking legs -->
+    <path
+        android:strokeColor="#FF6B35"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M70,68L77,73 M69,72L74,78" />
+
+    <!-- Crab shell body (rounded oval) -->
+    <path
+        android:fillColor="#FF6B35"
+        android:pathData="M54,48C38,48 34,56 34,64C34,72 41,76 54,76C67,76 74,72 74,64C74,56 70,48 54,48Z" />
+
+    <!-- Shell top glossy highlight -->
+    <path
+        android:fillColor="#FFA270"
+        android:pathData="M54,50C43,50 38,55 36,60C38,54 44,51 54,51C64,51 70,54 72,60C70,55 65,50 54,50Z" />
+
+    <!-- Left claw arm + claw -->
+    <path
+        android:strokeColor="#FF6B35"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M40,54L34,44L36,36" />
+    <path
+        android:fillColor="#FF6B35"
+        android:pathData="M36,33C31,33 29,38 33,42C35,44 39,43 40,40C41,37 39,33 36,33Z" />
+    <path
+        android:fillColor="#FFA270"
+        android:pathData="M34,35C33,35 32,37 34,38C36,39 37,38 37,37C37,36 35,35 34,35Z" />
+
+    <!-- Right claw arm + claw -->
+    <path
+        android:strokeColor="#FF6B35"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M68,54L74,44L72,36" />
+    <path
+        android:fillColor="#FF6B35"
+        android:pathData="M72,33C77,33 79,38 75,42C73,44 69,43 68,40C67,37 69,33 72,33Z" />
+    <path
+        android:fillColor="#FFA270"
+        android:pathData="M74,35C75,35 76,37 74,38C72,39 71,38 71,37C71,36 73,35 74,35Z" />
+
+    <!-- Left eye stalk + eye -->
+    <path
+        android:strokeColor="#FF6B35"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M46,50L46,44" />
     <path
         android:fillColor="#FFFFFF"
-        android:fillAlpha="0.9"
-        android:pathData="M38,72L70,72L70,76L38,76L38,72Z" />
+        android:pathData="M46,43m-4.5,0a4.5,4.5 0,1 1,9 0a4.5,4.5 0,1 1,-9 0" />
+    <path
+        android:fillColor="#0B0E14"
+        android:pathData="M46,43m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M47,42m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0" />
+
+    <!-- Right eye stalk + eye -->
+    <path
+        android:strokeColor="#FF6B35"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M62,50L62,44" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M62,43m-4.5,0a4.5,4.5 0,1 1,9 0a4.5,4.5 0,1 1,-9 0" />
+    <path
+        android:fillColor="#0B0E14"
+        android:pathData="M62,43m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M63,42m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0" />
+
+    <!-- Happy crab smile -->
+    <path
+        android:strokeColor="#3A1F14"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M50,65C52,67 56,67 58,65" />
+
 </vector>

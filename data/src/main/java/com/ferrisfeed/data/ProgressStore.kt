@@ -54,11 +54,32 @@ class ProgressStore(private val context: Context) {
     private val KEY_PLACEMENT_SKIPPED_BEGINNER = booleanPreferencesKey("placement_skip_beginner")
     private val KEY_ANALYTICS_OPT_OUT = booleanPreferencesKey("analytics_opt_out")
     private val KEY_LAST_SYNC = longPreferencesKey("last_sync_millis")
+    private val KEY_DESIGN_PHILOSOPHY = stringPreferencesKey("design_philosophy")
 
     // ---- Observable state ----
 
     val xp: Flow<Int> = context.progressDataStore.data.map { it[KEY_XP] ?: 0 }
-    val streakDays: Flow<Int> = context.progressDataStore.data.map { it[KEY_STREAK] ?: 0 }
+
+    /**
+     * Active streak in days. Accurately verifies that the last active day was either
+     * today or yesterday; if more than one day has elapsed, the streak is broken (0)
+     * until the next activity is recorded.
+     */
+    val streakDays: Flow<Int> = context.progressDataStore.data.map { prefs ->
+        val lastStr = prefs[KEY_LAST_ACTIVE_DAY] ?: return@map 0
+        val lastDate = runCatching { LocalDate.parse(lastStr) }.getOrNull() ?: return@map 0
+        val today = LocalDate.now()
+        if (lastDate == today || lastDate.plusDays(1) == today) {
+            prefs[KEY_STREAK] ?: 0
+        } else {
+            0
+        }
+    }
+
+    val designPhilosophy: Flow<String> = context.progressDataStore.data.map {
+        it[KEY_DESIGN_PHILOSOPHY] ?: "StudioGlass"
+    }
+
     val placementDone: Flow<Boolean> =
         context.progressDataStore.data.map { it[KEY_PLACEMENT_DONE] ?: false }
     val analyticsOptOut: Flow<Boolean> =
@@ -74,6 +95,25 @@ class ProgressStore(private val context: Context) {
     /** Last 365 active days as ISO yyyy-MM-dd, for the heatmap calendar. */
     val heatmapDays: Flow<Set<String>> =
         context.progressDataStore.data.map { it[KEY_ACTIVE_DAYS] ?: emptySet() }
+
+    /** Live map of all stored topic masteries with time decay. */
+    val allStoredMastery: Flow<Map<String, Float>> = context.progressDataStore.data.map { prefs ->
+        val now = System.currentTimeMillis()
+        prefs.asMap()
+            .filterKeys { it.name.startsWith("mastery_") }
+            .mapNotNull { (key, value) ->
+                val raw = value as? String ?: return@mapNotNull null
+                val stored = runCatching { json.decodeFromString(TopicMastery.serializer(), raw) }.getOrNull()
+                    ?: return@mapNotNull null
+                val topic = key.name.removePrefix("mastery_")
+                topic to decayedMastery(stored.score, stored.updatedAtMillis, now)
+            }
+            .toMap()
+    }
+
+    suspend fun setDesignPhilosophy(name: String) {
+        context.progressDataStore.edit { it[KEY_DESIGN_PHILOSOPHY] = name }
+    }
 
     // ---- XP ----
 
@@ -103,6 +143,10 @@ class ProgressStore(private val context: Context) {
         context.progressDataStore.edit { prefs ->
             recordActivityLocked(prefs, dayXp = 0, now = now)
         }
+    }
+
+    suspend fun recordDailyActivity(now: Long = System.currentTimeMillis()) {
+        recordActiveDay(now)
     }
 
     suspend fun getHeatmapCounts(days: Int = 120): Map<String, Int> {

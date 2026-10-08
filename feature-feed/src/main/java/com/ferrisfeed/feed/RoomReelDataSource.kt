@@ -53,6 +53,9 @@ class RoomReelDataSource(
     override suspend fun savedIds(): Set<String> =
         dataStore.data.first()[KEY_SAVED_IDS].orEmpty()
 
+    override fun observeSavedIds(): Flow<Set<String>> =
+        dataStore.data.map { it[KEY_SAVED_IDS].orEmpty() }
+
     override suspend fun likedIds(): Set<String> =
         dataStore.data.first()[KEY_LIKED_IDS].orEmpty()
 

@@ -29,7 +29,7 @@ import kotlin.random.Random
 
 private val KEY_LAST_INDEX = intPreferencesKey("feed_last_index")
 private val KEY_LAST_ID = longPreferencesKey("feed_last_id_hash")
-private val KEY_SPEAK_DISMISSED = booleanPreferencesKey("speak_prompt_dismissed")
+private val KEY_LAST_REEL_ID = stringPreferencesKey("feed_last_reel_id")
 private val KEY_SWIPE_HINT_SEEN = booleanPreferencesKey("swipe_hint_seen")
 
 data class FeedUiState(
@@ -38,6 +38,7 @@ data class FeedUiState(
     val isLoading: Boolean = true,
     val savedIds: Set<String> = emptySet(),
     val likedIds: Set<String> = emptySet(),
+    val answeredQuizzes: Map<String, Boolean> = emptyMap(),
 )
 
 data class ImpressionEvent(
@@ -77,12 +78,9 @@ class FeedViewModel @Inject constructor(
 
     private val savedIds = MutableStateFlow<Set<String>>(emptySet())
     private val likedIds = MutableStateFlow<Set<String>>(emptySet())
+    private val answeredQuizzes = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     private val index = MutableStateFlow(0)
     private val loading = MutableStateFlow(true)
-
-    private val speakDismissedInternal = MutableStateFlow(false)
-    /** True once the user hides the speaker prompt; persisted and feed-wide. */
-    val speakDismissed: StateFlow<Boolean> = speakDismissedInternal
 
     private val swipeHintSeenInternal = MutableStateFlow(false)
     /** True once the user performs the first vertical swipe; persisted across launches. */
@@ -119,13 +117,15 @@ class FeedViewModel @Inject constructor(
             )
         },
         likedIds,
-    ) { main, liked ->
+        answeredQuizzes,
+    ) { main, liked, answered ->
         FeedUiState(
             reels = main.reels,
             currentIndex = main.currentIndex,
             isLoading = main.isLoading,
             savedIds = main.savedIds,
             likedIds = liked,
+            answeredQuizzes = answered,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, FeedUiState())
 
@@ -139,7 +139,6 @@ class FeedViewModel @Inject constructor(
             savedIds.value = repository.savedIds()
             likedIds.value = repository.likedIds()
             val prefs = dataStore.data.first()
-            speakDismissedInternal.value = prefs[KEY_SPEAK_DISMISSED] ?: false
             swipeHintSeenInternal.value = prefs[KEY_SWIPE_HINT_SEEN] ?: false
             // First run: Room is still seeding from bundled JSON, so wait for
             // the first non-empty snapshot instead of reading once and
@@ -152,8 +151,15 @@ class FeedViewModel @Inject constructor(
                 repository.refreshQueue(buildQueue(queueSource(all), clock()))
             }
             val restored = dataStore.data.first()
+            val restoredReelId = restored[KEY_LAST_REEL_ID]
             val restoredIndex = restored[KEY_LAST_INDEX] ?: 0
-            index.value = restoredIndex
+            val queueList = queue.value
+            if (restoredReelId != null && queueList.isNotEmpty()) {
+                val foundIndex = queueList.indexOfFirst { it.id == restoredReelId }
+                index.value = if (foundIndex >= 0) foundIndex else restoredIndex.coerceIn(0, max(0, queueList.size - 1))
+            } else {
+                index.value = restoredIndex.coerceIn(0, max(0, queueList.size - 1))
+            }
             loading.value = false
             pageStartMs = clock()
         }
@@ -336,6 +342,7 @@ class FeedViewModel @Inject constructor(
      */
     fun onGrade(reelId: String, correct: Boolean, label: String) {
         interactedWithCurrent = true
+        answeredQuizzes.update { it + (reelId to correct) }
         viewModelScope.launch {
             repository.recordGrade(reelId, correct, label)
             val topic = repository.getReel(reelId)?.topic?.ifBlank { null }
@@ -345,6 +352,7 @@ class FeedViewModel @Inject constructor(
             val newMastery = progressStore.getMastery(topic)
             val xpGain = if (correct) 15 else 5
             progressStore.addXp(xpGain)
+            progressStore.recordDailyActivity()
             _xpGains.emit(xpGain)
             if (correct && prevMastery < 0.85f && newMastery >= 0.85f) {
                 _mastered.emit(topic)
@@ -356,27 +364,6 @@ class FeedViewModel @Inject constructor(
         interactedWithCurrent = true
     }
 
-    /**
-     * Speaker-opening capture callback (TODO 24c).
-     *
-     * Deliberately NOT a grading signal: quiz answers stay the sole
-     * SRS/XP/streak input (`onGrade`). Recognition only marks the page
-     * interacted (so a speak-then-leave is not logged as a skip) — the
-     * analytics backend records start/complete separately (TODO 27a).
-     */
-    fun onRecognition(reelId: String, heard: Boolean) {
-        interactedWithCurrent = true
-    }
-
-    /** Hides the speaker prompt everywhere and remembers it across launches. */
-    fun dismissSpeakPrompt() {
-        speakDismissedInternal.value = true
-        viewModelScope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_SPEAK_DISMISSED] = true
-            }
-        }
-    }
 
     /** Marks the initial swipe gesture cue seen and remembers it across launches. */
     fun dismissSwipeHint() {
@@ -399,8 +386,12 @@ class FeedViewModel @Inject constructor(
             delay(400)
             dataStore.edit { prefs ->
                 prefs[KEY_LAST_INDEX] = index
-                prefs[KEY_LAST_ID] = (reelId?.hashCode()?.toLong() ?: 0L)
+                if (reelId != null) {
+                    prefs[KEY_LAST_REEL_ID] = reelId
+                    prefs[KEY_LAST_ID] = reelId.hashCode().toLong()
+                }
             }
+            progressStore.saveScrollPosition(reelId, index)
         }
     }
 }
