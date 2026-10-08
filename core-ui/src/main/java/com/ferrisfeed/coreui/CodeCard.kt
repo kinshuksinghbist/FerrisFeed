@@ -85,6 +85,7 @@ object CodeCardTokens {
     val Macro = Color(0xFFD2A8FF)
     val TypeColor = Color(0xFFFFA657)
     val FnColor = Color(0xFFD2A8FF)
+    val LineNumber = Color(0xFF6B7280)
 }
 
 /**
