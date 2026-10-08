@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -135,7 +136,7 @@ fun ProfileScreen(
                 title = "Topics I'm Good At",
                 subtitle = "Mastery ≥ 70% · Strong foundation",
                 items = state.topicsGoodAt,
-                accentColor = FerrisColors.Mint400,
+                accentColor = FerrisColors.MintCorrect,
                 icon = Icons.Filled.Star,
                 emptyMessage = "Complete quizzes with high accuracy to build topic mastery!",
                 onTopicClick = onTopicClick,
@@ -148,7 +149,7 @@ fun ProfileScreen(
                 title = "Topics to Practice",
                 subtitle = "Needs review · Tap to sharpen",
                 items = state.topicsToPractice,
-                accentColor = FerrisColors.Flame400,
+                accentColor = FerrisColors.FerrisOrange,
                 icon = Icons.Filled.Warning,
                 emptyMessage = "No weak topics detected. Keep learning!",
                 onTopicClick = onTopicClick,
@@ -327,10 +328,13 @@ private fun PhilosophyOptionChip(
         MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
     }
 
+    val interactionSource = remember { MutableInteractionSource() }
+
     Box(
         modifier = modifier
-            .tactileClickable(shape = shape, onClick = onClick)
+            .tactileClickable(interactionSource)
             .clip(shape)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .background(bg)
             .border(if (isSelected) 1.5.dp else 0.5.dp, borderStroke, shape)
             .padding(vertical = 10.dp, horizontal = 12.dp),
@@ -392,7 +396,7 @@ private fun WorkingStreakCard(
                         style = MaterialTheme.typography.labelSmall,
                         fontFamily = DisplayFont,
                         fontWeight = FontWeight.Bold,
-                        color = FerrisColors.Flame400,
+                        color = FerrisColors.FerrisOrange,
                     )
                     Text(
                         text = if (streakDays > 0) "$streakDays Days Strong!" else "Start Your Streak!",
@@ -438,7 +442,7 @@ private fun DayIndicatorPill(
     isActive: Boolean,
 ) {
     val shape = CircleShape
-    val bg = if (isActive) FerrisColors.Flame400 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+    val bg = if (isActive) FerrisColors.FerrisOrange else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
     val textCol = if (isActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
 
     Column(
@@ -452,7 +456,7 @@ private fun DayIndicatorPill(
                 .background(bg)
                 .border(
                     width = 1.dp,
-                    color = if (isActive) FerrisColors.Flame400 else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                    color = if (isActive) FerrisColors.FerrisOrange else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                     shape = shape,
                 ),
             contentAlignment = Alignment.Center,
@@ -504,7 +508,7 @@ private fun StatsGrid(
                 label = "Active Streak",
                 value = "$streakDays Days",
                 icon = Icons.Filled.LocalFireDepartment,
-                tint = FerrisColors.Flame400,
+                tint = FerrisColors.FerrisOrange,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -516,7 +520,7 @@ private fun StatsGrid(
                 label = "Mastered",
                 value = "$masteredCount Reels",
                 icon = Icons.Filled.Check,
-                tint = FerrisColors.Mint400,
+                tint = FerrisColors.MintCorrect,
                 modifier = Modifier.weight(1f),
             )
             StatMetricCard(
