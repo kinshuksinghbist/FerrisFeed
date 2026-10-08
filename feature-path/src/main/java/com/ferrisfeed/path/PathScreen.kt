@@ -267,7 +267,7 @@ fun PathScreen(
                                 ) {
                                     FerrisButton(
                                         text = "Explore",
-                                        style = FerrisButtonStyle.Outlined,
+                                        style = FerrisButtonStyle.Tonal,
                                         onClick = { onExploreTopic(continueNode) },
                                     )
                                     FerrisButton(
