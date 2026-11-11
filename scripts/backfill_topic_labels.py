@@ -149,4 +149,11 @@ def main(force: bool = False) -> int:
 
 
 if __name__ == "__main__":
+    # Superseded by the v3 curriculum (data/Curriculum.kt): topic_label is now
+    # a curriculum topic key chosen per reel, not a per-file label. Running
+    # this with --force would overwrite those keys with the old positional
+    # labels, so it refuses unless explicitly asked for the legacy behaviour.
+    if "--legacy" not in sys.argv[1:]:
+        print("backfill_topic_labels.py is superseded by data/Curriculum.kt; pass --legacy to run anyway")
+        sys.exit(2)
     sys.exit(main(force="--force" in sys.argv[1:]))

@@ -17,9 +17,12 @@ do not relitigate them without new evidence.
   - Display Font: `Space Grotesk` Medium and Bold.
   - Code Font: `JetBrains Mono` Regular, Medium, and Bold.
   - Body Font: Platform default sans-serif for optimal long-line legibility.
-- **Palette & Shapes** — Dynamic color is OFF by default (`dynamicColor = false`).
-  OLED Dark `#0B0E14` with `#10141C` surface; Paper Light `#FFFBF2`.
-  Card shapes: 32dp (`large`), medium 24dp, small 16dp.
+- **Design system v3 ("Workbench")** — one flat, type-led language in
+  `core-ui/Theme.kt`: Material scheme + `FerrisPalette` (track, answer
+  feedback, XP, hairline, raised) via `FerrisTheme.palette`, `FerrisType`
+  (hook, overline). Midnight `#0B0E14` / Paper `#FAF8F4`. Shapes 8/12/16/20/28dp.
+  No glass, no blur, no fake 3D, no runtime "design philosophy" switch.
+  Dynamic colour stays OFF (it would erase track identity).
 - **minSdk 26, targetSdk 35, edge-to-edge, predictive back** —
   minSdk 26 covers 98%+ devices while keeping `VerticalPager` + dynamic
   color simple. Edge-to-edge via `enableEdgeToEdge()` plus
@@ -31,15 +34,17 @@ do not relitigate them without new evidence.
 
 - **`:app`** — `MainActivity`, `FerrisApp`, `AppShell`, DI wiring, NavHost,
   notifications, baseline profiles, R8.
-- **`:core-ui`** — design system tokens and controls: `ReelCard`, `CodeCard`,
-  `QuizCard`, `ProgressRing`, `StreakFlame`, `FerrisMark`, `FerrisButton`,
-  `FerrisChip`, `FerrisIconButton`, theme, motion, inline markdown.
-- **`:feature-feed`** — vertical pager, 3D page transitions, prefetch, shuffle,
-  session progress bar, speaker opening dock, feed actions.
-- **`:feature-path`** — DAG path engine UI, roadmap timeline, hero continue card,
-  search with expandable filters panel.
+- **`:core-ui`** — design system and shared pieces: theme/tokens, controls
+  (`FerrisButton`, `FerrisChip`, `SegmentedControl`, meters, pills),
+  `LessonContent`, `QuizContent`, `CodeBlock`, `FerrisMark`, motion,
+  inline markdown.
+- **`:feature-feed`** — Learn pager in sets of five (`FeedPaging`), recap
+  pages, curriculum queue (`QueueBuilder`), scopes (main / topic / lesson).
+- **`:feature-path`** — Path: units → topics from `Curriculum`, Up next,
+  lesson search.
 - **`:data`** — Room entities/DAOs (reels + FTS + progress), DataStore,
-  repositories, WorkManager sync workers.
+  `Curriculum` (the unit/topic map every screen reads), seeder with
+  versioned content refresh, WorkManager sync workers.
 
 ## Libraries (see `gradle/libs.versions.toml`)
 

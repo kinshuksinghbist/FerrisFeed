@@ -61,4 +61,8 @@ dependencies {
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+
+    // JVM tests for FeedPaging + queue ordering; same catalog entry the
+    // other modules use, no new coordinate.
+    testImplementation(libs.junit)
 }

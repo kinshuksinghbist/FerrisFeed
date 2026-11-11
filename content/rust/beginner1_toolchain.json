@@ -10,10 +10,10 @@
       "answer": 0,
       "explain": "rustup manages toolchains, components, and targets in one place.",
       "options": [
-        "rustup, the official toolchain manager",
-        "apt-get install rustc only",
-        "pip install rust",
-        "Downloading rustc source manually"
+        "rustup, the official toolchain installer",
+        "Your OS package manager, e.g. apt install rustc",
+        "Build rustc from source with make install",
+        "The standalone rustc binary from crates.io"
       ],
       "q": "What is the recommended way to install Rust?"
     },
@@ -21,7 +21,7 @@
     "track": "rust",
     "trap": "Installing via apt/brew alone gives stale toolchains that break tutorials.",
     "output": "# rustup installer runs, then both print their versions:\nrustc <version> (e.g. rustc 1.82.0)\ncargo <matching version>",
-    "topic_label": "toolchain"
+    "topic_label": "cargo-toolchain"
   },
   {
     "body_md": "Use `rustup show` and `rustup update` to manage versions. Switch between **stable**, **beta**, and **nightly** per project with `rustup override`. No reinstalls needed.",
@@ -32,12 +32,12 @@
     "level": 1,
     "quiz": {
       "answer": 1,
-      "explain": "Toolchains let you pin stable vs nightly per directory.",
+      "explain": "rustup override pins a toolchain to one directory, so other projects stay on stable.",
       "options": [
-        "Environment variables",
-        "rustup toolchains with overrides",
-        "Two separate installs",
-        "Docker only"
+        "Export a toolchain env var in your profile",
+        "rustup override set nightly in that dir",
+        "Install a second Rust in another folder",
+        "Add edition = \"nightly\" to Cargo.toml"
       ],
       "q": "How do you use nightly for one project only?"
     },
@@ -45,7 +45,7 @@
     "track": "rust",
     "trap": "Setting global nightly breaks stable builds; use directory override instead.",
     "output": "# toolchain list shows installed toolchains, e.g.:\nstable-x86_64-unknown-linux-gnu (default)\nnightly-x86_64-unknown-linux-gnu\n# override pins nightly for the current directory only",
-    "topic_label": "toolchain"
+    "topic_label": "cargo-toolchain"
   },
   {
     "body_md": "`cargo new hello` scaffolds a runnable project with `Cargo.toml` and `src/main.rs`. Use `--bin` for apps (default) and `--lib` for libraries. Then `cd hello`.",
@@ -58,10 +58,10 @@
       "answer": 2,
       "explain": "cargo new creates Cargo.toml plus src/main.rs or lib.rs.",
       "options": [
-        "main.rs only",
-        "Makefile only",
+        "A lone src/main.rs with no manifest",
+        "A Makefile and a hello.rs file",
         "Cargo.toml plus src/main.rs",
-        "README only"
+        "An empty folder you fill in yourself"
       ],
       "q": "What does `cargo new hello` create?"
     },
@@ -69,7 +69,7 @@
     "track": "rust",
     "trap": "Creating files by hand misses Cargo.toml metadata and src layout.",
     "output": "Created binary (application) `hello` package\nCargo.toml  src/main.rs\nfn main() {\n    println!(\"Hello, world!\");\n}",
-    "topic_label": "toolchain"
+    "topic_label": "cargo-toolchain"
   },
   {
     "body_md": "Four commands cover 90% of work: `run` builds and executes, `build` compiles, `check` type-checks fast, `clippy` lints. Use `check` while iterating to save compile time.",
@@ -82,10 +82,10 @@
       "answer": 0,
       "explain": "cargo check skips codegen so it is much faster than build.",
       "options": [
-        "cargo check",
-        "cargo build --release",
-        "cargo run",
-        "cargo clean"
+        "cargo check, which skips codegen",
+        "cargo build --release, fully optimized",
+        "cargo run, which builds then executes",
+        "cargo clean, then a fresh cargo build"
       ],
       "q": "Fastest way to verify your code compiles?"
     },
@@ -93,12 +93,12 @@
     "track": "rust",
     "trap": "Running cargo build every save wastes minutes; check is enough.",
     "output": "# run: builds and executes the binary\n# check: type-checks only — fastest feedback, no codegen\n# build --release: optimized artifact in target/release/\n# clippy: lints pass with no warnings on clean code",
-    "topic_label": "toolchain"
+    "topic_label": "cargo-toolchain"
   },
   {
     "body_md": "`Cargo.toml` is your manifest: package name, version, edition, and dependencies. Run `cargo add serde` to add deps. `Cargo.lock` pins exact versions for reproducible builds.",
     "code": "[package]\nname = \"hello\"\nversion = \"0.1.0\"\nedition = \"2021\"\n[dependencies]\nserde = \"1.0\"",
-    "hook": "One small file controls your entire Rust build — ignore it and builds break.",
+    "hook": "Cargo.toml declares your deps; Cargo.lock pins them exactly",
     "id": "rust-b1-005",
     "language": "rust",
     "level": 1,
@@ -106,10 +106,10 @@
       "answer": 1,
       "explain": "Cargo.toml declares metadata and deps; lockfile pins versions.",
       "options": [
-        "src/main.rs",
-        "Cargo.toml",
-        ".rustfmt.toml",
-        "target/debug binary"
+        "In src/main.rs with use statements",
+        "In Cargo.toml, in the [dependencies] table",
+        "In Cargo.lock, which you edit by hand",
+        "In rustfmt.toml at the project root"
       ],
       "q": "Where do you declare dependencies?"
     },
@@ -117,12 +117,12 @@
     "track": "rust",
     "trap": "Editing Cargo.lock by hand causes conflicts; let cargo update it.",
     "output": "# manifest declares hello 0.1.0, edition 2021, serde 1.0\n# cargo build fetches serde and pins it in Cargo.lock",
-    "topic_label": "toolchain"
+    "topic_label": "cargo-toolchain"
   },
   {
     "body_md": "Variables are **immutable by default** with `let`. The compiler stops accidental mutation. This default prevents whole classes of bugs other languages allow silently.",
     "code": "fn main() {\n    let x = 5;\n    // x = 6; // error!\n    println!(\"{x}\");\n}",
-    "hook": "In Rust this innocent line refuses to compile — and that is the point.",
+    "hook": "Rust variables are immutable by default — and that is the point",
     "id": "rust-b1-006",
     "language": "rust",
     "level": 1,
@@ -130,10 +130,10 @@
       "answer": 0,
       "explain": "let bindings are immutable unless marked mut.",
       "options": [
-        "Immutable",
-        "Mutable",
-        "Global",
-        "Lazy"
+        "Immutable unless you mark it mut",
+        "Mutable, like most languages",
+        "A global constant like const",
+        "Lazily evaluated on first use"
       ],
       "q": "What is `let x = 5;` by default?"
     },
@@ -141,12 +141,12 @@
     "track": "rust",
     "trap": "Forgetting mut gives `cannot assign twice` error; add `mut` deliberately.",
     "output": "5",
-    "topic_label": "variables"
+    "topic_label": "variables-types"
   },
   {
     "body_md": "Add `mut` when you truly need change. The compiler then allows assignment but still checks borrows. Prefer immutable; reach for `mut` only with a reason.",
     "code": "fn main() {\n    let mut count = 0;\n    count += 1;\n    count += 1;\n    println!(\"{count}\"); // 2\n}",
-    "hook": "Two extra characters unlock mutation — but Rust makes you ask for it.",
+    "hook": "Add mut to change a variable — Rust makes you ask for it",
     "id": "rust-b1-007",
     "language": "rust",
     "level": 1,
@@ -165,12 +165,12 @@
     "track": "rust",
     "trap": "Marking everything mut silences the safety net; keep immutable default.",
     "output": "2",
-    "topic_label": "variables"
+    "topic_label": "variables-types"
   },
   {
     "body_md": "**Shadowing** redeclares with `let` to transform a value, even changing type. Unlike `mut`, the old binding is replaced. Great for parsing and cleanup pipelines.",
     "code": "fn main() {\n    let s = \" 42 \";\n    let s = s.trim();\n    let s: i32 = s.parse().unwrap();\n    println!(\"{s}\");\n}",
-    "hook": "Same name, three different types — and the compiler loves it.",
+    "hook": "Shadowing: reuse one name for three different types",
     "id": "rust-b1-008",
     "language": "rust",
     "level": 1,
@@ -178,10 +178,10 @@
       "answer": 1,
       "explain": "Shadowing with let creates a new binding, allowing type change.",
       "options": [
-        "With mut assignment",
-        "With let shadowing",
-        "With const casting",
-        "It is impossible"
+        "Assign to it after declaring it mut",
+        "Shadow it with a second let statement",
+        "Cast it in place with the as keyword",
+        "You can't: names keep one type"
       ],
       "q": "How can you rebind `s` from &str to i32 with the same name?"
     },
@@ -189,7 +189,7 @@
     "track": "rust",
     "trap": "Confusing shadowing with mut: mut keeps type, shadowing can change it.",
     "output": "42",
-    "topic_label": "variables"
+    "topic_label": "variables-types"
   },
   {
     "body_md": "Rust integers are explicit: `i8`–`i128`, `u8`–`u128`, plus `isize`/`usize` for indexing. Overflow **panics in debug**, wraps in release. Use `checked_add` when overflow matters.",
@@ -213,7 +213,7 @@
     "track": "rust",
     "trap": "Assuming wrapping everywhere; debug panics expose hidden overflow bugs.",
     "output": "None",
-    "topic_label": "variables"
+    "topic_label": "variables-types"
   },
   {
     "body_md": "`f64` is the default float, `bool` is true/false, `char` is a full **Unicode scalar** (4 bytes), not one byte. Single quotes for char, double for strings.",
@@ -224,12 +224,12 @@
     "level": 1,
     "quiz": {
       "answer": 0,
-      "explain": "char is a Unicode scalar value, 4 bytes.",
+      "explain": "char is a Unicode scalar value stored in 4 bytes, so it can hold any code point like a crab emoji.",
       "options": [
-        "A Unicode scalar value",
-        "Always one byte",
-        "A string",
-        "An integer"
+        "A 4-byte Unicode scalar value",
+        "A single byte, like char in C",
+        "A 2-byte UTF-16 unit, as in Java",
+        "A one-character string slice"
       ],
       "q": "What is a Rust char?"
     },
@@ -237,31 +237,31 @@
     "track": "rust",
     "trap": "Using 'a' vs \"a\" wrong: single quotes are char, double are string.",
     "output": "3.14159 true 🦀",
-    "topic_label": "variables"
+    "topic_label": "variables-types"
   },
   {
     "body_md": "**Tuples** group mixed types with fixed size; **arrays** hold one type with fixed length. Index tuples with `.0`, arrays with `[0]`. Slices borrow arrays dynamically.",
     "code": "fn main() {\n    let t: (i32, &str) = (42, \"hi\");\n    let arr: [i32; 3] = [1, 2, 3];\n    println!(\"{} {}\", t.0, arr[1]);\n}",
-    "hook": "Two containers look similar but the compiler treats them totally differently.",
+    "hook": "Tuples mix types, arrays repeat one — know which to reach for",
     "id": "rust-b1-011",
     "language": "rust",
     "level": 1,
     "quiz": {
-      "answer": 2,
-      "explain": "Tuples allow mixed types; arrays require one element type.",
+      "answer": 0,
+      "explain": "Tuples allow mixed element types; arrays, Vecs, and slices hold one element type.",
       "options": [
-        "Structs",
-        "Vectors",
-        "Tuples",
-        "HashMaps"
+        "A tuple like (i32, &str)",
+        "An array like [i32; 3]",
+        "A Vec<T> built with vec![]",
+        "A slice borrowed as &[T]"
       ],
-      "q": "Which holds mixed types with fixed size?"
+      "q": "Which built-in type groups mixed types in a fixed size?"
     },
     "takeaway": "Tuples mix types; arrays repeat one type.",
     "track": "rust",
     "trap": "Indexing array out of bounds panics at runtime; length is fixed.",
     "output": "42 2",
-    "topic_label": "control-flow"
+    "topic_label": "variables-types"
   },
   {
     "body_md": "Define functions with `fn name(args: Type) -> Ret`. Last expression without `;` is the return. No `return` needed for tail values — idiomatic Rust omits it.",
@@ -274,10 +274,10 @@
       "answer": 1,
       "explain": "Trailing expression without semicolon is the return value.",
       "options": [
-        "With return only",
-        "As tail expression without semicolon",
-        "With yield",
-        "It cannot return"
+        "With return; a bare tail value is an error",
+        "As the last expression, with no semicolon",
+        "With yield, like a generator function",
+        "By assigning to the function's own name"
       ],
       "q": "How does a function return a value idiomatically?"
     },
@@ -295,13 +295,13 @@
     "language": "rust",
     "level": 1,
     "quiz": {
-      "answer": 0,
-      "explain": "Conditions must be bool; integers are not truthy.",
+      "answer": 1,
+      "explain": "Conditions must be bool and integers are not truthy, so this is a type error at compile time.",
       "options": [
-        "It prints even",
-        "Compile error: expected bool",
-        "It prints odd",
-        "Runtime panic"
+        "Runs the block, since 1 is truthy",
+        "Fails to compile: expected bool",
+        "Warns, then treats 1 as true",
+        "Panics at runtime on a non-bool"
       ],
       "q": "What does `if 1 { }` do in Rust?"
     },
@@ -319,13 +319,13 @@
     "language": "rust",
     "level": 1,
     "quiz": {
-      "answer": 3,
-      "explain": "if evaluates to a value, so let can bind it directly.",
+      "answer": 1,
+      "explain": "if is an expression in Rust, so let can bind its value directly.",
       "options": [
-        "match",
-        "loop",
-        "switch",
-        "let with if expression"
+        "The ?: operator, same as in C",
+        "let x = if c { a } else { b };",
+        "A ternary macro from the std prelude",
+        "A switch statement with two cases"
       ],
       "q": "What replaces `cond ? a : b` in Rust?"
     },
@@ -343,13 +343,13 @@
     "language": "rust",
     "level": 1,
     "quiz": {
-      "answer": 2,
-      "explain": "break with a value makes loop evaluate to that value.",
+      "answer": 0,
+      "explain": "break with a value makes the loop evaluate to it; return would exit the whole function.",
       "options": [
-        "return",
-        "continue",
-        "break with value",
-        "exit"
+        "break with a value, like break 42",
+        "return from inside the loop body",
+        "continue with the value to keep",
+        "It yields the last expression it ran"
       ],
       "q": "How does a loop produce a value?"
     },
@@ -381,7 +381,7 @@
     "track": "rust",
     "trap": "Forgetting to update the condition variable loops forever.",
     "output": "3\n2\n1",
-    "topic_label": "loops-macros"
+    "topic_label": "control-flow"
   },
   {
     "body_md": "`for x in 0..3` iterates ranges; `0..3` excludes end, `0..=3` includes it. Works over arrays, iterators, anything `IntoIterator`. No manual indexing needed.",
@@ -405,23 +405,23 @@
     "track": "rust",
     "trap": "Using 0..len+1 or ..=len wrong causes off-by-one panics.",
     "output": "0\n1\n2\n0\n1\n2\n3",
-    "topic_label": "loops-macros"
+    "topic_label": "control-flow"
   },
   {
     "body_md": "`break` exits, `continue` skips to next iteration. Labeled loops like `'outer: loop` let you break from nested loops. Labels start with a tick `'`.",
     "code": "fn main() {\n    'outer: for a in 0..3 {\n        for b in 0..3 {\n            if a + b > 3 { break 'outer; }\n        }\n    }\n}",
-    "hook": "Breaking out of two loops at once needs a secret syntax.",
+    "hook": "Break out of two nested loops at once with a loop label",
     "id": "rust-b1-018",
     "language": "rust",
     "level": 1,
     "quiz": {
-      "answer": 2,
-      "explain": "Labeled break exits the named outer loop.",
+      "answer": 0,
+      "explain": "A labeled break exits the named loop; continue 'outer only skips to its next iteration.",
       "options": [
-        "return",
-        "continue",
-        "break 'outer",
-        "goto"
+        "break 'outer with a loop label",
+        "break twice in a row, one per loop",
+        "continue 'outer to stop both loops",
+        "goto a label after the outer loop"
       ],
       "q": "How do you exit an outer loop from inside a nested loop?"
     },
@@ -429,7 +429,7 @@
     "track": "rust",
     "trap": "Plain break only exits inner loop; logic silently continues outer.",
     "output": "// compiles clean, no output — 'outer break exits both loops silently",
-    "topic_label": "loops-macros"
+    "topic_label": "control-flow"
   },
   {
     "body_md": "Print with `println!` (`!` means macro). Use `{var}` inline formatting, `{var:?}` with Debug. `dbg!` prints plus returns value — handy for quick debugging.",
@@ -453,12 +453,12 @@
     "track": "rust",
     "trap": "Forgetting :? for structs without Display gives a formatting error.",
     "output": "n=42\n42",
-    "topic_label": "loops-macros"
+    "topic_label": "dev-workflow"
   },
   {
     "body_md": "Editions (`2015`, `2018`, `2021`) gate language changes without breaking old code. Set `edition = \"2021\"` in Cargo.toml. New projects should always use the latest.",
     "code": "[package]\nname = \"demo\"\nversion = \"0.1.0\"\nedition = \"2021\"\n# then: cargo run",
-    "hook": "Rust never breaks your old code — this one setting is how.",
+    "hook": "Rust editions add new syntax without breaking old code",
     "id": "rust-b1-020",
     "language": "rust",
     "level": 1,
@@ -477,6 +477,6 @@
     "track": "rust",
     "trap": "Staying on 2015 edition disables async/await and modern syntax.",
     "output": "# edition 2021 enabled; cargo run builds with modern syntax",
-    "topic_label": "loops-macros"
+    "topic_label": "cargo-toolchain"
   }
 ]

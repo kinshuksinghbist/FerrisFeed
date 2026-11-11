@@ -2,120 +2,120 @@
   {
     "body_md": "Round robin cycles requests evenly and works when nodes match. Keep weights for unequal boxes and rely on fast failure detection because blind rotation still hits sick hosts.",
     "code": "let i = counter.fetch_add(1, SeqCst) % nodes.len();\nforward(&nodes[i], req).await // simple cycle",
-    "hook": "Fair rotation for identical backends made simple.",
+    "hook": "Round robin: fair rotation for identical backends.",
     "id": "sd-scale-001",
     "language": "rust",
     "level": 2,
     "output": "req -> nodes[i], i cycles 0..n-1\n// even split on equal boxes; eject sick hosts fast",
     "quiz": {
-      "answer": 2,
-      "explain": "Equality plus health awareness keeps rotation fair and safe.",
+      "answer": 0,
+      "explain": "Plain rotation assumes equal capacity and cost per request; health checks still have to eject sick hosts.",
       "options": [
-        "Sticky always",
-        "Random only",
-        "Weighted round robin with health-aware removal",
-        "Single node"
+        "Identical backends with similar request costs",
+        "Requests with wildly different durations",
+        "Sessions that must always stick to one backend",
+        "Backends with very uneven hardware sizes"
       ],
       "q": "When does round robin shine?"
     },
     "takeaway": "Use weighted rotation for uniform nodes behind health checks.",
     "trap": "Rotating blindly into a dead node without ejection.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "load-balancing"
   },
   {
     "body_md": "Least connections sends traffic to the emptiest backend. It adapts to slow nodes and long requests but needs accurate counts and warmup guards for fresh hosts.",
     "code": "let n = nodes.iter().min_by_key(|n| n.inflight())\n    .expect(\"node\"); // route to emptiest",
-    "hook": "Send work where the queue is shortest.",
+    "hook": "Least connections: send work where the line is shortest.",
     "id": "sd-scale-002",
     "language": "rust",
     "level": 2,
     "output": "req -> node with min inflight (emptiest)\n// slow nodes get less; slow-start fresh hosts",
     "quiz": {
-      "answer": 1,
-      "explain": "Live counts steer around slow and busy backends.",
+      "answer": 0,
+      "explain": "Live in-flight counts steer around slow, busy backends; new hosts need slow-start so they are not flooded.",
       "options": [
-        "Round robin fixed",
-        "Least inflight with slow-start for new nodes",
-        "Hash all",
-        "Drop load"
+        "Request costs vary, so live counts beat rotation",
+        "It guarantees each user always hits the same backend",
+        "It needs no state about backend health or load",
+        "New hosts should get a burst of traffic first"
       ],
       "q": "Why pick least connections?"
     },
     "takeaway": "Route to the emptiest host when request costs vary widely.",
     "trap": "Flooding a just-started node that reports zero load.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "load-balancing"
   },
   {
     "body_md": "Maglev hashing gives stable sticking with minimal churn on membership change. Big lookup table plus per-host permutations reassign only moved ranges so sessions survive resizes.",
     "code": null,
-    "hook": "Sticky routing that survives host churn gracefully.",
+    "hook": "Maglev hashing: sticky routing that survives host churn.",
     "id": "sd-scale-003",
     "language": null,
     "level": 3,
     "quiz": {
-      "answer": 0,
+      "answer": 3,
       "explain": "Permutation tables remap only affected entries on change.",
       "options": [
-        "Maglev tables for stable assignment with minimal remap",
-        "Plain modulo",
-        "Broadcast all",
-        "DNS only"
+        "It hashes keys mod N for simple stable routing",
+        "Every LB syncs its session table with all its peers",
+        "DNS steers each client to a fixed backend IP",
+        "Even spread with minimal remap when hosts change"
       ],
       "q": "What makes Maglev good for load balancers?"
     },
     "takeaway": "Use Maglev tables for sticky routes that survive membership shifts.",
     "trap": "Using modulo hashing and reshuffling every session on scale.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "load-balancing"
   },
   {
     "body_md": "Health checks separate alive from ready to serve. Probe a cheap dependency-aware endpoint, flap-dampen failures, and eject fast while keeping a small outlier pool for recovery.",
     "code": "async fn ready() -> Status {\n    if db.ping().await.is_ok() { ok() } else { unavailable() }\n}",
-    "hook": "Stop sending love to dying backends.",
+    "hook": "Health checks: stop sending traffic to dying backends.",
     "id": "sd-scale-004",
     "language": "rust",
     "level": 2,
     "output": "db ok -> 200 ready (gets traffic)\ndb down -> 503, ejected fast, damped vs flaps",
     "quiz": {
-      "answer": 3,
+      "answer": 2,
       "explain": "Dependency-aware readiness plus damping avoids flapping traffic.",
       "options": [
-        "TCP only",
-        "No checks",
-        "Check once daily",
-        "Layered checks with damping and fast ejection"
+        "A TCP connect check on the service port is enough",
+        "Deep checks of every downstream on each probe",
+        "Readiness probes with flap damping, fast eject",
+        "Eject a host permanently on its first failed probe"
       ],
       "q": "What makes health checks reliable?"
     },
     "takeaway": "Probe readiness with dependencies and dampen flapping decisions.",
     "trap": "Marking ready on TCP accept while the database is down.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "load-balancing"
   },
   {
     "body_md": "Terminate TLS at the edge so backends skip handshake math. Keep certs central, enforce modern versions, and pass identity downstream with verified headers or mutual TLS inside.",
     "code": null,
-    "hook": "Handshakes at edge, plaintext lessons inside.",
+    "hook": "TLS termination: do the handshakes at the edge.",
     "id": "sd-scale-005",
     "language": null,
     "level": 2,
     "quiz": {
-      "answer": 1,
-      "explain": "Edge offload plus verified identity headers scales handshakes safely.",
+      "answer": 2,
+      "explain": "The edge does the handshake math and holds certs centrally; inside traffic still needs mTLS or verified identity headers.",
       "options": [
-        "TLS everywhere manually",
-        "Terminate at edge with central certs and verified identity",
-        "No TLS inside ever",
-        "Self-signed all"
+        "It makes inside traffic secure without any TLS",
+        "So backends can verify client certs themselves",
+        "Central certs and backends skip handshake work",
+        "It removes the need for certificates entirely"
       ],
       "q": "Why terminate TLS at the load balancer?"
     },
     "takeaway": "Offload handshakes at the edge and propagate verified identity inward.",
     "trap": "Trusting spoofable identity headers from the open internet.",
     "track": "system-design",
-    "topic_label": "scaling"
+    "topic_label": "load-balancing"
   },
   {
     "body_md": "CDN cache keys must include what varies the bytes like path, query allowlist, encoding, and auth class. Normalize junk queries and version assets so hits stay high and private data never mixes.",
@@ -126,49 +126,49 @@
     "level": 2,
     "output": "GET /feed?user=7&xjunk=1 -> key drops junk + user\n// shared hits stay high; private never under a public key",
     "quiz": {
-      "answer": 2,
+      "answer": 3,
       "explain": "Minimal varying key with normalization boosts hits safely.",
       "options": [
-        "Cache all raw URLs",
-        "Ignore vary",
-        "Normalize keys and isolate private content",
-        "Cache POST bodies"
+        "Use the full raw URL with every query param",
+        "Key only on path so all variants share a hit",
+        "Cache Set-Cookie responses for all users",
+        "Normalize queries and vary by auth class"
       ],
       "q": "How do you build safe CDN cache keys?"
     },
     "takeaway": "Normalize cache keys and isolate private responses by identity.",
     "trap": "Caching personalized pages under a shared public key.",
     "track": "system-design",
-    "topic_label": "horizontal-scaling"
+    "topic_label": "caching"
   },
   {
     "body_md": "Token bucket allows bursts while capping average rate. Refill tokens on elapsed time and spend one per request so APIs absorb spikes without drowning backends.",
     "code": "bucket.tokens = (bucket.tokens + elapsed * rate).min(cap);\nif bucket.tokens >= 1.0 { bucket.tokens -= 1.0; allow() }",
-    "hook": "Bursts welcome, floods politely declined here.",
+    "hook": "Token bucket: bursts welcome, floods politely declined.",
     "id": "sd-scale-007",
     "language": "rust",
     "level": 2,
     "output": "tokens refill elapsed*rate (cap); >= 1.0 -> allow + deduct\n// bursts to cap, average to rate",
     "quiz": {
-      "answer": 0,
+      "answer": 1,
       "explain": "Bucket depth sets burst while refill sets sustained rate.",
       "options": [
-        "Token bucket for bursty APIs with capped averages",
-        "Fixed window",
-        "No limits",
-        "Block all bursts"
+        "When every burst must be rejected outright",
+        "Bursty APIs that need a capped average rate",
+        "When you need exact counts per calendar day",
+        "When traffic is smooth and never bursts at all"
       ],
       "q": "When is token bucket the right limiter?"
     },
     "takeaway": "Use token buckets to allow bursts while capping average load.",
     "trap": "Setting bucket depth huge and calling it rate limiting.",
     "track": "system-design",
-    "topic_label": "horizontal-scaling"
+    "topic_label": "rate-limiting"
   },
   {
     "body_md": "Sliding window counts recent requests with smoother edges than fixed windows. Track timestamps in Redis sorted sets and expire old entries so boundary bursts cannot double-spend quota.",
     "code": "let now = now_ms();\nstore.add(key, now); // zadd timestamp member\nstore.trim_older(key, now - window); // zremrangebyscore",
-    "hook": "Count the last minute, not the calendar minute.",
+    "hook": "Sliding window: count the last minute, not the calendar one.",
     "id": "sd-scale-008",
     "language": "rust",
     "level": 3,
@@ -177,70 +177,70 @@
       "answer": 1,
       "explain": "Continuous windows remove fixed-boundary quota doubling.",
       "options": [
-        "Fixed windows",
-        "Sliding log for precise recent counts without edges",
-        "No storage",
-        "Client counts"
+        "It needs less memory than a fixed counter",
+        "Stops 2x bursts at the window boundary",
+        "It lets clients bank unused quota for later",
+        "It resets everyone's quota at the same time"
       ],
       "q": "Why prefer sliding window over fixed window?"
     },
     "takeaway": "Count rolling windows to stop boundary bursts from doubling quota.",
     "trap": "Using fixed windows that allow twice the quota at edges.",
     "track": "system-design",
-    "topic_label": "horizontal-scaling"
+    "topic_label": "rate-limiting"
   },
   {
     "body_md": "Retry with capped exponential backoff plus jitter spreads stampedes. Retry only idempotent errors, cap attempts, and add hedged deadline so one slow shard cannot stall everything.",
     "code": "let d = min(cap, base * 2_u64.pow(n)) + rand(0..250);\nsleep(d).await; // jittered backoff, idempotent only",
-    "hook": "Retry like rain, not like a thundering herd.",
+    "hook": "Retries with jitter: rain, not a thundering herd.",
     "id": "sd-scale-009",
     "language": "rust",
     "level": 2,
     "output": "d = min(cap, base*2^n) + jitter(0..250ms); sleep, retry\n// idempotent errors only; attempts capped",
     "quiz": {
-      "answer": 3,
+      "answer": 2,
       "explain": "Jitter desynchronizes clients while caps bound worst latency.",
       "options": [
-        "Retry instantly",
-        "Retry forever",
-        "Retry non-idempotent",
-        "Capped backoff with jitter on idempotent errors"
+        "Retry immediately so the user waits less time",
+        "Retry every error, including non-idempotent POSTs",
+        "Jittered backoff, capped, idempotent calls only",
+        "Use the same fixed delay for every client"
       ],
       "q": "Safe retry recipe for flaky calls?"
     },
     "takeaway": "Retry idempotent calls with capped jittered backoff and limits.",
     "trap": "Retrying non-idempotent payments without idempotency keys.",
     "track": "system-design",
-    "topic_label": "horizontal-scaling"
+    "topic_label": "resilience"
   },
   {
     "body_md": "Circuit breaker stops calling a failing dependency and fails fast. It trips after error threshold, probes with half-open traffic, and closes when success returns.",
     "code": "if breaker.is_open() { return fallback(); }\n// half-open: allow one probe, close on success",
-    "hook": "Fail fast today to stay alive tomorrow.",
+    "hook": "Circuit breakers: fail fast today, stay alive tomorrow.",
     "id": "sd-scale-010",
     "language": "rust",
     "level": 2,
     "output": "open -> fallback() at once, zero doomed calls\n// half-open probe closes the breaker on success",
     "quiz": {
-      "answer": 2,
+      "answer": 1,
       "explain": "Open circuits shed doomed work and let dependencies recover.",
       "options": [
-        "Retry forever",
-        "Queue forever",
-        "Trip on errors and probe recovery with half-open calls",
-        "Ignore errors"
+        "Only the database from slow, unindexed queries",
+        "Callers and a failing dependency from overload",
+        "Requests from failing, by retrying until success",
+        "The network from packet loss and timeouts"
       ],
       "q": "What does a circuit breaker protect?"
     },
     "takeaway": "Trip failing calls fast and probe recovery through half-open traffic.",
     "trap": "Keeping the breaker closed during a full downstream outage.",
     "track": "system-design",
-    "topic_label": "horizontal-scaling"
+    "topic_label": "resilience"
   },
   {
     "body_md": "Bulkhead isolates pools so one bad tenant cannot sink all. Split threads, connections, and queues per dependency with per-lane caps and separate timeouts.",
     "code": "// separate pools per downstream\nlet a = Pool::new(20); // payments\nlet b = Pool::new(50); // search",
-    "hook": "One leak should not sink the whole ship.",
+    "hook": "Bulkheads: one leak should not sink the whole ship.",
     "id": "sd-scale-011",
     "language": "rust",
     "level": 2,
@@ -249,22 +249,22 @@
       "answer": 1,
       "explain": "Per-lane caps contain blast radius across tenants.",
       "options": [
-        "Shared pool all",
-        "Isolated pools with per-dependency caps",
-        "No timeouts",
-        "One queue"
+        "One shared pool sized for peak traffic",
+        "Separate pools and caps per dependency",
+        "Longer timeouts so slow calls can finish",
+        "A global queue that orders all requests"
       ],
       "q": "How do bulkheads contain failures?"
     },
     "takeaway": "Isolate resources per dependency with independent capacity caps.",
     "trap": "Sharing one pool across critical and best-effort traffic.",
     "track": "system-design",
-    "topic_label": "caching-patterns"
+    "topic_label": "resilience"
   },
   {
     "body_md": "Timeout budgets cap total wait across chained calls. Set per-attempt deadlines smaller than the edge budget and propagate remaining time so deep calls cannot blow the user deadline.",
     "code": "let left = deadline.saturating_sub(now());\ncall.with_timeout(left / 2).await?; // leave room",
-    "hook": "Budgets beat hope when calls chain deep.",
+    "hook": "Timeout budgets: deadlines must shrink as calls chain.",
     "id": "sd-scale-012",
     "language": "rust",
     "level": 3,
@@ -273,140 +273,140 @@
       "answer": 0,
       "explain": "Propagated deadlines bound tail latency across the chain.",
       "options": [
-        "Propagate shrinking deadlines down the call chain",
-        "No timeouts",
-        "Same timeout all",
-        "Infinite retries"
+        "Pass the remaining deadline down each hop",
+        "Every hop gets the same full edge timeout again",
+        "Inner calls get longer timeouts than outer",
+        "Retries reset the clock so each try is fresh"
       ],
       "q": "How do timeout budgets work?"
     },
     "takeaway": "Propagate shrinking deadlines so chained calls respect edge limits.",
     "trap": "Giving every hop the full edge timeout and stacking waits.",
     "track": "system-design",
-    "topic_label": "caching-patterns"
+    "topic_label": "resilience"
   },
   {
     "body_md": "Backpressure signals overload upstream instead of queueing forever. Bound queues, shed low-priority load with 429 plus Retry-After, and autoscale on queue depth rather than hope.",
     "code": "if queue.len() > max { return status(429); }\n// signal Retry-After, drop tail low priority",
-    "hook": "Say no fast so the important work survives.",
+    "hook": "Load shedding: say no fast so important work survives.",
     "id": "sd-scale-013",
     "language": "rust",
     "level": 3,
     "output": "len > max -> 429 + Retry-After, low priority shed\n// queue depth drives autoscale",
     "quiz": {
-      "answer": 2,
+      "answer": 0,
       "explain": "Bounded queues plus explicit shedding keep latency stable.",
       "options": [
-        "Unbounded queues",
-        "Block forever",
-        "Bound queues with priority shedding and retry hints",
-        "Drop randomly"
+        "Bound queues, shed low priority with 429",
+        "Grow queues so no request is ever dropped",
+        "Accept all and let timeouts sort it out",
+        "Drop requests at random across all tiers"
       ],
       "q": "Healthy response to sustained overload?"
     },
     "takeaway": "Bound queues and shed low priority load with clear retry signals.",
     "trap": "Growing an unbounded queue until memory kills the host.",
     "track": "system-design",
-    "topic_label": "caching-patterns"
+    "topic_label": "rate-limiting"
   },
   {
     "body_md": "HPA scales on signals like CPU, request queue, and custom latency. Pick leading indicators, cool down flaps, and scale stateful parts separately from stateless web tiers.",
     "code": null,
-    "hook": "Scale on signals, not on panic at midnight.",
+    "hook": "Autoscaling: scale on signals, not midnight panic.",
     "id": "sd-scale-014",
     "language": null,
     "level": 2,
     "quiz": {
-      "answer": 1,
+      "answer": 0,
       "explain": "Leading metrics plus cooldowns scale before saturation hits.",
       "options": [
-        "CPU only",
-        "Leading signals with cooldowns and tier separation",
-        "Manual only",
-        "Scale databases freely"
+        "Leading signals plus cooldowns, tiers separate",
+        "CPU alone, with no cooldown so it can react fast",
+        "Scale the database with the web tier together",
+        "Scale only after p99 latency already doubled"
       ],
       "q": "What makes autoscaling stable?"
     },
     "takeaway": "Scale on leading signals with cooldowns per tier.",
     "trap": "Scaling on lagging CPU alone during queue buildup.",
     "track": "system-design",
-    "topic_label": "caching-patterns"
+    "topic_label": "deploy-observe"
   },
   {
     "body_md": "Readiness gates traffic while liveness triggers restarts. Fail readiness when dependencies sag, fail liveness only on deadlock, and never couple deploys to aggressive restart thresholds.",
     "code": "async fn live() -> Status { ok() } // cheap, no deps\nasync fn ready() -> Status { deps_ok().await }",
-    "hook": "Ready means serve me, alive means spare me.",
+    "hook": "Readiness vs liveness: ready means serve, alive means spare.",
     "id": "sd-scale-015",
     "language": "rust",
     "level": 2,
     "output": "live(): 200 always (cheap); ready(): 200 iff deps ok\n// K8s: unready stops traffic, live failure restarts",
     "quiz": {
-      "answer": 0,
+      "answer": 1,
       "explain": "Separating them avoids restart loops during outages.",
       "options": [
-        "Readiness gates traffic and liveness gates restarts",
-        "Same probe both",
-        "No probes",
-        "Restart on slow DB"
+        "Liveness gates traffic; readiness gates restarts",
+        "Readiness gates traffic; liveness gates restarts",
+        "Both should fail when the database is down",
+        "They are the same check, just run on two ports"
       ],
       "q": "Readiness versus liveness in Kubernetes?"
     },
     "takeaway": "Gate traffic with readiness and reserve liveness for true deadlocks.",
     "trap": "Failing liveness on downstream slowness and restart-looping.",
     "track": "system-design",
-    "topic_label": "caching-patterns"
+    "topic_label": "deploy-observe"
   },
   {
     "body_md": "Blue-green runs two full stacks and flips traffic once green passes checks. It gives instant rollback and full isolation at double cost plus migration care for state.",
     "code": null,
-    "hook": "Two stages, one spotlight, instant rollback power.",
+    "hook": "Blue-green deploys: two stacks, one flip, instant rollback.",
     "id": "sd-scale-016",
     "language": null,
     "level": 2,
     "quiz": {
-      "answer": 3,
-      "explain": "Full parallel stack makes cutover and rollback atomic.",
+      "answer": 2,
+      "explain": "A full parallel stack makes cutover and rollback one traffic flip; the shared database still needs compatible schemas.",
       "options": [
-        "Patch live",
-        "Canary first",
-        "Rolling only",
-        "Full parallel stack with traffic flip for instant rollback"
+        "When you want to test on 1% of traffic first",
+        "When you cannot afford to run double capacity",
+        "When you need an instant, atomic rollback path",
+        "When schema changes can't be backward compatible"
       ],
       "q": "When is blue-green worth the cost?"
     },
     "takeaway": "Keep parallel stacks for atomic cutover and instant rollback.",
     "trap": "Forgetting state migration while flipping stateless traffic.",
     "track": "system-design",
-    "topic_label": "microservices"
+    "topic_label": "deploy-observe"
   },
   {
     "body_md": "Canary shifts a slice of traffic to the new build and watches error and latency deltas. Automate promotion and rollback on burn signals instead of eyeballing dashboards.",
     "code": "// 1% -> 10% -> 50% with auto rollback\nif error_delta > limit { rollback(); }",
-    "hook": "Let one percent bleed before one hundred do.",
+    "hook": "Canary releases: let 1% bleed before 100% do.",
     "id": "sd-scale-017",
     "language": "rust",
     "level": 2,
     "output": "1% -> 10% -> 50% while deltas stay green\nerror_delta > limit -> rollback() at once",
     "quiz": {
-      "answer": 1,
+      "answer": 3,
       "explain": "Gradual exposure with auto rollback limits blast radius.",
       "options": [
-        "Full deploy",
-        "Gradual traffic shift with metric-gated promotion",
-        "Manual watch",
-        "Skip staging"
+        "Deploy to all hosts, hidden behind a feature flag",
+        "Run the new build in staging for a full week",
+        "Replace every host at once to minimize drift",
+        "Expose a small slice; promote if metrics hold"
       ],
       "q": "How does canary reduce release risk?"
     },
     "takeaway": "Shift traffic gradually with automatic rollback on metric regression.",
     "trap": "Canarying without rollback automation during a metric spike.",
     "track": "system-design",
-    "topic_label": "microservices"
+    "topic_label": "deploy-observe"
   },
   {
     "body_md": "Feature flags decouple deploy from release with targeted rollouts. Flag by user cohort, keep flags short-lived, and always ship a kill switch for risky paths.",
     "code": "if flags.enabled(\"new_rank\", &user) {\n    rank_v2(posts) // else rank_v1",
-    "hook": "Ship code dark, light it up by cohort.",
+    "hook": "Feature flags: ship code dark, light it up by cohort.",
     "id": "sd-scale-018",
     "language": "rust",
     "level": 2,
@@ -415,17 +415,17 @@
       "answer": 2,
       "explain": "Cohort targeting plus expiry keeps flags safe and clean.",
       "options": [
-        "Permanent flags",
-        "No flags",
-        "Short-lived cohort flags with kill switches",
-        "Flag everything"
+        "Keep every flag forever in case you need it",
+        "Wrap every code path in its own permanent flag",
+        "Short-lived flags, cohort rollout, kill switch",
+        "Flip flags for all users at once on release"
       ],
       "q": "Healthy feature flag practice?"
     },
     "takeaway": "Roll out by cohort with short-lived flags and kill switches.",
     "trap": "Leaving stale flags that fork logic forever.",
     "track": "system-design",
-    "topic_label": "microservices"
+    "topic_label": "deploy-observe"
   },
   {
     "body_md": "RED tracks rate errors duration per service while USE tracks utilization saturation errors per resource. RED spots user pain fast and USE finds the bottlenecked disk or queue beneath.",
@@ -435,25 +435,25 @@
     "language": null,
     "level": 2,
     "quiz": {
-      "answer": 0,
+      "answer": 2,
       "explain": "Service signals plus resource signals connect symptoms to causes.",
       "options": [
-        "RED for services and USE for resources together",
-        "Logs only",
-        "CPU only",
-        "Traces only"
+        "RED for resources, USE for services",
+        "RED for logs, USE for tracing spans",
+        "RED for services, USE for resources",
+        "RED for alerts, USE for capacity only"
       ],
-      "q": "RED versus USE observability split?"
+      "q": "How do RED and USE metrics split the work?"
     },
     "takeaway": "Pair service signals with resource signals to link pain to cause.",
     "trap": "Alerting on CPU alone while errors climb unnoticed.",
     "track": "system-design",
-    "topic_label": "microservices"
+    "topic_label": "deploy-observe"
   },
   {
     "body_md": "Tracing samples to keep cost sane while catching tails. Head-sample errors and slow paths, tail-sample interesting traces, and propagate baggage so spans join across services.",
     "code": "// sample slow or error traces, keep 1% baseline\nif latency > slo || err { keep(); }",
-    "hook": "Sample smart so tails cannot hide at scale.",
+    "hook": "Trace sampling: sample smart so slow tails cannot hide.",
     "id": "sd-scale-020",
     "language": "rust",
     "level": 3,
@@ -462,17 +462,17 @@
       "answer": 3,
       "explain": "Adaptive sampling keeps signal while bounding storage cost.",
       "options": [
-        "Sample all",
-        "Sample none",
-        "Fixed tiny",
-        "Adaptive sampling favoring errors and slow traces"
+        "A fixed 0.1% head sample of every request",
+        "Record 100% of traces and just compress them",
+        "Sample only successful requests to cut noise",
+        "Keep errors and slow traces, sample the rest"
       ],
       "q": "How do you sample traces at scale?"
     },
     "takeaway": "Sample adaptively to keep errors and slow paths without excess cost.",
     "trap": "Sampling uniformly and losing every rare tail event.",
     "track": "system-design",
-    "topic_label": "microservices"
+    "topic_label": "deploy-observe"
   },
   {
     "body_md": "Burn-rate alerts fire on how fast you eat error budget. Page on fast burn over short windows and ticket on slow burn over days so noise drops but real outages still wake someone.",
@@ -483,19 +483,19 @@
     "level": 3,
     "output": "fast burn (14x/1h) -> page; slow burn (1x/3d) -> ticket\n// budget-aware; short spikes alone stay quiet",
     "quiz": {
-      "answer": 1,
+      "answer": 0,
       "explain": "Dual windows separate urgent outages from slow leaks.",
       "options": [
-        "Alert all spikes",
-        "Fast burn pages and slow burn tickets",
-        "No SLOs",
-        "Daily manual check"
+        "Page on fast burn, ticket on slow burn",
+        "Page on every error spike above one percent",
+        "Alert only once the budget is fully spent",
+        "Average errors over 30 days, then page"
       ],
       "q": "How do burn-rate alerts cut noise?"
     },
     "takeaway": "Page on fast budget burn and ticket slow leaks separately.",
     "trap": "Paging on every short spike without budget context.",
     "track": "system-design",
-    "topic_label": "microservices"
+    "topic_label": "deploy-observe"
   }
 ]

@@ -2,6 +2,9 @@ package com.ferrisfeed.data
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -33,37 +36,106 @@ class CurriculumSeeder(
     suspend fun seedIfEmpty(): Int {
         if (dao.countAll() > 0) return 0
         var total = 0
+        forEachPack { entities ->
+            dao.upsertAll(entities)
+            total += entities.size
+        }
+        markCurrent()
+        Log.i(TAG, "Curriculum seed complete: $total reels")
+        return total
+    }
+
+    /**
+     * Content refresh for installs seeded by an older build (redesign v3
+     * re-labelled every topic and rewrote quizzes). Runs once per
+     * [CONTENT_VERSION] bump: lesson text, topic, level and quiz come from the
+     * bundled packs; every SRS column (due date, stability, reps, lapses...)
+     * is kept, so nobody loses review history. New reels are inserted.
+     */
+    suspend fun refreshIfStale(): Int {
+        // An empty table (first launch, or a destructive migration) always seeds.
+        if (dao.countAll() == 0) return seedIfEmpty()
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (prefs.getInt(KEY_CONTENT_VERSION, 0) >= CONTENT_VERSION) return 0
+        var total = 0
+        forEachPack { fresh ->
+            val merged = fresh.map { reel ->
+                val old = dao.getById(reel.id) ?: return@map reel
+                old.copy(
+                    track = reel.track,
+                    level = reel.level,
+                    topic = reel.topic,
+                    hook = reel.hook,
+                    bodyMd = reel.bodyMd,
+                    code = reel.code,
+                    output = reel.output,
+                    language = reel.language,
+                    takeaway = reel.takeaway,
+                    trap = reel.trap,
+                    quizJson = reel.quizJson,
+                    orderIndex = reel.orderIndex,
+                )
+            }
+            dao.upsertAll(merged)
+            total += merged.size
+        }
+        markCurrent()
+        Log.i(TAG, "Curriculum refreshed to v$CONTENT_VERSION: $total reels")
+        return total
+    }
+
+    private fun markCurrent() {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(KEY_CONTENT_VERSION, CONTENT_VERSION)
+            .apply()
+    }
+
+    private suspend fun forEachPack(block: suspend (List<ReelEntity>) -> Unit) {
         for ((dir, track) in TRACK_DIRS) {
             val files = runCatching {
                 context.assets.list(dir).orEmpty()
             }.getOrDefault(emptyArray())
             for (file in files.filter { it.endsWith(".json") }) {
-                total += seedFile(dir, track, file)
+                val entities = parsePack(dir, track, file)
+                if (entities.isNotEmpty()) block(entities)
             }
         }
-        Log.i(TAG, "Curriculum seed complete: $total reels")
-        return total
     }
 
-    private suspend fun seedFile(dir: String, track: String, file: String): Int {
+    private fun parsePack(dir: String, track: String, file: String): List<ReelEntity> {
         val topic = topicForFile(file)
         return runCatching {
             val raw = context.assets
                 .open("$dir/$file")
                 .bufferedReader()
                 .use { it.readText() }
-            val rows = json.parseToJsonElement(raw).jsonArray
-            val entities = rows.mapIndexedNotNull { index, element ->
-                runCatching { element.jsonObject.toReelEntity(track, topic, index) }
-                    .getOrNull()
+            json.parseToJsonElement(raw).jsonArray.mapIndexedNotNull { index, element ->
+                runCatching { element.jsonObject.toReelEntity(track, topic, index) }.getOrNull()
             }
-            if (entities.isNotEmpty()) dao.upsertAll(entities)
-            entities.size
-        }.getOrDefault(0)
+        }.getOrDefault(emptyList())
     }
 
     companion object {
         private const val TAG = "CurriculumSeeder"
+
+        private val readyState = MutableStateFlow(false)
+
+        /**
+         * True once this process's seed/refresh pass has finished (or failed).
+         * The feed waits on it so its first queue never sees a half-seeded
+         * table or pre-refresh topic labels.
+         */
+        val ready: StateFlow<Boolean> = readyState.asStateFlow()
+
+        fun markReady() {
+            readyState.value = true
+        }
+
+        /** Bump whenever bundled lesson content changes in a way installs must pick up. */
+        const val CONTENT_VERSION = 3
+        private const val PREFS = "ferris_content"
+        private const val KEY_CONTENT_VERSION = "content_version"
 
         private val TRACK_DIRS = listOf(
             "rust" to ReelEntity.TRACK_RUST,

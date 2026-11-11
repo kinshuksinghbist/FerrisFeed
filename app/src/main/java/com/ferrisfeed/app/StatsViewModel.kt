@@ -2,52 +2,31 @@ package com.ferrisfeed.app
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ferrisfeed.coreui.DesignPhilosophy
+import com.ferrisfeed.data.LearnerProfile
 import com.ferrisfeed.data.ProgressStore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
- * Aggregated user stats for the top stat bar and app shell design philosophy.
+ * App-level state: whether first-run onboarding is done. Null until
+ * DataStore answers, so the first frame never flashes onboarding at a
+ * returning learner.
  */
-data class UserStats(
-    val xp: Int = 0,
-    val streakDays: Int = 0,
-)
-
 @HiltViewModel
-class StatsViewModel @Inject constructor(
+class AppViewModel @Inject constructor(
     private val progressStore: ProgressStore,
 ) : ViewModel() {
 
-    val stats: StateFlow<UserStats> = combine(
-        progressStore.xp,
-        progressStore.streakDays,
-    ) { xp, streak ->
-        UserStats(xp = xp, streakDays = streak)
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = UserStats(),
-    )
+    val learner: StateFlow<LearnerProfile?> = progressStore.learnerProfile
+        .map<LearnerProfile, LearnerProfile?> { it }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    val designPhilosophy: StateFlow<DesignPhilosophy> = progressStore.designPhilosophy
-        .map { if (it == DesignPhilosophy.NeoBrutalism.name) DesignPhilosophy.NeoBrutalism else DesignPhilosophy.StudioGlass }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Eagerly,
-            initialValue = DesignPhilosophy.StudioGlass,
-        )
-
-    fun setDesignPhilosophy(philosophy: DesignPhilosophy) {
-        viewModelScope.launch {
-            progressStore.setDesignPhilosophy(philosophy.name)
-        }
+    fun completeOnboarding(trackFocus: String, experience: Int) {
+        viewModelScope.launch { progressStore.saveLearnerProfile(trackFocus, experience) }
     }
 }

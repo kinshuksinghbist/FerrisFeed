@@ -19,7 +19,7 @@
       "q": "If you implement From<A> for B, what do you get?"
     },
     "takeaway": "Implement From for conversions and rely on Into for ergonomic call sites.",
-    "topic_label": "intermediate misc",
+    "topic_label": "traits-generics",
     "track": "rust",
     "trap": "Implementing both From and Into manually causes conflicting-impl errors."
   },
@@ -35,15 +35,15 @@
       "answer": 2,
       "explain": "Debug is developer-facing and derivable while Display is user-facing and manual.",
       "options": [
-        "Display is derivable, Debug is manual",
-        "They are interchangeable traits",
-        "Debug is for developers and Display is for users",
-        "Neither supports formatting"
+        "Display is derivable; Debug is manual",
+        "They are interchangeable formatters",
+        "Debug is for devs; Display for users",
+        "Debug prints in release builds only"
       ],
       "q": "How do Debug and Display differ?"
     },
     "takeaway": "Derive Debug for diagnostics and implement Display for user-facing output.",
-    "topic_label": "intermediate misc",
+    "topic_label": "traits-generics",
     "track": "rust",
     "trap": "Using Debug output in user interfaces leaks internals and looks unpolished."
   },
@@ -57,17 +57,17 @@
     "output": "2\n",
     "quiz": {
       "answer": 1,
-      "explain": "Deref coercion auto-converts smart pointers to their inner borrow.",
+      "explain": "Deref coercion follows Deref impls (&Box<String> to &String to &str) so smart pointers act like their target.",
       "options": [
-        "It clones the inner value",
-        "It auto-borrows smart pointers as their target",
-        "It moves out of the box",
-        "It leaks memory safely"
+        "Clones the inner value on access",
+        "Turns &Box<String> into &str for you",
+        "Moves the inner value out of the Box",
+        "Calls Clone to get the target type"
       ],
       "q": "What does deref coercion do?"
     },
     "takeaway": "Rely on deref coercion for smart pointers but avoid abusing it elsewhere.",
-    "topic_label": "intermediate misc",
+    "topic_label": "smart-pointers",
     "track": "rust",
     "trap": "Implementing Deref on domain types hides ownership and confuses method resolution."
   },
@@ -80,18 +80,18 @@
     "level": 2,
     "output": "greet(\"\") → Owned(\"guest\")\ngreet(\"ann\") → Borrowed(\"ann\")",
     "quiz": {
-      "answer": 3,
+      "answer": 0,
       "explain": "Cow avoids allocation on the common borrowed path and owns only when needed.",
       "options": [
-        "It always clones input",
-        "It only borrows statically",
-        "It only owns heap data",
-        "It borrows by default and owns when required"
+        "No allocation when nothing changes",
+        "It always clones, so callers own it",
+        "It's faster to hash than a String",
+        "It stores text on the stack instead"
       ],
       "q": "Why return Cow instead of String?"
     },
     "takeaway": "Return Cow to avoid allocation when the borrowed fast path suffices.",
-    "topic_label": "intermediate misc",
+    "topic_label": "smart-pointers",
     "track": "rust",
     "trap": "Calling into_owned too early defeats Cow and allocates on every call."
   },
@@ -107,15 +107,15 @@
       "answer": 0,
       "explain": "AsRef accepts many owned and borrowed forms of the same data.",
       "options": [
-        "AsRef accepts many shapes of the same data",
-        "AsRef only takes static refs",
-        "AsRef forces heap allocation",
-        "AsRef disables borrowing"
+        "Callers can pass String or &str",
+        "It forces callers to clone first",
+        "It only accepts 'static strings",
+        "It makes the function run faster"
       ],
       "q": "Why use AsRef<str> parameters?"
     },
     "takeaway": "Accept AsRef in public APIs so callers can pass owned or borrowed values.",
-    "topic_label": "intermediate misc",
+    "topic_label": "traits-generics",
     "track": "rust",
     "trap": "Taking &String blocks &str callers for no benefit; use AsRef or &str."
   },
@@ -128,18 +128,18 @@
     "level": 2,
     "output": "OK — assertion passes, no output",
     "quiz": {
-      "answer": 2,
+      "answer": 0,
       "explain": "Borrow lets owned map keys be queried with borrowed equivalents.",
       "options": [
-        "It hashes faster",
-        "It sorts the map",
-        "It allows borrowed lookups on owned keys",
-        "It resizes the map"
+        "Looking up String keys with a &str",
+        "Storing &str keys without lifetimes",
+        "Sorting entries by key on insert",
+        "Mutating keys in place after insert"
       ],
       "q": "What does Borrow enable for maps?"
     },
     "takeaway": "Rely on Borrow so owned-key maps support cheap borrowed lookups.",
-    "topic_label": "smart-pointers",
+    "topic_label": "traits-generics",
     "track": "rust",
     "trap": "Custom keys without a Borrow impl force wasteful owned lookups."
   },
@@ -152,25 +152,25 @@
     "level": 2,
     "output": "format!(\"{}\", DbErr::Missing(\"ann\")) → \"missing user ann\"",
     "quiz": {
-      "answer": 1,
+      "answer": 0,
       "explain": "thiserror derives Error for enums with formatted messages per variant.",
       "options": [
-        "It replaces Result entirely",
-        "It derives typed errors with per-variant messages",
-        "It only logs warnings",
-        "It catches panics automatically"
+        "Deriving Error for your typed enums",
+        "Replacing Result with a dynamic error",
+        "Catching panics and converting them",
+        "Logging warnings when errors occur"
       ],
       "q": "What is thiserror for?"
     },
     "takeaway": "Derive typed library errors with thiserror so callers can match precisely.",
-    "topic_label": "smart-pointers",
+    "topic_label": "error-handling",
     "track": "rust",
     "trap": "Using stringly errors in libraries prevents callers from handling cases."
   },
   {
     "body_md": "`anyhow::Result` plus `.context(\"loading config\")` adds a breadcrumb trail to app errors. The `?` propagates, context explains what you were doing. Print with `{:?}` for the full chain in logs.",
     "code": "fn load() -> anyhow::Result<String> {\n    std::fs::read_to_string(\"app.toml\")\n        .context(\"loading app config\")\n}",
-    "hook": "File not found — but WHICH file and WHY were you reading it?",
+    "hook": "anyhow's .context() says which file failed and why",
     "id": "rust-i4-008",
     "language": "rust",
     "level": 2,
@@ -179,15 +179,15 @@
       "answer": 0,
       "explain": "context attaches what-you-were-doing notes to propagated errors.",
       "options": [
-        "context adds actionable breadcrumbs to errors",
-        "context suppresses error messages",
-        "context retries failed calls",
-        "context changes error types"
+        "A note saying what you were doing",
+        "A retry of the failed operation",
+        "A conversion to a typed error enum",
+        "A hidden, quieter error message"
       ],
       "q": "What does anyhow context add?"
     },
     "takeaway": "Attach anyhow context at app boundaries to make failures easy to diagnose.",
-    "topic_label": "smart-pointers",
+    "topic_label": "error-handling",
     "track": "rust",
     "trap": "Adding context inside tight loops buries the root cause under noise."
   },
@@ -200,18 +200,18 @@
     "level": 2,
     "output": "[4, 16, 36, 64]",
     "quiz": {
-      "answer": 3,
+      "answer": 2,
       "explain": "Adapters are lazy and fuse into one pass when consumed.",
       "options": [
-        "Each adapter allocates a vector",
-        "Adapters run eagerly at once",
-        "filter needs collect first",
-        "Adapters stay lazy until a consumer runs"
+        "Each adapter builds its own Vec first",
+        "Eagerly, as soon as they're chained",
+        "Lazily, once a consumer pulls items",
+        "filter runs at once, map runs later"
       ],
       "q": "When do map and filter execute?"
     },
     "takeaway": "Chain lazy adapters and consume once to process data in a single pass.",
-    "topic_label": "smart-pointers",
+    "topic_label": "closures-iterators",
     "track": "rust",
     "trap": "Forgetting the final collect means the adapter chain never runs at all."
   },
@@ -227,15 +227,15 @@
       "answer": 1,
       "explain": "fold threads an accumulator through every element to one result.",
       "options": [
-        "It filters elements lazily",
-        "It reduces many elements into one accumulator",
-        "It zips two iterators together",
-        "It clones the iterator"
+        "Filters elements into a new iterator",
+        "Reduces all items to one value",
+        "Pairs up items from two iterators",
+        "Flattens nested iterators into one"
       ],
       "q": "What does fold do?"
     },
     "takeaway": "Use fold to reduce iterators into a single summary value or collection.",
-    "topic_label": "smart-pointers",
+    "topic_label": "closures-iterators",
     "track": "rust",
     "trap": "Folding with a shared mutable accumulator across threads causes data races."
   },
@@ -248,18 +248,18 @@
     "level": 2,
     "output": "0: 10-1\n1: 20-2\n",
     "quiz": {
-      "answer": 2,
+      "answer": 1,
       "explain": "zip stops at the shorter iterator while enumerate adds indices.",
       "options": [
-        "zip pads the shorter side",
-        "enumerate skips every other item",
+        "zip pads the shorter side with None",
         "zip stops at the shorter iterator",
-        "zip requires equal lengths or panics"
+        "zip panics when lengths differ",
+        "zip cycles the shorter one again"
       ],
       "q": "What happens when zipped iterators differ in length?"
     },
     "takeaway": "Pair iterators with zip and enumerate but verify lengths when truncation matters.",
-    "topic_label": "box-rc",
+    "topic_label": "closures-iterators",
     "track": "rust",
     "trap": "Silent zip truncation drops trailing data when inputs differ in length."
   },
@@ -275,15 +275,15 @@
       "answer": 0,
       "explain": "Collecting to Result short-circuits on the first error.",
       "options": [
-        "Collecting to Result short-circuits on first error",
-        "Collecting to Result skips all errors",
-        "Collecting to Result panics on success",
-        "Collecting needs a loop always"
+        "Returns the first Err and stops",
+        "Skips every Err and keeps the Oks",
+        "Collects every Err into the Vec",
+        "Panics as soon as a parse fails"
       ],
       "q": "What does collect::<Result<Vec<_>, _>> do on error?"
     },
     "takeaway": "Collect fallible maps into Result to validate whole batches with early exit.",
-    "topic_label": "box-rc",
+    "topic_label": "error-handling",
     "track": "rust",
     "trap": "Collecting into Vec then checking loses which element failed first."
   },
@@ -296,18 +296,18 @@
     "level": 2,
     "output": "first(\"x\") → \"x\", pick(\"a\", \"b\") → \"a\"",
     "quiz": {
-      "answer": 1,
+      "answer": 0,
       "explain": "With two input borrows the compiler cannot guess which flows to output.",
       "options": [
-        "Elision handles any number of inputs",
-        "Two input borrows need explicit output lifetimes",
-        "Outputs never need lifetimes",
-        "self borrows are ignored"
+        "Elision can't pick which input to tie to",
+        "A fn can't return a borrowed &str at all",
+        "&str outputs always need 'static",
+        "It compiles; elision handles two inputs"
       ],
       "q": "Why does fn pick(a: &str, b: &str) -> &str fail?"
     },
     "takeaway": "Learn the three elision rules so you annotate only truly ambiguous signatures.",
-    "topic_label": "box-rc",
+    "topic_label": "lifetimes",
     "track": "rust",
     "trap": "Annotating every lifetime by hand hides the simple elided shape."
   },
@@ -320,18 +320,18 @@
     "level": 2,
     "output": "apply(|s| s.len()) → 2",
     "quiz": {
-      "answer": 3,
+      "answer": 0,
       "explain": "HRTB expresses bounds that must hold for every possible lifetime.",
       "options": [
-        "A runtime borrow checker",
-        "A thread pool builder",
-        "A macro repetition rule",
-        "A bound valid for every possible lifetime"
+        "It must hold for every lifetime 'a",
+        "It loops over each borrow at runtime",
+        "'a is fixed to the caller's scope",
+        "'a is always treated as 'static"
       ],
       "q": "What does for<'a> in a bound mean?"
     },
     "takeaway": "Recognize higher-ranked bounds when closures must accept any fresh borrow.",
-    "topic_label": "box-rc",
+    "topic_label": "lifetimes",
     "track": "rust",
     "trap": "Forcing one concrete lifetime where any-lifetime is needed over-constrains callers."
   },
@@ -345,17 +345,17 @@
     "output": "shapes.len() → 0 (each element may differ in type)",
     "quiz": {
       "answer": 0,
-      "explain": "dyn Trait uses dynamic dispatch through a vtable per object.",
+      "explain": "dyn Trait calls go through a vtable pointer, which costs an indirection and usually prevents inlining.",
       "options": [
-        "dyn Trait uses dynamic dispatch with a vtable",
-        "dyn Trait monomorphizes every type",
-        "dyn Trait requires Sized bounds",
-        "dyn Trait avoids all indirection"
+        "A vtable call that blocks inlining",
+        "One monomorphized copy per type",
+        "A garbage-collection header per value",
+        "Nothing; it's the same as generics"
       ],
       "q": "What is the cost of dyn Trait?"
     },
     "takeaway": "Use trait objects for heterogeneous collections and generics for hot paths.",
-    "topic_label": "box-rc",
+    "topic_label": "traits-generics",
     "track": "rust",
     "trap": "Putting non-object-safe generic methods on a dyn trait breaks compilation."
   },
@@ -368,18 +368,18 @@
     "level": 2,
     "output": "OK — thread returns 3 via join; no output",
     "quiz": {
-      "answer": 2,
+      "answer": 1,
       "explain": "Send allows moving ownership across threads while Sync allows sharing refs.",
       "options": [
-        "They control async polling",
-        "They control memory layout",
-        "Send allows moving and Sync allows sharing across threads",
-        "They control trait object safety"
+        "They control how futures are polled",
+        "Send: safe to move; Sync: safe to share",
+        "They fix a type's layout in memory",
+        "Send: safe to share; Sync: safe to move"
       ],
       "q": "What do Send and Sync guarantee?"
     },
     "takeaway": "Let Send and Sync bounds guide which types can cross thread boundaries.",
-    "topic_label": "box-rc",
+    "topic_label": "threads",
     "track": "rust",
     "trap": "Wrapping Rc in Arc or sending raw pointers across threads breaks safety."
   },
@@ -395,15 +395,15 @@
       "answer": 1,
       "explain": "Arc clone bumps the atomic count without copying inner data.",
       "options": [
-        "It deep-copies the data",
-        "It bumps the shared count without copying data",
-        "It moves data to the heap",
-        "It locks a mutex first"
+        "Deep-copies the data for the thread",
+        "Bumps an atomic count; no data copy",
+        "Moves the data onto a fresh heap slot",
+        "Locks a mutex, then copies the value"
       ],
       "q": "What does Arc::clone do?"
     },
     "takeaway": "Share immutable data across threads with cheap Arc clones around it.",
-    "topic_label": "interior-mutability",
+    "topic_label": "threads",
     "track": "rust",
     "trap": "Cloning inner data instead of the Arc copies megabytes on every spawn."
   },
@@ -419,15 +419,15 @@
       "answer": 0,
       "explain": "Poisoning signals a panic while holding the lock and lock returns Err.",
       "options": [
-        "Poisoning means a holder panicked and lock yields Err",
-        "Poisoning means the mutex is empty",
-        "Poisoning means deadlock occurred",
-        "Poisoning means the data was freed"
+        "A holder panicked, so lock() gives Err",
+        "The mutex was dropped while still locked",
+        "Two threads have deadlocked on the lock",
+        "The guarded data was freed while locked"
       ],
       "q": "What is mutex poisoning?"
     },
     "takeaway": "Handle poisoned mutexes deliberately by recovering only after auditing state.",
-    "topic_label": "interior-mutability",
+    "topic_label": "threads",
     "track": "rust",
     "trap": "Blindly unwrapping lock results turns recoverable poison into a second crash."
   },
@@ -440,18 +440,18 @@
     "level": 2,
     "output": "v = 42 (recv succeeds; nothing printed)",
     "quiz": {
-      "answer": 2,
+      "answer": 0,
       "explain": "Cloned senders allow many producers feeding one receiver.",
       "options": [
-        "Receivers must be cloned",
-        "Channels cannot cross threads",
-        "Cloned senders enable multi-producer patterns",
-        "Sending always needs a mutex"
+        "Clone the Sender once per producer",
+        "Clone the Receiver for each thread",
+        "Wrap the Sender in a Mutex first",
+        "Use sync_channel; mpsc is one-to-one"
       ],
       "q": "How do you get multiple producers on mpsc?"
     },
     "takeaway": "Connect threads with channels and clone senders for multi-producer flows.",
-    "topic_label": "interior-mutability",
+    "topic_label": "threads",
     "track": "rust",
     "trap": "Blocking recv on the main thread with no sender left deadlocks forever."
   },
@@ -464,25 +464,25 @@
     "level": 2,
     "output": "error[E0502]: cannot borrow `v` as immutable because it is also borrowed as mutable",
     "quiz": {
-      "answer": 1,
+      "answer": 0,
       "explain": "Scopes guarantee children join before borrows expire.",
       "options": [
-        "They run threads forever",
-        "They join children before borrows expire",
-        "They share memory unsafely",
-        "They replace async tasks"
+        "The scope joins them before returning",
+        "They copy all locals onto their stack",
+        "They run on the caller's own thread",
+        "Borrows in threads are unchecked"
       ],
       "q": "Why can scoped threads borrow locals?"
     },
     "takeaway": "Use scoped threads for fork-join work that borrows local data safely.",
-    "topic_label": "interior-mutability",
+    "topic_label": "threads",
     "track": "rust",
     "trap": "Spawning detached threads that borrow locals escapes the borrow checker illegally."
   },
   {
     "body_md": "`DerefMut` enables `*box_ref = new_val` through smart pointers. `MutexGuard` uses it so `guard.field = x` writes through the lock. Do not implement `DerefMut` unless shared mutation is the point.",
     "code": "let mut b = Box::new(5);\n*b = 10; // DerefMut in action\nprintln!(\"{b}\");",
-    "hook": "Assign THROUGH a pointer as if it were the value itself.",
+    "hook": "DerefMut lets you assign through a smart pointer",
     "id": "rust-i4-021",
     "language": "rust",
     "level": 2,
@@ -491,15 +491,15 @@
       "answer": 0,
       "explain": "DerefMut powers mutable access through smart pointer wrappers.",
       "options": [
-        "DerefMut enables mutation through smart pointers",
-        "DerefMut clones on every write",
-        "DerefMut only works on raw pointers",
-        "DerefMut prevents all mutation"
+        "Writing through it, as in *b = 10",
+        "Cloning the value on every write",
+        "Mutating through raw pointers only",
+        "Freezing the pointee against writes"
       ],
       "q": "What does DerefMut enable?"
     },
     "takeaway": "Use DerefMut for pointer-like mutation and avoid it on plain domain types.",
-    "topic_label": "interior-mutability",
+    "topic_label": "smart-pointers",
     "track": "rust",
     "trap": "DerefMut on value types lets callers silently mutate internals."
   },
@@ -512,18 +512,18 @@
     "level": 2,
     "output": "Port::try_from(8080) → Ok\nPort::try_from(-1) → Err",
     "quiz": {
-      "answer": 2,
+      "answer": 0,
       "explain": "TryFrom signals failure with Result instead of panicking.",
       "options": [
-        "From returns Option always",
-        "Into cannot fail ever",
-        "TryFrom handles fallible conversions with Result",
-        "TryFrom is infallible by design"
+        "When the conversion might fail",
+        "When the types share a layout",
+        "Whenever From would be too slow",
+        "When converting between references"
       ],
       "q": "When should you use TryFrom?"
     },
     "takeaway": "Model fallible conversions with TryFrom so failures surface as Results.",
-    "topic_label": "interior-mutability",
+    "topic_label": "traits-generics",
     "track": "rust",
     "trap": "Panicking inside From for invalid input turns bad data into crashes."
   }

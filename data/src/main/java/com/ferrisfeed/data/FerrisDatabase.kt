@@ -55,17 +55,19 @@ abstract class FerrisDatabase : RoomDatabase() {
                 .fallbackToDestructiveMigration()
                 .fallbackToDestructiveMigrationOnDowngrade()
                 .addCallback(object : Callback() {
-                    override fun onCreate(db: SupportSQLiteDatabase) {
-                        super.onCreate(db)
-                        // First launch ever: fill Room from bundled JSON off
-                        // the opening thread. Feed observes the table and
-                        // waits for rows (see FeedViewModel init).
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        super.onOpen(db)
+                        // First launch seeds Room from bundled JSON; existing
+                        // installs pick up re-labelled topics and rewritten
+                        // quizzes once per content version, keeping all SRS
+                        // progress (CurriculumSeeder.refreshIfStale). Off the
+                        // opening thread; the feed waits for rows.
                         ioScope.launch {
                             runCatching {
-                                val database = getInstance(context)
-                                CurriculumSeeder(context, database.reelDao())
-                                    .seedIfEmpty()
+                                CurriculumSeeder(context, getInstance(context).reelDao())
+                                    .refreshIfStale()
                             }
+                            CurriculumSeeder.markReady()
                         }
                     }
                 })

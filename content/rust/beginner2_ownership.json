@@ -7,12 +7,12 @@
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "How does Rust ensure heap memory like a String is freed safely without a garbage collector?",
+      "q": "How does Rust free a String's heap memory without a garbage collector?",
       "options": [
-        "A runtime garbage collector periodically scans memory for unreferenced strings",
-        "The developer must manually call a free() or deallocate() function",
-        "The compiler automatically injects a drop call as soon as the owner variable exits scope",
-        "The memory stays allocated until the operating system shuts down the process"
+        "A background GC scans for unreachable strings",
+        "You must call a free function by hand",
+        "Drop runs when the owner goes out of scope",
+        "It stays allocated until the process exits"
       ],
       "answer": 2,
       "explain": "Rust ties memory lifecycle to variable scope: when the owner leaves its enclosing scope, drop runs deterministically."
@@ -26,17 +26,17 @@
   {
     "body_md": "Assigning a `String` **moves** ownership \u2014 old variable becomes invalid. This prevents two owners freeing same heap data. Use-after-move is a compile error, not a crash.",
     "code": "fn main() {\n    let a = String::from(\"hi\");\n    let b = a; // move\n    // println!(\"{a}\"); // error!\n    println!(\"{b}\");\n}",
-    "hook": "let b = a; kills a \u2014 the most shocking line for newcomers.",
+    "hook": "let b = a; moves a String \u2014 and a becomes unusable",
     "id": "rust-b2-002",
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "When you execute `let b = a;` where `a` is a heap-allocated String, what happens to `a`?",
+      "q": "After `let b = a;` with `a` a String, what happens to `a`?",
       "options": [
-        "Both a and b share ownership of the same underlying heap buffer",
-        "Ownership moves to b, making a immediately invalid and unusable",
-        "a remains valid because Rust creates an implicit deep copy",
-        "The program panics with a double-free runtime exception"
+        "a and b share ownership of one buffer",
+        "It moves to b, and a becomes unusable",
+        "a stays valid since Rust deep-copies it",
+        "It compiles, then double-frees at runtime"
       ],
       "answer": 1,
       "explain": "In Rust, assignment of heap types moves ownership by default, preventing double-free bugs at compile time."
@@ -50,17 +50,17 @@
   {
     "body_md": "Passing a `String` to a function **moves** it unless you return it. Caller loses ownership. Take `String` only when function should consume the data.",
     "code": "fn take(s: String) { println!(\"{s}\"); }\nfn main() {\n    let s = String::from(\"x\");\n    take(s);\n    // println!(\"{s}\"); // error\n}",
-    "hook": "Calling a function can destroy your variable \u2014 by design.",
+    "hook": "Passing a String to a function moves it \u2014 the caller loses it",
     "id": "rust-b2-003",
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "When passing an owned String into a function fn take(s: String), what happens to the caller binding?",
+      "q": "After `take(s)` with `fn take(s: String)`, can the caller still use `s`?",
       "options": [
-        "Ownership transfers into the function, so the caller can no longer use that variable",
-        "The caller retains full ownership and can freely access the string afterward",
-        "Rust automatically duplicates the string data on the stack for the function",
-        "The variable becomes global and accessible anywhere in the program"
+        "No, ownership moved into the function",
+        "Yes, the caller keeps ownership of s",
+        "Yes, Rust copies the String for it",
+        "Yes, it's returned when take ends"
       ],
       "answer": 0,
       "explain": "Passing a value by value moves ownership into the callee; once called, the caller can no longer reference it."
@@ -79,12 +79,12 @@
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "What actually happens under the hood when you call s.clone() on a String?",
+      "q": "What happens when you call .clone() on a String?",
       "options": [
-        "It creates a fast pointer alias pointing to the existing memory buffer",
-        "It converts the heap string into a static compile-time string slice",
-        "It explicitly creates a full deep copy of the heap buffer with its own independent owner",
-        "It temporarily borrows the string for the duration of the current statement"
+        "It makes a new pointer to the same buffer",
+        "It turns the String into a &'static str",
+        "It allocates and copies a new heap buffer",
+        "It borrows the String for one statement"
       ],
       "answer": 2,
       "explain": "clone() performs an explicit deep copy of heap contents, giving both bindings independent memory at the cost of allocation."
@@ -103,15 +103,15 @@
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "Why does `let b = a;` leave `a` fully usable when `a` is an i32, but not when it is a String?",
+      "q": "Why does `let b = a;` keep `a` usable for an i32 but not a String?",
       "options": [
-        "Integers are stored in global registers, whereas strings are stored in thread-local storage",
-        "i32 implements the Copy trait (simple bitwise stack copy), while String manages heap resources",
-        "The compiler treats numeric variables as immutable constants that cannot be moved",
-        "Strings in Rust are reference-counted while numbers are garbage-collected"
+        "i32 is Copy; String owns heap data and moves",
+        "Integers live in registers, Strings on the heap",
+        "The compiler treats numbers as constants",
+        "Strings are ref-counted; integers are not"
       ],
-      "answer": 1,
-      "explain": "Types with fixed stack sizes like i32 implement Copy, meaning assignments duplicate bits without transferring ownership."
+      "answer": 0,
+      "explain": "i32 implements Copy, so assignment duplicates its bits; String owns a heap buffer, so assignment moves it."
     },
     "takeaway": "Stack-only primitives are Copy; heap types move.",
     "track": "rust",
@@ -127,12 +127,12 @@
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "When a function takes a borrowed reference `&s`, how does ownership behave between caller and callee?",
+      "q": "When a function takes `&s`, who owns the data?",
       "options": [
-        "The caller retains full ownership, granting the callee temporary read-only access",
-        "The callee claims ownership permanently and must return the reference to restore it",
-        "The data is copied to the callee stack frame for the duration of the call",
-        "The value is immediately deallocated once the callee finishes execution"
+        "The caller; the callee only borrows it",
+        "The callee, until it hands the reference back",
+        "The callee gets its own copy on the stack",
+        "No one; the value is freed after the call"
       ],
       "answer": 0,
       "explain": "Borrowing with & allows read-only access without transferring ownership, leaving the caller in control."
@@ -146,17 +146,17 @@
   {
     "body_md": "Many borrows can coexist: `&T` is **shared**. Ten readers are fine because none can mutate. Data race impossible when mutation is impossible.",
     "code": "fn main() {\n    let s = String::from(\"hi\");\n    let r1 = &s;\n    let r2 = &s;\n    println!(\"{r1} {r2}\");\n}",
-    "hook": "Ten people can read the same book \u2014 as long as nobody writes in it.",
+    "hook": "Shared borrows: any number of &T readers can coexist",
     "id": "rust-b2-007",
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "How many immutable shared references (&T) can safely exist to the same data at the same time?",
+      "q": "How many &T shared references to the same data can exist at once?",
       "options": [
-        "Only one reference at any given time",
-        "Up to two references, provided they are in the same scope",
-        "As many as you want simultaneously, since read-only readers cannot cause data races",
-        "Zero, unless the data is wrapped inside a mutex"
+        "Just one; a second would be rejected",
+        "Up to two, if both are in one scope",
+        "Any number, since none of them can mutate",
+        "None, unless the data is in a Mutex"
       ],
       "answer": 2,
       "explain": "Any number of immutable borrows can coexist simultaneously because concurrent readers cannot mutate the underlying state."
@@ -170,17 +170,17 @@
   {
     "body_md": "`&mut s` borrows **exclusively** for mutation. Only one active `&mut` at a time, and no `&` alongside it. Compiler enforces this aliasing rule.",
     "code": "fn bump(n: &mut i32) { *n += 1; }\nfn main() {\n    let mut v = 5;\n    bump(&mut v);\n    println!(\"{v}\");\n}",
-    "hook": "Only one writer allowed \u2014 Rust enforces it at compile time.",
+    "hook": "&mut is exclusive: one writer, no readers alongside it",
     "id": "rust-b2-008",
     "language": "rust",
     "level": 2,
     "quiz": {
-      "q": "What restrictions does the borrow checker place on mutable references (&mut T)?",
+      "q": "What does the borrow checker allow for &mut T?",
       "options": [
-        "You can have multiple &mut references as long as they reside in different threads",
-        "Exactly one active mutable reference is allowed, with zero shared references active alongside it",
-        "Up to three mutable references are permitted within a single function body",
-        "Mutable references can coexist freely with any number of immutable references"
+        "Several &mut, if each is in its own thread",
+        "One active &mut and no & alongside it",
+        "Up to three &mut within a single function",
+        "One &mut plus any number of & readers"
       ],
       "answer": 1,
       "explain": "Rust guarantees memory safety by enforcing exclusive access: either one writer (&mut) XOR multiple readers (&)."
@@ -199,12 +199,12 @@
     "language": "rust",
     "level": 2,
     "quiz": {
-      "q": "What is the core aliasing rule enforced by the Rust borrow checker to prevent data races?",
+      "q": "What is the core aliasing rule the borrow checker enforces?",
       "options": [
-        "You may have unlimited mutable references, but only one immutable reference",
-        "You can have many immutable references simultaneously with one mutable reference",
-        "You may have either many shared readers (&T) OR one exclusive writer (&mut T), never both",
-        "References can only be created within loops or conditional match expressions"
+        "Many &mut writers, but only one & reader",
+        "Many & readers alongside one &mut writer",
+        "Many & or one &mut, never both at once",
+        "Each value may be borrowed only once"
       ],
       "answer": 2,
       "explain": "Rust fundamental borrow rule is: many readers XOR one writer. This invariant eliminates data races at compile time."
@@ -218,17 +218,17 @@
   {
     "body_md": "References must never outlive their data. Borrow checker rejects **dangling refs** via lifetimes. `fn dangle() -> &String` cannot compile \u2014 owned value drops at return.",
     "code": "// fn dangle() -> &String {\n//   let s = String::from(\"x\");\n//   &s // error: returns ref to local\n// }",
-    "hook": "This 4-line function is impossible in Rust \u2014 and that saves you.",
+    "hook": "Return a reference to a local? Rust rejects the dangling ref",
     "id": "rust-b2-010",
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "Why does the compiler refuse to build a function that returns a reference to a local variable (&String)?",
+      "q": "Why won't a function returning a reference to its local String compile?",
       "options": [
-        "The local variable is dropped at the end of the function, leaving a dangerous dangling pointer",
-        "Rust does not permit functions to return references under any circumstances",
-        "Returning references requires the unsafe keyword and raw pointer casting",
-        "The function must return an integer error code instead of a reference"
+        "The local is dropped at return, so it'd dangle",
+        "Functions are never allowed to return references",
+        "Returning references needs an unsafe block",
+        "The String must be returned as a raw pointer"
       ],
       "answer": 0,
       "explain": "Local variables cease to exist when their enclosing function frame pops; returning their reference would create a dangling pointer."
@@ -247,12 +247,12 @@
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "What does a slice like &str or &[T] actually represent in memory?",
+      "q": "What is a slice like &str or &[T] in memory?",
       "options": [
-        "A newly allocated heap array containing a copy of the selected elements",
-        "A lightweight two-word fat pointer containing a memory address and a length",
-        "A cryptographic hash that dynamically maps keys to original values",
-        "A compressed byte stream that decodes lazily on iteration"
+        "A fresh heap copy of the selected elements",
+        "A pointer plus a length into data it doesn't own",
+        "A single pointer to the first element only",
+        "A lazy iterator that copies on each read"
       ],
       "answer": 1,
       "explain": "Slices are fat pointers: they store a pointer to the start of the data and the number of elements, without copying."
@@ -261,46 +261,46 @@
     "track": "rust",
     "trap": "Slicing mid-UTF8-char panics; slice on char boundaries only.",
     "output": "he",
-    "topic_label": "slices-structs"
+    "topic_label": "slices-strings"
   },
   {
     "body_md": "Prefer `&str` params over `&String`: they accept String, literals, and slices alike. Deref coercion makes `&String` act as `&str` at call sites automatically.",
     "code": "fn greet(name: &str) { println!(\"hi {name}\"); }\nfn main() {\n    greet(\"ana\"); // literal\n    greet(&String::from(\"bob\")); // owned\n}",
-    "hook": "fn f(s: &String) is almost always wrong \u2014 one character fixes it.",
+    "hook": "Take &str, not &String \u2014 it accepts literals and Strings alike",
     "id": "rust-b2-012",
     "language": "rust",
     "level": 2,
     "quiz": {
-      "q": "Why is &str strongly preferred over &String for function parameters that only read text?",
+      "q": "Why prefer &str over &String for read-only text parameters?",
       "options": [
-        "&String requires manual heap allocations on every single function call",
-        "&str is faster to compile because it bypasses the type checker",
-        "&str flexibly accepts string literals, slices, and owned strings via automatic deref coercion",
-        "&String is deprecated in modern Rust editions and triggers compiler warnings"
+        "&String allocates on every function call",
+        "&str skips type checking, so it compiles faster",
+        "&str accepts literals, slices, and &String",
+        "&String is deprecated in recent editions"
       ],
       "answer": 2,
-      "explain": "&str is much more versatile: it accepts string literals (&static str), slices, and &String via deref coercion."
+      "explain": "&str accepts string literals (&'static str), slices, and &String via deref coercion."
     },
     "takeaway": "Take &str for flexible read-only text APIs.",
     "track": "rust",
     "trap": "Using &String params rejects literals and slices needlessly.",
     "output": "hi ana\nhi bob",
-    "topic_label": "slices-structs"
+    "topic_label": "slices-strings"
   },
   {
     "body_md": "**Structs** bundle named fields. Use `struct Name { f: T }`, init with `Name { f }`, access with `.`. `..other` fills remaining fields via struct update syntax.",
     "code": "struct User { name: String, age: u8 }\nfn main() {\n    let u = User { name: \"ana\".into(), age: 30 };\n    println!(\"{} {}\", u.name, u.age);\n}",
-    "hook": "Classes are gone \u2014 this simpler grouping replaces them.",
+    "hook": "No classes in Rust \u2014 structs group named fields instead",
     "id": "rust-b2-013",
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "How does Rust model custom composite data types containing multiple named, typed fields?",
+      "q": "How does Rust define a custom type with named, typed fields?",
       "options": [
-        "Using `struct Name { ... }` with named fields and explicit types",
-        "Using object-oriented `class Name extends Object { ... }`",
-        "Using runtime interfaces that dynamically resolve field names",
-        "Using procedural macros that generate global variable tables"
+        "struct User { name: String, age: u8 }",
+        "class User extends Object { ... }",
+        "type User = { name: String, age: u8 }",
+        "interface User { name: String; age: u8 }"
       ],
       "answer": 0,
       "explain": "Structs bundle related named values together into a single cohesive, strongly typed data structure."
@@ -309,22 +309,22 @@
     "track": "rust",
     "trap": "Forgetting a field in literal errors; use ..base to fill rest.",
     "output": "ana 30",
-    "topic_label": "slices-structs"
+    "topic_label": "structs-methods"
   },
   {
     "body_md": "Tuple structs `Name(T, U)` and unit structs `Name;` are compact variants. Good for newtypes like `Meters(f64)` that add type safety with zero cost.",
     "code": "struct Meters(f64);\nstruct Marker; // unit\nfn main() {\n    let m = Meters(3.5);\n    println!(\"{}\", m.0);\n}",
-    "hook": "A struct with no field names? It is a power move for type safety.",
+    "hook": "Tuple structs and newtypes: type safety at zero runtime cost",
     "id": "rust-b2-014",
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "How does the newtype pattern (struct Meters(f64)) improve code safety without adding runtime overhead?",
+      "q": "How does a newtype like `struct Meters(f64)` add safety at no runtime cost?",
       "options": [
-        "It compresses 64-bit floats down into 32 bits at runtime",
-        "It creates a distinct, strongly checked type that prevents accidental mixing of identical primitive units",
-        "It converts runtime arithmetic into compile-time macros",
-        "It automatically validates that numeric values are greater than zero"
+        "It packs the f64 into 32 bits at runtime",
+        "It is a distinct type, so units can't mix",
+        "It checks at runtime that values are positive",
+        "It turns arithmetic into compile-time macros"
       ],
       "answer": 1,
       "explain": "Wrapping a primitive in a single-field tuple struct creates a distinct compile-time type with zero memory overhead."
@@ -333,7 +333,7 @@
     "track": "rust",
     "trap": "Forgetting .0 access on tuple structs; fields are positional.",
     "output": "3.5",
-    "topic_label": "slices-structs"
+    "topic_label": "structs-methods"
   },
   {
     "body_md": "**Enums** list variants a value can be: `enum Dir { N, S, E, W }`. Variants can hold data: `Some(T)`, `Ok(T)`, `Err(E)`. Use `::` to construct each case.",
@@ -343,12 +343,12 @@
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "What makes Rust enums far more expressive and powerful than traditional C or Java enums?",
+      "q": "What makes Rust enums more expressive than C or Java enums?",
       "options": [
-        "Rust enums are always mapped to 64-bit integer values",
-        "Each enum variant can optionally hold its own custom payload and data types",
-        "Enums can be dynamically modified and extended at runtime",
-        "Enum variants do not need to be declared before they are used"
+        "Variants are always stored as 64-bit integers",
+        "Each variant can carry its own data payload",
+        "New variants can be added at runtime",
+        "Variants inherit methods from a base enum"
       ],
       "answer": 1,
       "explain": "Rust enums are tagged unions: each variant can be unit-like, a tuple, or a struct holding data."
@@ -357,22 +357,22 @@
     "track": "rust",
     "trap": "Treating enums like ints; use match, not == chains, to unpack.",
     "output": "// compiles clean, no output \u2014 c holds Coin::Penny",
-    "topic_label": "slices-structs"
+    "topic_label": "enums-matching"
   },
   {
     "body_md": "`match` must be **exhaustive**: handle every variant or add `_` wildcard. Each arm can bind payloads. Compiler warns if you miss a future variant.",
     "code": "enum Coin { Penny, Nickel }\nfn cents(c: Coin) -> u8 {\n    match c {\n        Coin::Penny => 1,\n        Coin::Nickel => 5,\n    }\n}",
-    "hook": "Forget one case and Rust refuses to build \u2014 future-you says thanks.",
+    "hook": "match must be exhaustive \u2014 forget a variant and it won't build",
     "id": "rust-b2-016",
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "Why does the Rust compiler require pattern matching with `match` to be strictly exhaustive?",
+      "q": "Why does Rust require `match` to be exhaustive?",
       "options": [
-        "Exhaustiveness guarantees that every possible variant is handled, preventing unhandled state bugs",
-        "It allows the compiler to convert all match statements into fast binary search trees",
-        "It is a stylistic guideline enforced only when running cargo clippy",
-        "Non-exhaustive matches cause silent program termination with zero exit codes"
+        "So every variant is handled, with none forgotten",
+        "So matches compile into binary search trees",
+        "It doesn't; only cargo clippy checks this",
+        "So missing cases exit silently with code 0"
       ],
       "answer": 0,
       "explain": "Exhaustive matching ensures no variant is overlooked, so adding a new enum variant prompts compile errors wherever it is used."
@@ -381,22 +381,22 @@
     "track": "rust",
     "trap": "Missing arm gives non-exhaustive pattern error; add _ or variant.",
     "output": "cents(Coin::Penny) == 1\ncents(Coin::Nickel) == 5",
-    "topic_label": "options-enums"
+    "topic_label": "enums-matching"
   },
   {
     "body_md": "`if let` handles **one** interesting case, ignoring rest. Shorter than match for single-variant checks. Pair with `let-else` when you need early return on mismatch.",
     "code": "fn main() {\n    let v = Some(3);\n    if let Some(n) = v {\n        println!(\"{n}\");\n    }\n}",
-    "hook": "Full match for one case is overkill \u2014 this cuts it to two lines.",
+    "hook": "if let: match just one pattern without a full match block",
     "id": "rust-b2-017",
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "When is using `if let Some(x) = expr` preferred over writing a full `match` expression?",
+      "q": "When is `if let Some(x) = expr` better than a full `match`?",
       "options": [
-        "When you only care about matching one specific variant and want to ignore all others cleanly",
-        "When you need to handle every possible variant with specialized error logic",
-        "When the expression being matched is an asynchronous future",
-        "When performance is critical, since if let skips pattern verification"
+        "When you care about one variant only",
+        "When every variant needs its own logic",
+        "When the matched value is a future",
+        "When speed matters, since it skips checks"
       ],
       "answer": 0,
       "explain": "if let is concise syntactic sugar for matching a single pattern when all other cases can be ignored."
@@ -405,7 +405,7 @@
     "track": "rust",
     "trap": "Using if let when you need exhaustive handling hides missed cases.",
     "output": "3",
-    "topic_label": "options-enums"
+    "topic_label": "enums-matching"
   },
   {
     "body_md": "`Option<T>` is `Some(T)` or `None` \u2014 Rust's null replacement. No null derefs possible: you must handle None via match, `unwrap_or`, `?`, or combinators before use.",
@@ -415,12 +415,12 @@
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "How does Option<T> eliminate the notorious billion-dollar mistake of null pointer exceptions?",
+      "q": "How does Option<T> prevent null pointer errors?",
       "options": [
-        "It automatically supplies a fallback zero or empty string whenever null occurs",
-        "It forces developers to explicitly handle the None possibility before accessing the value",
-        "It turns null dereferences into non-fatal background warnings in the log",
-        "It replaces null pointers with heap-allocated sentinel strings"
+        "It substitutes a zero value when one is missing",
+        "You must handle None before using the value",
+        "Null derefs become logged warnings instead",
+        "It swaps null for a heap-allocated sentinel"
       ],
       "answer": 1,
       "explain": "In Rust, values cannot be null. Optional values must be wrapped in Option<T>, forcing explicit handling of absence."
@@ -429,22 +429,22 @@
     "track": "rust",
     "trap": "Calling unwrap blindly panics on None; prefer unwrap_or or ?.",
     "output": "0",
-    "topic_label": "options-enums"
+    "topic_label": "option-result"
   },
   {
     "body_md": "Chain Options without nesting: `map` transforms Some, `and_then` chains fallible steps, `unwrap_or` supplies defaults. Keeps happy path flat and readable.",
     "code": "fn main() {\n    let s = Some(\" 42 \");\n    let n = s.map(|x| x.trim()).and_then(|x| x.parse::<i32>().ok());\n    println!(\"{n:?}\");\n}",
-    "hook": "Nested if-Some pyramids collapse into one clean line.",
+    "hook": "Option combinators: map and and_then flatten nested matches",
     "id": "rust-b2-019",
     "language": "rust",
     "level": 2,
     "quiz": {
-      "q": "How can you transform the value inside an Option<T> without writing nested `match` statements?",
+      "q": "How do you transform the value inside an Option without nested matches?",
       "options": [
-        "By repeatedly calling .unwrap() inside a try-catch exception block",
-        "By casting the Option into a raw pointer and dereferencing it directly",
-        "By chaining functional combinators like .map() and .and_then()",
-        "By setting a global panic hook that catches missing values"
+        "Call .unwrap() inside a try/catch block",
+        "Cast it to a raw pointer and dereference it",
+        "Chain .map() and .and_then() calls",
+        "Install a panic hook to catch missing values"
       ],
       "answer": 2,
       "explain": "Combinators like map and and_then allow declarative, flat transformations of optional values without nested boilerplate."
@@ -453,7 +453,7 @@
     "track": "rust",
     "trap": "Using map where and_then needed nests Option<Option<T>>.",
     "output": "Some(42)",
-    "topic_label": "options-enums"
+    "topic_label": "option-result"
   },
   {
     "body_md": "`Result<T, E>` is `Ok(T)` or `Err(E)` for recoverable errors. `match`, `?`, or combinators handle it. Unlike exceptions, error path is visible in the type signature.",
@@ -463,36 +463,36 @@
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "Which standard Rust type represents an operation that can either succeed with data or fail with a recoverable error?",
+      "q": "Which std type holds either a success value or a recoverable error?",
       "options": [
         "Option<T>",
-        "panic::Catch<T>",
         "Result<T, E>",
-        "std::error::Null<T>"
+        "Box<dyn Error>",
+        "Either<T, E>"
       ],
-      "answer": 2,
+      "answer": 1,
       "explain": "Result<T, E> encodes either success (Ok(T)) or failure (Err(E)), making recoverable errors part of the type signature."
     },
     "takeaway": "Result makes errors part of the API contract.",
     "track": "rust",
     "trap": "Ignoring Err with let _ hides failures; handle or propagate.",
     "output": "div(1.0, 2.0) == Ok(0.5)\ndiv(1.0, 0.0) == Err(\"zero\")",
-    "topic_label": "options-enums"
+    "topic_label": "option-result"
   },
   {
     "body_md": "Methods take `self`, `&self`, or `&mut self` in `impl` blocks. `&self` reads, `&mut self` mutates, `self` consumes. Call with dot: `rect.area()`.",
     "code": "struct Rect { w: f64, h: f64 }\nimpl Rect {\n    fn area(&self) -> f64 { self.w * self.h }\n}\nfn main() {\n    let r = Rect { w: 2.0, h: 3.0 };\n    println!(\"{}\", r.area());\n}",
-    "hook": "No this, no self confusion \u2014 three receivers cover every case.",
+    "hook": "self, &self, &mut self: pick the method receiver you need",
     "id": "rust-b2-021",
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "Which method receiver should you specify when a method only needs to read instance fields without modifying or consuming it?",
+      "q": "Which receiver should a method use if it only reads fields?",
       "options": [
-        "&self (borrows the instance immutably for reading)",
-        "&mut self (borrows the instance exclusively for mutation)",
-        "self (takes full ownership and consumes the instance)",
-        "Self (calls a static constructor on the type)"
+        "&self, a shared borrow of the instance",
+        "&mut self, an exclusive borrow",
+        "self, which takes ownership of it",
+        "Self, calling a static constructor"
       ],
       "answer": 0,
       "explain": "&self borrows the instance immutably, allowing caller code to reuse the struct after calling the method."
@@ -501,7 +501,7 @@
     "track": "rust",
     "trap": "Using self when &self suffices moves the value unexpectedly.",
     "output": "6",
-    "topic_label": "methods-patterns"
+    "topic_label": "structs-methods"
   },
   {
     "body_md": "Associated functions like `String::new()` have no self \u2014 call on type itself. Constructors are just convention: `fn new(...) -> Self`. No `new` keyword needed.",
@@ -511,12 +511,12 @@
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "How do constructors work in Rust given that there is no `new` keyword in the language?",
+      "q": "How do constructors work in Rust, given there's no `new` keyword?",
       "options": [
-        "Constructors are defined using special compiler annotations",
-        "They are plain associated functions (commonly named new) that return Self",
-        "Objects are instantiated by calling dynamic factory methods provided by the runtime",
-        "The compiler automatically generates default zero-initialized constructors for all structs"
+        "A #[constructor] attribute marks the fn",
+        "A plain associated fn, often new, returns Self",
+        "The runtime calls a factory on first use",
+        "The compiler generates a zeroed default per struct"
       ],
       "answer": 1,
       "explain": "In Rust, constructors are just conventional associated functions defined inside impl blocks that return Self."
@@ -525,22 +525,22 @@
     "track": "rust",
     "trap": "Writing p.new() instead of P::new() confuses instance vs type call.",
     "output": "// compiles clean, no output \u2014 p holds P { x: 5 }",
-    "topic_label": "methods-patterns"
+    "topic_label": "structs-methods"
   },
   {
     "body_md": "`#[derive(Debug)]` auto-implements printing with `{:?}`. Add `Clone`, `PartialEq` similarly. Derives remove boilerplate for common traits instantly.",
     "code": "#[derive(Debug, Clone, PartialEq)]\nstruct P { x: i32 }\nfn main() {\n    let p = P { x: 1 };\n    println!(\"{p:?}\");\n}",
-    "hook": "One line above your struct writes code for you.",
+    "hook": "#[derive(Debug)] writes trait impls for your struct for free",
     "id": "rust-b2-023",
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "What is the idiomatic way to enable debug formatting ({:?}) on a custom struct without manual implementation?",
+      "q": "What's the idiomatic way to enable {:?} printing on your own struct?",
       "options": [
-        "Write an explicit impl std::fmt::Display block by hand",
-        "Cast the struct to a string slice before calling println!",
-        "Annotate the struct definition with #[derive(Debug)]",
-        "Include the struct inside a tuple struct with a printable field"
+        "Hand-write an impl of fmt::Display",
+        "Cast the struct to a &str before printing",
+        "Add #[derive(Debug)] above the struct",
+        "Wrap it in a tuple struct with a String"
       ],
       "answer": 2,
       "explain": "#[derive(Debug)] instructs the compiler to generate the formatting boilerplate automatically."
@@ -549,7 +549,7 @@
     "track": "rust",
     "trap": "Forgetting Debug derive then using {:?} fails with formatting error.",
     "output": "P { x: 1 }",
-    "topic_label": "methods-patterns"
+    "topic_label": "structs-methods"
   },
   {
     "body_md": "Field init shorthand: `User { name, age }` when variables match field names. Destructuring `let User { name, age } = u;` unpacks similarly. Less repetition, fewer typos.",
@@ -559,12 +559,12 @@
     "language": "rust",
     "level": 1,
     "quiz": {
-      "q": "When can you use Rust field init shorthand syntax like `User { name, age }`?",
+      "q": "When can you use field init shorthand like `User { name, age }`?",
       "options": [
-        "Whenever local variable names exactly match the struct field names",
-        "Only when all fields are primitive integer or boolean types",
-        "Exclusively inside unit test functions and integration modules",
-        "Whenever the struct implements the Default trait"
+        "When local variable names match field names",
+        "Only when every field is a primitive type",
+        "Only inside test modules marked #[cfg(test)]",
+        "Only when the struct derives Default"
       ],
       "answer": 0,
       "explain": "When local variables share the exact names of struct fields, you can omit the field: value repetition."
@@ -573,7 +573,7 @@
     "track": "rust",
     "trap": "Shadowing a field name then using shorthand binds wrong value.",
     "output": "User { name: \"ana\", age: 30 }",
-    "topic_label": "methods-patterns"
+    "topic_label": "structs-methods"
   },
   {
     "body_md": "Use `let-else` to extract from Option/Result or **diverge** early: `let Some(x) = v else { return; }`. Guarantees x valid after, no nesting, no unwrap.",
@@ -583,20 +583,20 @@
     "language": "rust",
     "level": 2,
     "quiz": {
-      "q": "How does `let Some(val) = opt else { return; };` simplify extracting values from an Option?",
+      "q": "What does `let Some(v) = opt else { return; };` do?",
       "options": [
-        "It panics automatically if the option is None",
-        "It binds val in the outer scope on success, or executes an early diverging return branch",
-        "It retries the operation in a background thread until a value becomes available",
-        "It converts the option into an uninitialized raw memory buffer"
+        "It panics automatically if opt is None",
+        "It binds v, or runs else, which must diverge",
+        "It retries in the background until a value arrives",
+        "It leaves v uninitialized when opt is None"
       ],
       "answer": 1,
-      "explain": "let-else provides clean guard syntax: it unwraps and binds variables in the outer scope or diverges immediately."
+      "explain": "let-else binds v in the outer scope on a match; otherwise the else block runs and must return, break, or panic."
     },
     "takeaway": "let-else flattens fallible extraction with early exit.",
     "track": "rust",
     "trap": "Else branch must diverge (!); plain fallback value will not compile.",
     "output": "f(Some(7)) prints 7\nf(None) returns silently",
-    "topic_label": "methods-patterns"
+    "topic_label": "enums-matching"
   }
 ]

@@ -2,287 +2,287 @@
   {
     "body_md": "2PC prepares then commits across shards with a coordinator. Strong atomicity but blocking if coordinator dies. Use for money moves; prefer Saga with compensations for long-lived flows.",
     "code": null,
-    "hook": "All or nothing — unless the coordinator dies.",
+    "hook": "Two-phase commit: all or nothing, unless the coordinator dies.",
     "id": "sd-adv-001",
     "language": null,
     "level": 3,
     "quiz": {
       "answer": 1,
-      "explain": "Prepare locks resources; commit finalizes or aborts all.",
+      "explain": "The coordinator asks all shards to prepare, then commits or aborts all. If it dies after prepare, participants block holding locks.",
       "options": [
-        "Best for long sagas",
-        "Prepare then commit atomically but blocking",
-        "No coordination needed",
-        "Eventual only"
+        "A saga pattern for long-running workflows",
+        "Prepare, then commit: atomic but blocking",
+        "A protocol that needs no coordinator",
+        "Eventual consistency via async replay"
       ],
       "q": "What is two-phase commit?"
     },
     "takeaway": "Use 2PC only for short atomic multi-shard writes.",
     "trap": "2PC across regions stalling on one slow node.",
     "track": "system-design",
-    "topic_label": "distributed"
+    "topic_label": "distributed-consistency"
   },
   {
     "body_md": "Saga splits transactions into local steps with compensating actions. Choreography emits events; orchestration drives steps. On failure run compensations backwards. Design each step idempotent.",
     "code": "// saga: book → pay → notify\n// on pay fail: cancel(book)",
-    "hook": "Long transactions as reversible steps.",
+    "hook": "Sagas: long transactions as reversible steps.",
     "id": "sd-adv-002",
     "language": "rust",
     "level": 3,
     "output": "book ok -> pay fails -> cancel(book) runs\n// net effect: nothing booked, nothing charged",
     "quiz": {
       "answer": 2,
-      "explain": "Compensations undo partial progress without locks.",
+      "explain": "Each local step has a compensating action; on failure, completed steps are undone in reverse order, with no cross-service locks.",
       "options": [
-        "Locks everywhere",
-        "No failure handling",
-        "Local steps plus compensations",
-        "2PC always"
+        "It holds locks on every service until done",
+        "It retries the failed step until it works",
+        "It runs compensating steps in reverse",
+        "It falls back to a two-phase commit"
       ],
-      "q": "How does Saga handle failure?"
+      "q": "How does a saga handle a failed step?"
     },
     "takeaway": "Make every step retryable and compensatable.",
     "trap": "Non-compensatable step like sent email.",
     "track": "system-design",
-    "topic_label": "distributed"
+    "topic_label": "distributed-consistency"
   },
   {
     "body_md": "Raft elects a leader, replicates log entries, commits on majority. Terms prevent split-brain; heartbeats detect failure. Use etcd or TikV rather than hand-rolling consensus.",
     "code": null,
-    "hook": "Majority rules — literally.",
+    "hook": "Raft consensus: majority rules, literally.",
     "id": "sd-adv-003",
     "language": null,
     "level": 3,
     "quiz": {
       "answer": 0,
-      "explain": "Leader plus majority quorum ensures single log order.",
+      "explain": "An elected leader appends entries and commits once a majority stores them; terms and elections prevent two leaders committing.",
       "options": [
-        "Leader plus majority log replication",
-        "No leader needed",
-        "Minority wins",
-        "Single node suffices"
+        "A leader replicates; a majority commits",
+        "Every node writes, and the newest write wins",
+        "Any minority can commit if it is fast",
+        "One node decides; others just cache it"
       ],
       "q": "How does Raft achieve consensus?"
     },
     "takeaway": "Rely on proven stores for leader election.",
     "trap": "Even node counts increasing tie risk.",
     "track": "system-design",
-    "topic_label": "distributed"
+    "topic_label": "distributed-consistency"
   },
   {
     "body_md": "G-Counter CRDT increments on any replica and merges by max per node. Sum gives total without coordination. Ideal for likes and distributed counters with eventual convergence.",
     "code": "// merge: for each node take max\n// value = sum(counts)\nstate[node] += 1",
-    "hook": "Counters that never conflict.",
+    "hook": "CRDT counters: replicas that merge without conflicts.",
     "id": "sd-adv-004",
     "language": "rust",
     "level": 3,
     "output": "state[node] += 1; value = sum(max per node)\n// replicas converge with zero coordination",
     "quiz": {
       "answer": 3,
-      "explain": "Monotonic merges commute so order does not matter.",
+      "explain": "Each replica increments only its own slot; merge takes the max per slot, which commutes, so replicas converge in any order.",
       "options": [
-        "Last-write-wins",
-        "Central lock",
-        "2PC counter",
-        "Merge by max per replica then sum"
+        "Last write wins by wall-clock timestamp",
+        "A central lock serializes every increment",
+        "Two-phase commit on each increment",
+        "Max per replica slot, then sum for total"
       ],
-      "q": "How does a G-Counter work?"
+      "q": "How does a G-Counter CRDT merge?"
     },
     "takeaway": "Use CRDTs for coordination-free merges.",
     "trap": "Trying decrement on G-Counter; use PN-Counter.",
     "track": "system-design",
-    "topic_label": "distributed"
+    "topic_label": "distributed-consistency"
   },
   {
     "body_md": "Exactly-once is impossible alone; achieve effectively-once with idempotent consumers plus transactional offsets. Kafka transactions tie offset commit to output, deduped by key downstream.",
     "code": "consumer.process(msg)\nstore.save(msg.id, result) // dedupe\nconsumer.commit()",
-    "hook": "Exactly-once is a team sport.",
+    "hook": "Exactly-once delivery is a team sport, not a setting.",
     "id": "sd-adv-005",
     "language": "rust",
     "level": 3,
     "output": "first sight: save(msg.id, result); dupe: stored result replayed\ncommit offset -> retries invisible (effectively-once)",
     "quiz": {
       "answer": 1,
-      "explain": "Dedupe plus atomic commit makes retries invisible.",
+      "explain": "Transport is at-least-once, so duplicates happen. Dedupe by key and commit offsets atomically with output, and retries become invisible.",
       "options": [
-        "It just works",
-        "Idempotent consumer plus atomic offset commit",
-        "Send twice always",
-        "Skip commits"
+        "Enable exactly-once; the broker handles it",
+        "Idempotent consumers plus atomic offsets",
+        "Send every message twice to be safe",
+        "Commit offsets before doing the work"
       ],
-      "q": "How do you get effectively-once delivery?"
+      "q": "How do you get effectively-once processing?"
     },
     "takeaway": "Pair at-least-once transport with dedupe.",
     "trap": "Assuming producer acks alone guarantee once.",
     "track": "system-design",
-    "topic_label": "distributed"
+    "topic_label": "messaging-events"
   },
   {
     "body_md": "Backpressure signals overload upstream: bounded queues, `try_send` with drop or shed, and `429 + Retry-After`. In Rust use tokio mpsc with capacity plus tower concurrency limits.",
     "code": "let (tx, rx) = tokio::sync::mpsc::channel(100);\n// tx.try_send(job).or(Err(Shed))",
-    "hook": "Say no fast instead of dying slow.",
+    "hook": "Load shedding: say no fast instead of dying slow.",
     "id": "sd-adv-006",
     "language": "rust",
     "level": 3,
     "output": "channel(100) open; try_send ok while len < 100\n// full -> Err(Shed): shed load + answer 429 + Retry-After",
     "quiz": {
       "answer": 0,
-      "explain": "Bounded buffers plus shed protect tail latency.",
+      "explain": "Bounded queues cap memory and latency; shedding with 429 + Retry-After tells clients to back off instead of timing out slowly.",
       "options": [
-        "Bounded queues plus load shedding",
-        "Unbounded queues",
-        "Infinite retries",
-        "Block forever"
+        "Bounded queues and shedding excess load",
+        "Unbounded queues so no request is lost",
+        "Retry rejected work until it gets in",
+        "Block callers until capacity frees up"
       ],
-      "q": "How do you handle overload?"
+      "q": "How should a service handle overload?"
     },
     "takeaway": "Bound, shed, and signal pressure upstream.",
     "trap": "Unbounded channels OOMing under spike.",
     "track": "system-design",
-    "topic_label": "distributed"
+    "topic_label": "rate-limiting"
   },
   {
     "body_md": "Fan-out: push writes to all followers (fast reads, hot celebrities) vs pull reads on demand (cheap writes). Hybrid: push for normal users, pull for celebrities with many followers.",
     "code": "// push: on post, append to follower feeds\n// pull: celebrity posts read at request",
-    "hook": "Celebrities break naive fan-out.",
+    "hook": "Feed fan-out: celebrities break the naive approach.",
     "id": "sd-adv-007",
     "language": "rust",
     "level": 3,
     "output": "normal author: N timeline appends (fast reads)\ncelebrity: no fan-out; followers pull at request time",
     "quiz": {
       "answer": 2,
-      "explain": "Hybrid avoids million-write storms for famous accounts.",
+      "explain": "Fan-out on write is cheap for small accounts, but millions of writes per celebrity post is not; merge their posts in at read time.",
       "options": [
-        "Push always",
-        "Pull always",
-        "Hybrid push normal, pull celebrities",
-        "No feeds needed"
+        "Push every post to all followers' feeds",
+        "Pull every feed at read time for all users",
+        "Push for most users, pull for celebrities",
+        "Cache celebrity posts per follower forever"
       ],
-      "q": "How do you scale Twitter feeds?"
+      "q": "How do you scale feeds with celebrity accounts?"
     },
     "takeaway": "Split fan-out strategy by follower count.",
     "trap": "Pure push melting on a viral post.",
     "track": "system-design",
-    "topic_label": "consensus-raft"
+    "topic_label": "case-studies"
   },
   {
     "body_md": "Clock skew breaks ordering; use Hybrid Logical Clocks or Snowflake IDs (timestamp+node+seq). Sort by (ts, seq) and tolerate drift with bounded wait before serving reads.",
     "code": "// snowflake id\n// 41b time | 10b node | 12b seq",
-    "hook": "Time lies — sequence anyway.",
+    "hook": "Clocks lie: sortable IDs order events anyway.",
     "id": "sd-adv-008",
     "language": "rust",
     "level": 3,
     "output": "e.g. id = (ts << 22) | (node << 12) | seq\n// sortable + unique per node; no wall-clock trust",
     "quiz": {
       "answer": 1,
-      "explain": "Node-scoped sequences keep IDs ordered and unique.",
+      "explain": "Clocks skew, so wall time alone misorders events. Snowflake or HLC IDs combine time with node and sequence to stay unique and sortable.",
       "options": [
-        "Wall clock alone",
-        "Hybrid timestamp plus node sequence",
-        "Random UUID sort",
-        "No ordering"
+        "Each server's wall-clock timestamp alone",
+        "IDs of timestamp, node ID, and sequence",
+        "Sort events by their random v4 UUID",
+        "Arrival order at the load balancer"
       ],
       "q": "How do you order events across machines?"
     },
     "takeaway": "Generate sortable unique IDs, not wall-clock reliance.",
     "trap": "NTP jump reordering recent posts.",
     "track": "system-design",
-    "topic_label": "consensus-raft"
+    "topic_label": "distributed-consistency"
   },
   {
     "body_md": "Lease vs lock: leases expire so crashes recover; locks need fencing tokens to avoid split-brain writes. Use short TTL leases in Redis/etcd for leader or job ownership.",
     "code": "SET leader \"n1\" NX EX 10\n# refresh every 3s; fencing token++",
-    "hook": "Locks with expiry save you from zombies.",
+    "hook": "Leases: locks with expiry save you from zombies.",
     "id": "sd-adv-009",
     "language": "rust",
     "level": 3,
     "output": "OK (leader=n1, TTL 10s) iff no live lease\n// holder refreshes every 3s; fencing token++ blocks zombies",
     "quiz": {
       "answer": 0,
-      "explain": "Expiry plus fencing prevents stale owner writes.",
+      "explain": "A crashed holder's lease expires so others can proceed; a fencing token makes storage reject writes from a paused old holder.",
       "options": [
-        "Leases expire with fencing against zombies",
-        "Locks never expire safely",
-        "No fencing needed",
-        "Leases are forever"
+        "They expire, and fencing blocks zombies",
+        "Locks never need to expire if held safely",
+        "Leases make fencing tokens unnecessary",
+        "Leases are held forever once granted"
       ],
-      "q": "Why prefer leases over locks?"
+      "q": "Why prefer leases over plain locks?"
     },
     "takeaway": "Expire ownership and fence stale writers.",
     "trap": "Long lease delaying failover for minutes.",
     "track": "system-design",
-    "topic_label": "consensus-raft"
+    "topic_label": "distributed-consistency"
   },
   {
     "body_md": "Hot partitions kill scale: random prefix or split key spreads heat. Monitor partition throughput, add salt `hotkey#rand`, and pre-split ranges before launches.",
     "code": "key = format!(\"{}#{}\", hot, rand(10))\n# aggregate 10 shards on read",
-    "hook": "Salt the hot key.",
+    "hook": "Hot partitions: salt the hot key to spread the load.",
     "id": "sd-adv-010",
     "language": "rust",
     "level": 3,
     "output": "writes spread over hot#0..hot#9\nread aggregates 10 shards -> true count",
     "quiz": {
       "answer": 3,
-      "explain": "Salting fans writes across physical partitions.",
+      "explain": "Appending a salt like hotkey#7 spreads writes over several partitions; reads aggregate them. Replicas help reads, not writes.",
       "options": [
-        "Bigger instance only",
-        "Throttle users",
-        "More replicas of same key",
-        "Salt/split hot keys across partitions"
+        "Move it to a bigger instance and wait",
+        "Throttle the users who hit that key",
+        "Add read replicas of the same partition",
+        "Salt or split the key across partitions"
       ],
       "q": "How do you fix a hot partition?"
     },
     "takeaway": "Spread heat, aggregate on read.",
     "trap": "Salting without read aggregation breaks counts.",
     "track": "system-design",
-    "topic_label": "consensus-raft"
+    "topic_label": "distributed-consistency"
   },
   {
     "body_md": "Poison messages crash consumers in loops. Dead-letter after N retries with headers preserving error, alert on DLQ growth, and replay after fix with backoff. Never block partition forever.",
     "code": "if retries > 5 { dlq.send(msg); ack(); }\nelse { retry_with_backoff(); }",
-    "hook": "Quarantine, do not crash-loop.",
+    "hook": "Dead-letter queues: quarantine poison, do not crash-loop.",
     "id": "sd-adv-011",
     "language": "rust",
     "level": 3,
     "output": "retries <= 5: backoff; else dlq.send + ack\n// partition keeps moving; replay DLQ after the fix",
     "quiz": {
       "answer": 1,
-      "explain": "DLQ isolates bad records for later replay.",
+      "explain": "After capped retries, move the message to a DLQ with its error, alert on DLQ growth, and replay once fixed, so the partition keeps flowing.",
       "options": [
-        "Retry forever",
-        "DLQ after retries then replay",
-        "Drop silently",
-        "Stop consumer"
+        "Retry them forever until they succeed",
+        "Dead-letter after N tries, replay later",
+        "Drop them silently and keep consuming",
+        "Stop the consumer until someone fixes it"
       ],
       "q": "How do you handle poison messages?"
     },
     "takeaway": "Dead-letter and replay bad events safely.",
     "trap": "No alerting so DLQ grows unnoticed.",
     "track": "system-design",
-    "topic_label": "consensus-raft"
+    "topic_label": "messaging-events"
   },
   {
     "body_md": "Zero-downtime deploys: health gates, connection draining, rolling updates with two versions live. Migrations must be expand-contract: add column, dual-write, backfill, then contract.",
     "code": "-- expand\nALTER TABLE posts ADD COLUMN slug TEXT;\n-- contract later after backfill",
-    "hook": "Deploy at noon without fear.",
+    "hook": "Zero-downtime deploys: ship at noon without fear.",
     "id": "sd-adv-012",
     "language": "sql",
     "level": 3,
     "output": "ALTER TABLE // posts.slug added NULL\n// old + new code both run; backfill, then contract later",
     "quiz": {
       "answer": 2,
-      "explain": "Backward-compatible steps keep mixed versions working.",
+      "explain": "Add new schema first, dual-write and backfill, switch reads, then drop the old. Each step works with both app versions running.",
       "options": [
-        "Big-bang rewrite",
-        "Downtime window",
-        "Expand-contract migrations plus rolling deploy",
-        "Skip migrations"
+        "One big-bang migration at deploy time",
+        "A scheduled downtime window each time",
+        "Expand-contract plus rolling deploys",
+        "Skip migrations; use schemaless JSON"
       ],
       "q": "How do you ship schema changes safely?"
     },
     "takeaway": "Make every deploy compatible with previous version.",
     "trap": "Dropping column before readers upgrade.",
     "track": "system-design",
-    "topic_label": "consensus-raft"
+    "topic_label": "deploy-observe"
   }
 ]

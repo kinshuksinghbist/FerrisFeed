@@ -1206,3 +1206,28 @@ blocks) → `32` (shell) → `34, 38, 37, 36` (feed pages; 36 needs 35d) → `33
   store screenshots for 27d are queued with that pass.
 - `targetSdk` is now 35 and the widget receiver + refresh worker are registered and
   scheduled (28a–28b) — the pre-existing gaps from the Spec v2 pass are closed.
+
+## P8. Redesign v3 — audit, content repair, one design system — IN REVIEW
+
+Branch `redesign/v3`. Audit-driven; see `docs/feed-ux.md` and learnings §28.
+
+- [x] Content: 376 reels re-labelled into 39 curriculum topics / 14 units;
+      374 MCQs rebalanced (correct-is-longest 87% → 7.5%), 7 wrong answer keys
+      fixed, ~170 cryptic hooks rewritten; validator 30/30.
+- [x] `Curriculum.kt` + `CurriculumMapTest`; versioned content refresh that
+      keeps SRS progress.
+- [x] Design system v3: palette/type tokens, one control set; deleted
+      DesignPhilosophy, glass, tactile 3D, pager tilt, StreakFlame,
+      DifficultyLabel, SwipeCue, Shimmer, ReelCard, QuizCard.
+- [x] Learn: sets of five + recap, curriculum queue (`QueueBuilder`),
+      scoped feeds, one top bar, overflow-only scrolling, shuffled options,
+      common-trap in feedback, like removed.
+- [x] Path: units → topics, Up next, search behind a button.
+- [x] You: rank, streak week, accuracy, strongest/weakest topics, saved,
+      learning focus. Fixed topic taps from mastery opening empty feeds.
+- [x] Onboarding: track + experience.
+- [x] JVM harness: CurriculumMapTest, FeedPagingTest, QueueBuilderTest green.
+- [ ] CI green on `redesign/v3` (needs push access for this machine's
+      GitHub account, or a push from an account with access).
+- [ ] Device pass: onboarding → set → recap; Path topic → back restores
+      Learn position; TalkBack walk of a quiz; light theme.

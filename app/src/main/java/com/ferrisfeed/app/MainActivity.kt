@@ -6,32 +6,26 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -40,8 +34,9 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.ferrisfeed.coreui.FerrisFeedTheme
-import com.ferrisfeed.coreui.FerrisMotion
 import com.ferrisfeed.coreui.LocalBottomBarInset
+import com.ferrisfeed.data.Curriculum
+import com.ferrisfeed.feed.FeedScope
 import com.ferrisfeed.feed.FeedScreen
 import com.ferrisfeed.feed.FeedViewModel
 import com.ferrisfeed.path.PathScreen
@@ -60,10 +55,11 @@ sealed interface Route : NavKey {
     @Serializable
     data object Profile : Route
 
+    /** One lesson (search hit, saved lesson, deep link) played inside its topic. */
     @Serializable
     data class ReelDetail(val reelId: String) : Route
 
-    /** Topic-only feed reached from a roadmap node (quiz + info mixed). */
+    /** A curriculum topic in lesson order, reached from Path or You. */
     @Serializable
     data class TopicFeed(val topicId: String) : Route
 }
@@ -82,12 +78,16 @@ class MainActivity : ComponentActivity() {
             ?.takeIf { it.scheme == "ferrisfeed" && it.host == "reel" }
             ?.lastPathSegment
         setContent {
-            val statsViewModel: StatsViewModel = hiltViewModel()
-            val currentPhilosophy by statsViewModel.designPhilosophy.collectAsState()
             FerrisFeedTheme {
-                CompositionLocalProvider(com.ferrisfeed.coreui.LocalDesignPhilosophy provides currentPhilosophy) {
-                    Surface(modifier = Modifier.fillMaxSize()) {
-                        FerrisFeedNavHost(initialReelId = deepLinkedReel)
+                val app: AppViewModel = hiltViewModel()
+                val learner by app.learner.collectAsState()
+                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                    val profile = learner
+                    // DataStore not answered yet: keep the splash colour for a frame.
+                    when {
+                        profile == null -> Unit
+                        !profile.onboarded -> OnboardingScreen(onDone = app::completeOnboarding)
+                        else -> FerrisFeedNavHost(initialReelId = deepLinkedReel)
                     }
                 }
             }
@@ -95,9 +95,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private fun Route.isTab(): Boolean = this is Route.Feed || this is Route.Path || this is Route.Profile
+
 /**
- * Feed + Path + Profile app shell with floating glass nav bar, persistent top stat bar,
- * and custom route transitions (Spec v2 + P6 32 + P7 Profile).
+ * Learn · Path · You, with topic and lesson feeds pushed on top. The nav bar
+ * is a solid bar under the content (it hides on pushed feeds, which get a
+ * back button in their own top bar instead).
  */
 @Composable
 fun FerrisFeedNavHost(initialReelId: String?) {
@@ -105,194 +108,92 @@ fun FerrisFeedNavHost(initialReelId: String?) {
     LaunchedEffect(initialReelId) {
         if (initialReelId != null) backStack.add(Route.ReelDetail(initialReelId))
     }
-    val currentTop = backStack.lastOrNull()
-    val selectedTab: Route = when (currentTop) {
-        is Route.Path -> Route.Path
-        is Route.Profile -> Route.Profile
-        else -> Route.Feed
+    val top = backStack.lastOrNull() as? Route ?: Route.Feed
+    val selectedTab: Route = (backStack.firstOrNull() as? Route) ?: Route.Feed
+    val showBar = top.isTab()
+    val systemNavInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    fun pop() {
+        if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
     }
 
-    val statsViewModel: StatsViewModel = hiltViewModel()
-    val userStats by statsViewModel.stats.collectAsState()
-
-    val statusBarsTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val navBarsBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val bottomInset = 64.dp + 12.dp + navBarsBottom
-
-    val isTopicFeed = currentTop is Route.TopicFeed
-    val isReelDetail = currentTop is Route.ReelDetail
-    val isDetailRoute = isTopicFeed || isReelDetail
-
-    CompositionLocalProvider(LocalBottomBarInset provides bottomInset) {
-        Box(modifier = Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize()) {
+        CompositionLocalProvider(LocalBottomBarInset provides if (showBar) 0.dp else systemNavInset) {
             NavDisplay(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 backStack = backStack,
-                onBack = { backStack.removeLastOrNull() },
-                transitionSpec = {
-                    val initialKey = initialState as? Route
-                    val targetKey = targetState as? Route
-                    val isTabSwitch = (initialKey is Route.Feed || initialKey is Route.Path || initialKey is Route.Profile) &&
-                        (targetKey is Route.Feed || targetKey is Route.Path || targetKey is Route.Profile)
-                    if (isTabSwitch) {
-                        (fadeIn(animationSpec = tween(200)) + scaleIn(animationSpec = tween(200), initialScale = 0.96f)) togetherWith
-                            (fadeOut(animationSpec = tween(200)) + scaleOut(animationSpec = tween(200), targetScale = 1.04f))
-                    } else {
-                        (slideInHorizontally(
-                            animationSpec = tween(350, easing = FastOutSlowInEasing),
-                            initialOffsetX = { (it * 0.3f).toInt() },
-                        ) + fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing))) togetherWith
-                            (slideOutHorizontally(
-                                animationSpec = tween(350, easing = FastOutSlowInEasing),
-                                targetOffsetX = { (-it * 0.3f).toInt() },
-                            ) + fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing)))
-                    }
-                },
-                popTransitionSpec = {
-                    (slideInHorizontally(
-                        animationSpec = tween(350, easing = FastOutSlowInEasing),
-                        initialOffsetX = { (-it * 0.3f).toInt() },
-                    ) + fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing))) togetherWith
-                        (slideOutHorizontally(
-                            animationSpec = tween(350, easing = FastOutSlowInEasing),
-                            targetOffsetX = { (it * 0.3f).toInt() },
-                        ) + fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing)))
-                },
+                onBack = { pop() },
+                // Quiet crossfades everywhere: the transition scope's states
+                // are not our Route keys in alpha08, so no per-route specs.
+                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(140)) },
+                popTransitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(140)) },
                 entryProvider = { key ->
                     when (key) {
                         is Route.Feed -> NavEntry(key) {
-                            FeedEntry(focusedReelId = null, topicFilter = null)
+                            FeedEntry(scope = FeedScope.Main, onBack = null, title = null)
                         }
                         is Route.TopicFeed -> NavEntry(key) {
-                            val prettyTitle = key.topicId
-                                .replace('_', ' ')
-                                .replace('-', ' ')
-                                .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
                             FeedEntry(
-                                focusedReelId = null,
-                                topicFilter = key.topicId,
-                                onBack = { backStack.removeLastOrNull() },
-                                title = prettyTitle,
+                                scope = FeedScope.Topic(key.topicId),
+                                onBack = { pop() },
+                                title = Curriculum.titleOf(key.topicId),
                             )
                         }
                         is Route.ReelDetail -> NavEntry(key) {
-                            FeedEntry(
-                                focusedReelId = key.reelId,
-                                topicFilter = null,
-                                onBack = { backStack.removeLastOrNull() },
-                                title = "Reel",
-                            )
+                            FeedEntry(scope = FeedScope.Lesson(key.reelId), onBack = { pop() }, title = null)
                         }
                         is Route.Path -> NavEntry(key) {
-                            val viewModel: PathViewModel = hiltViewModel()
-                            val state by viewModel.state.collectAsState()
+                            val vm: PathViewModel = hiltViewModel()
+                            val state by vm.state.collectAsState()
+                            LaunchedEffect(Unit) { vm.refresh() }
                             PathScreen(
                                 state = state,
-                                onQueryChanged = viewModel::onQueryChanged,
+                                onSelectTrack = vm::selectTrack,
+                                onOpenTopic = { topic -> backStack.add(Route.TopicFeed(topic.key)) },
+                                onSearchOpen = vm::setSearchOpen,
+                                onQueryChanged = vm::onQueryChanged,
                                 onResultClick = { result -> backStack.add(Route.ReelDetail(result.id)) },
-                                onTopicClick = { node -> backStack.add(Route.TopicFeed(node.id)) },
-                                onExploreTopic = viewModel::exploreTopic,
                             )
                         }
                         is Route.Profile -> NavEntry(key) {
-                            val profileViewModel: ProfileViewModel = hiltViewModel()
-                            val profileState by profileViewModel.state.collectAsState()
+                            val vm: ProfileViewModel = hiltViewModel()
+                            val state by vm.state.collectAsState()
                             ProfileScreen(
-                                state = profileState,
-                                onSelectPhilosophy = profileViewModel::setDesignPhilosophy,
-                                onOpenReel = { reelId -> backStack.add(Route.ReelDetail(reelId)) },
-                                onTopicClick = { topicId -> backStack.add(Route.TopicFeed(topicId)) },
-                                onRemoveSaved = profileViewModel::removeSaved,
+                                state = state,
+                                onOpenLesson = { id -> backStack.add(Route.ReelDetail(id)) },
+                                onOpenTopic = { topic -> backStack.add(Route.TopicFeed(topic)) },
+                                onRemoveSaved = vm::removeSaved,
+                                onChangeFocus = vm::setFocus,
                             )
                         }
-                        else -> error("Unknown route $key")
+                        else -> NavEntry(key) { }
                     }
                 },
             )
-
-            // Persistent top stat bar or topic back bar
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(top = statusBarsTop + 8.dp)
-            ) {
-                if (isTopicFeed) {
-                    val topicId = (currentTop as Route.TopicFeed).topicId
-                    val prettyTitle = topicId
-                        .replace('_', ' ')
-                        .replace('-', ' ')
-                        .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-                    BackChipBar(
-                        title = prettyTitle,
-                        onBack = { backStack.removeLastOrNull() },
-                    )
-                } else if (isReelDetail) {
-                    BackChipBar(
-                        title = "Reel",
-                        onBack = { backStack.removeLastOrNull() },
-                    )
-                } else {
-                    StatBar(
-                        stats = userStats,
-                        title = when (selectedTab) {
-                            is Route.Path -> "Path"
-                            is Route.Profile -> "Profile"
-                            else -> null
-                        },
-                    )
-                }
-            }
-
-            // Floating glass navigation bar
-            AnimatedVisibility(
-                visible = !isDetailRoute,
-                enter = slideInVertically(animationSpec = FerrisMotion.QuickOffset) { it } + fadeIn(animationSpec = FerrisMotion.Quick),
-                exit = slideOutVertically(animationSpec = FerrisMotion.QuickOffset) { it } + fadeOut(animationSpec = FerrisMotion.Quick),
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = navBarsBottom + 12.dp)
-            ) {
-                FerrisNavBar(
-                    selectedRoute = selectedTab,
-                    onSelectRoute = { route ->
-                        if (selectedTab != route) {
-                            while (backStack.size > 1) {
-                                backStack.removeAt(backStack.lastIndex)
-                            }
-                            if (backStack.isNotEmpty()) {
-                                backStack[0] = route
-                            } else {
-                                backStack.add(route)
-                            }
-                        }
-                    },
-                )
-            }
+        }
+        AnimatedVisibility(
+            visible = showBar,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut(),
+        ) {
+            FerrisNavBar(
+                selected = selectedTab,
+                onSelect = { route ->
+                    while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+                    if (backStack.isEmpty()) backStack.add(route) else backStack[0] = route
+                },
+            )
         }
     }
 }
 
 /**
- * Feed tab fragment: Hilt-provided ViewModel. [topicFilter] narrows the queue
- * to one roadmap topic; null is the full 70/20/10 mix.
+ * Every feed route shares one [FeedViewModel] (learnings §22), so each entry
+ * states its scope; the view model rebuilds only when the scope changes.
  */
 @Composable
-private fun FeedEntry(
-    focusedReelId: String?,
-    topicFilter: String?,
-    onBack: (() -> Unit)? = null,
-    title: String? = null,
-) {
+private fun FeedEntry(scope: FeedScope, onBack: (() -> Unit)?, title: String?) {
     val viewModel: FeedViewModel = hiltViewModel()
-    LaunchedEffect(topicFilter, focusedReelId) {
-        viewModel.setTopicFilter(topicFilter)?.join()
-        if (focusedReelId != null) viewModel.focusReel(focusedReelId)
-    }
-    FeedScreen(
-        viewModel = viewModel,
-        focusedReelId = focusedReelId,
-        onBack = onBack,
-        title = title,
-    )
+    LaunchedEffect(scope) { viewModel.setScope(scope) }
+    FeedScreen(viewModel = viewModel, scope = scope, onBack = onBack, title = title)
 }

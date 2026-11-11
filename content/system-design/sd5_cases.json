@@ -2,146 +2,146 @@
   {
     "body_md": "URL shortener: need 100M URLs/month, 10:1 reads. API POST /shorten, GET /:code. Store mapping in KV, cache hot in Redis. Bottleneck is write hotspot; snippet hashes with base62.",
     "code": "import hashlib\ncode = hashlib.md5(url.encode()).hexdigest()[:7]",
-    "hook": "100M links, millisecond redirects.",
+    "hook": "URL shortener: 100M links, millisecond redirects.",
     "id": "sd-case-001",
     "language": "python",
     "level": 3,
     "output": "code = 7-char md5 hex, e.g. '5d41402'\n// base62 in prod; KV write + Redis for hot codes; POST -> 201 + Location",
     "quiz": {
-      "answer": 2,
+      "answer": 1,
       "explain": "Hash plus dedupe plus cache handles read-heavy load.",
       "options": [
-        "SQL joins",
-        "Graph traversal",
-        "Hash to base62 with KV plus cache",
-        " blockchain"
+        "Store full URLs in SQL and join on each lookup",
+        "Base62 codes in a KV store, hot codes cached",
+        "Use the full SHA-256 hash as the short code",
+        "Redirect by scanning a table for the long URL"
       ],
-      "q": "Core trick for URL shortener?"
+      "q": "What's the core trick in a URL shortener?"
     },
     "takeaway": "Hash, dedupe, cache hot redirects.",
     "trap": "Sequential IDs leaking growth rate.",
     "track": "system-design",
-    "topic_label": "app cases"
+    "topic_label": "case-studies"
   },
   {
     "body_md": "Twitter feed: requirements fan-out 300M users, timeline <200ms. API post, follow, timeline. Storage posts in Cassandra, graph in social DB. Bottleneck celebrity fan-out; snippet pushes async.",
     "code": "// on post: for follower in followers[author]\n//   feed_cache.lpush(follower, post_id)",
-    "hook": "Push, pull, and the celebrity problem.",
+    "hook": "News feed fan-out: push, pull, and the celebrity problem.",
     "id": "sd-case-002",
     "language": "rust",
     "level": 3,
     "output": "post_id appended to each follower's cached timeline\n// celebrity path: skip push, followers pull at read",
     "quiz": {
-      "answer": 1,
+      "answer": 3,
       "explain": "Hybrid push/pull avoids million-write storms.",
       "options": [
-        "Push to everyone always",
-        "Hybrid fan-out with pull for celebrities",
-        "No cache",
-        "Single SQL table"
+        "Push every post into every follower's timeline",
+        "Pull and merge all followees on each read",
+        "Store all timelines in one sharded SQL table",
+        "Push for most users, pull for celebrity posts"
       ],
       "q": "How do you scale feed fan-out?"
     },
     "takeaway": "Push normal, pull celebrities, cache timelines.",
     "trap": "Pure pull scanning 1000 follows per read.",
     "track": "system-design",
-    "topic_label": "app cases"
+    "topic_label": "case-studies"
   },
   {
     "body_md": "Rate limiter: need 10k rps API protection, burst 50. API gateway check. Storage Redis buckets per key with Lua. Bottleneck central Redis; snippet uses token bucket Lua.",
     "code": "-- lua: refill then allow\nlocal t = redis.call('GET', KEYS[1]) or 0",
-    "hook": "Flood control at 10k rps.",
+    "hook": "Distributed rate limiter: flood control at 10k rps.",
     "id": "sd-case-003",
     "language": "rust",
     "level": 3,
     "output": "t = current count or 0; refill by elapsed, allow if tokens suffice\n// Lua runs atomically: global rate holds across nodes",
     "quiz": {
-      "answer": 0,
+      "answer": 2,
       "explain": "Atomic Lua on Redis enforces global rate.",
       "options": [
-        "Atomic Redis bucket per key",
-        "In-memory only",
-        "No burst",
-        "Client-side only"
+        "In-memory counters on each separate API instance",
+        "In the client SDK, trusting it to self-limit",
+        "Shared Redis buckets updated by atomic Lua",
+        "A SQL row per key, read then updated in two steps"
       ],
       "q": "Where does distributed rate limiting live?"
     },
     "takeaway": "Centralize counters with atomic scripts.",
     "trap": "Per-node limits multiplying global allowance.",
     "track": "system-design",
-    "topic_label": "app cases"
+    "topic_label": "rate-limiting"
   },
   {
     "body_md": "Chat: need 1M concurrent WebSockets, <100ms delivery, presence. API WS connect, send, presence heartbeat. Storage messages in Cassandra, presence in Redis. Bottleneck conn fan-out; snippet uses pub/sub.",
     "code": "ws.onmessage = (m) => pub.publish(\"room:\"+room, m.data)",
-    "hook": "Million sockets, one truth: who is online.",
+    "hook": "Chat at scale: a million sockets and who is online.",
     "id": "sd-case-004",
     "language": "javascript",
     "level": 3,
     "output": "msg published to room:<room>; each gateway delivers locally\n// <100ms fan-out; presence via heartbeat",
     "quiz": {
-      "answer": 3,
+      "answer": 2,
       "explain": "Sticky gateway plus pub/sub reaches all holders.",
       "options": [
-        "Polling only",
-        "One server only",
-        "No presence",
-        "Gateway plus pub/sub for rooms"
+        "Clients poll for new messages every second",
+        "One big server holding every socket in memory",
+        "WebSocket gateways joined by pub/sub fan-out",
+        "Store presence in Postgres, updated per heartbeat"
       ],
       "q": "How do you scale chat?"
     },
     "takeaway": "Shard connections, broadcast via pub/sub.",
     "trap": "No resume token losing messages on reconnect.",
     "track": "system-design",
-    "topic_label": "app cases"
+    "topic_label": "case-studies"
   },
   {
     "body_md": "S3 object store: need 11 nines, multipart uploads, presigned URLs. API PUT /object, GET range. Storage erasure-coded chunks plus metadata DB. Bottleneck metadata; snippet signs URL.",
     "code": "import boto3\nurl = boto3.client(\"s3\").generate_presigned_url(\"put_object\", Params={\"Bucket\":\"b\",\"Key\":\"k\"})",
-    "hook": "Blobs at exabyte scale.",
+    "hook": "Object storage like S3: blobs at exabyte scale.",
     "id": "sd-case-005",
     "language": "python",
     "level": 3,
     "output": "url = 'https://b.s3.../k?X-Amz-Signature=...'\n// client PUTs bytes direct; app tier bypassed",
     "quiz": {
-      "answer": 1,
+      "answer": 2,
       "explain": "Direct-to-storage uploads bypass app servers.",
       "options": [
-        "Proxy all bytes",
-        "Presigned URLs for direct upload",
-        "No metadata",
-        "Single disk"
+        "Stream every upload byte through the app servers",
+        "Base64 the file into a JSON API request",
+        "Presigned URLs for direct-to-storage uploads",
+        "Write each object to one big replicated disk"
       ],
       "q": "How do you scale uploads?"
     },
     "takeaway": "Sign URLs, store chunks with metadata index.",
     "trap": "Proxying gigabytes through app tier.",
     "track": "system-design",
-    "topic_label": "app cases"
+    "topic_label": "case-studies"
   },
   {
     "body_md": "Pastebin variant: requirements 10M pastes/month, TTL, burn-after-read. API POST paste, GET raw. Storage object store plus metadata Postgres. Bottleneck spam; snippet expires keys.",
     "code": "SETEX paste:abc 86400 \"...\"\n# burn: GETDEL paste:abc",
-    "hook": "Text hosting with self-destruct.",
+    "hook": "Pastebin design: text hosting with self-destruct.",
     "id": "sd-case-006",
     "language": "rust",
     "level": 3,
     "output": "OK (TTL 86400); GETDEL returns value once, then nil\n// expiry + burn-after-read contain spam",
     "quiz": {
-      "answer": 0,
+      "answer": 2,
       "explain": "TTL plus optional one-time read contains abuse.",
       "options": [
-        "TTL plus optional burn-after-read",
-        "Keep forever",
-        "No auth",
-        "Store in memory only"
+        "Keep every paste forever in Postgres rows",
+        "Sequential IDs so pastes are easy to share",
+        "Default TTL plus optional burn-after-read",
+        "Hold all pastes in app server memory for speed"
       ],
-      "q": "Key design for pastebin?"
+      "q": "What's the key design idea for a pastebin?"
     },
     "takeaway": "Expire by default, burn on demand.",
     "trap": "Predictable IDs enabling scraping.",
     "track": "system-design",
-    "topic_label": "app cases"
+    "topic_label": "case-studies"
   },
   {
     "body_md": "Search autocomplete: need 100ms prefix hints for 10M terms. API GET /suggest?q=. Storage trie in memory plus Kafka updates. Bottleneck rebuild; snippet queries sorted set.",
@@ -152,49 +152,49 @@
     "level": 3,
     "output": "(integer) 1; top-5 'rust*' terms back, ranked\n// <100ms prefix hints; no DB per keystroke",
     "quiz": {
-      "answer": 2,
+      "answer": 1,
       "explain": "Ranked prefix index serves instant hints.",
       "options": [
-        "Full scan",
-        "LIKE %q%",
-        "Prefix index with ranked cache",
-        "No index"
+        "SQL LIKE 'q%' query on every keystroke",
+        "Precomputed prefix index with ranked top-k",
+        "Full-text search engine query per keystroke",
+        "Rank all terms at read time by popularity"
       ],
       "q": "How do you serve typeahead fast?"
     },
     "takeaway": "Precompute ranked prefixes at write time.",
     "trap": "Hitting DB per keystroke.",
     "track": "system-design",
-    "topic_label": "url-shortener"
+    "topic_label": "case-studies"
   },
   {
     "body_md": "Notifications: requirements 50M pushes/day, dedupe, quiet hours. API enqueue event. Storage Kafka plus per-user queue. Bottleneck fan-out storms; snippet batches by user.",
     "code": "async fn notify(user: Id, e: Event) {\n    if quiet_hours(&user) { queue_later(user, e).await }\n}",
-    "hook": "50M nudges without spam.",
+    "hook": "Notification system: 50M pushes a day without spam.",
     "id": "sd-case-008",
     "language": "rust",
     "level": 3,
     "output": "quiet hours: queued for later, no push now\nelse: batched + deduped send",
     "quiz": {
-      "answer": 1,
+      "answer": 3,
       "explain": "Batching plus preferences prevents storms.",
       "options": [
-        "Send immediately always",
-        "Batch, dedupe, respect preferences",
-        "No retry",
-        "Broadcast all"
+        "Send each event immediately as it arrives",
+        "Broadcast to all devices on every account",
+        "Retry every failed send forever until delivered",
+        "Batch and dedupe per user, honor preferences"
       ],
       "q": "How do you avoid notification spam?"
     },
     "takeaway": "Batch and dedupe per user with backoff.",
     "trap": "Retry storm waking users at 3am.",
     "track": "system-design",
-    "topic_label": "url-shortener"
+    "topic_label": "case-studies"
   },
   {
     "body_md": "Ride-hailing match: need nearby drivers <500ms, surge. API request ride, update location. Storage geo index Redis GEOADD, trips in Postgres. Bottleneck geo query; snippet searches radius.",
     "code": "GEOADD drivers 77.2 28.6 driver:9\nGEORADIUS drivers 77.2 28.6 3 km",
-    "hook": "Nearest driver, half a second.",
+    "hook": "Ride matching: find the nearest driver in 500ms.",
     "id": "sd-case-009",
     "language": "rust",
     "level": 3,
@@ -203,88 +203,88 @@
       "answer": 0,
       "explain": "Geospatial index prunes candidates before ranking.",
       "options": [
-        "Geo index then rank by ETA",
-        "Scan all drivers",
-        "Random assign",
-        "Single city server"
+        "Geo index for nearby drivers, then rank by ETA",
+        "Scan every active driver and sort by distance",
+        "Pick the straight-line closest driver only",
+        "Query trips in Postgres by city on each request"
       ],
       "q": "How do you match riders fast?"
     },
     "takeaway": "Geo-query then rank by ETA and surge.",
     "trap": "Stale locations dispatching ghost drivers.",
     "track": "system-design",
-    "topic_label": "url-shortener"
+    "topic_label": "case-studies"
   },
   {
     "body_md": "Video pipeline: requirements 4K upload, transcode, HLS. API upload, webhook done. Storage S3 raw plus CDN segments. Bottleneck transcode; snippet enqueues job.",
     "code": "# enqueue transcode\nffmpeg -i in.mp4 -map 0 -c:v libx264 out.m3u8",
-    "hook": "Upload once, play everywhere.",
+    "hook": "Video pipeline: upload once, play everywhere.",
     "id": "sd-case-010",
     "language": "rust",
     "level": 3,
     "output": "job enqueued; worker transcodes to HLS segments on CDN\n// upload returns at once; playback adapts per device",
     "quiz": {
-      "answer": 3,
+      "answer": 0,
       "explain": "Async workers plus CDN decouple upload from playback.",
       "options": [
-        "Sync transcode",
-        "Block upload",
-        "No CDN",
-        "Async transcode to HLS on CDN"
+        "Async transcode to HLS segments served by a CDN",
+        "Transcode inside the upload request, then save",
+        "Stream the original uploaded file to every viewer",
+        "Serve segments straight from the origin bucket"
       ],
       "q": "How do you serve video at scale?"
     },
     "takeaway": "Async transcode, segment, cache at edge.",
     "trap": "Serving 4K mp4 directly to phones.",
     "track": "system-design",
-    "topic_label": "url-shortener"
+    "topic_label": "case-studies"
   },
   {
     "body_md": "E-commerce checkout: requirements cart, pay once, inventory. API reserve, charge idempotent, confirm. Storage orders Postgres, stock Redis decrement. Bottleneck oversell; snippet uses saga.",
     "code": "POST /pay\nIdempotency-Key: abc\n-- reserve stock, charge, confirm",
-    "hook": "Never sell the last shirt twice.",
+    "hook": "Checkout design: never sell the last shirt twice.",
     "id": "sd-case-011",
     "language": "sql",
     "level": 3,
     "output": "1st POST -> 200 charged; retry with key abc -> same stored result\n// reserve -> charge -> confirm saga; no oversell",
     "quiz": {
-      "answer": 1,
+      "answer": 2,
       "explain": "Reserve plus idempotent charge plus confirm avoids double-sell.",
       "options": [
-        "Charge first blindly",
-        "Reserve→charge idempotent→confirm saga",
-        "No inventory check",
-        "Double-charge ok"
+        "Charge first, then check stock and refund if out",
+        "Check stock on page load and trust it at checkout",
+        "Reserve stock, charge idempotently, then confirm",
+        "Decrement stock only after the order ships"
       ],
       "q": "How do you prevent oversell?"
     },
     "takeaway": "Saga with reservation and idempotency.",
     "trap": "No fencing letting two checkouts win.",
     "track": "system-design",
-    "topic_label": "url-shortener"
+    "topic_label": "case-studies"
   },
   {
     "body_md": "Metrics pipeline: need 1M points/sec ingest, 7-day queries. API write batch, query range. Storage Kafka to ClickHouse downsampled. Bottleneck cardinality; snippet batches writes.",
     "code": "# batch 1000 pts\n# clickhouse: AggregatingMergeTree",
-    "hook": "Million points a second, queryable.",
+    "hook": "Metrics pipeline: a million points a second, queryable.",
     "id": "sd-case-012",
     "language": "rust",
     "level": 3,
     "output": "1000-pt batches -> AggregatingMergeTree, downsampled by age\n// 1M pts/s ingest with fast 7-day range queries",
     "quiz": {
-      "answer": 2,
+      "answer": 0,
       "explain": "Batch plus columnar plus downsampling tames volume.",
       "options": [
-        "One row per insert",
-        "Per-point HTTP",
-        "Batch ingest to columnar with downsampling",
-        "No retention"
+        "Batch writes into columnar store, downsample old",
+        "Insert one row per data point as it arrives",
+        "Keep full-resolution data forever for accuracy",
+        "Send every point in its own HTTP request to the DB"
       ],
       "q": "How do you ingest metrics cheaply?"
     },
     "takeaway": "Batch, compress, downsample by age.",
     "trap": "Unbounded label cardinality exploding storage.",
     "track": "system-design",
-    "topic_label": "url-shortener"
+    "topic_label": "case-studies"
   }
 ]

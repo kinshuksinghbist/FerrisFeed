@@ -54,7 +54,11 @@ class ProgressStore(private val context: Context) {
     private val KEY_PLACEMENT_SKIPPED_BEGINNER = booleanPreferencesKey("placement_skip_beginner")
     private val KEY_ANALYTICS_OPT_OUT = booleanPreferencesKey("analytics_opt_out")
     private val KEY_LAST_SYNC = longPreferencesKey("last_sync_millis")
-    private val KEY_DESIGN_PHILOSOPHY = stringPreferencesKey("design_philosophy")
+    private val KEY_ONBOARDED = booleanPreferencesKey("onboarding_done")
+    private val KEY_TRACK_FOCUS = stringPreferencesKey("track_focus")
+    private val KEY_EXPERIENCE = intPreferencesKey("experience_level")
+    private val KEY_QUIZ_TOTAL = intPreferencesKey("quiz_total")
+    private val KEY_QUIZ_CORRECT = intPreferencesKey("quiz_correct")
 
     // ---- Observable state ----
 
@@ -76,8 +80,24 @@ class ProgressStore(private val context: Context) {
         }
     }
 
-    val designPhilosophy: Flow<String> = context.progressDataStore.data.map {
-        it[KEY_DESIGN_PHILOSOPHY] ?: "StudioGlass"
+    /** Learner preferences captured by first-run onboarding (redesign v3). */
+    val learnerProfile: Flow<LearnerProfile> = context.progressDataStore.data.map { prefs ->
+        LearnerProfile(
+            onboarded = prefs[KEY_ONBOARDED] ?: false,
+            trackFocus = prefs[KEY_TRACK_FOCUS] ?: LearnerProfile.FOCUS_BOTH,
+            experience = prefs[KEY_EXPERIENCE] ?: 0,
+        )
+    }
+
+    /** Lifetime quiz answers and how many were right (accuracy on Profile). */
+    val quizTally: Flow<QuizTally> = context.progressDataStore.data.map { prefs ->
+        QuizTally(total = prefs[KEY_QUIZ_TOTAL] ?: 0, correct = prefs[KEY_QUIZ_CORRECT] ?: 0)
+    }
+
+    /** XP earned today (daily goal ring). */
+    val todayXp: Flow<Int> = context.progressDataStore.data.map { prefs ->
+        val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+        prefs[intPreferencesKey(KEY_DAY_XP_PREFIX + today)] ?: 0
     }
 
     val placementDone: Flow<Boolean> =
@@ -111,8 +131,12 @@ class ProgressStore(private val context: Context) {
             .toMap()
     }
 
-    suspend fun setDesignPhilosophy(name: String) {
-        context.progressDataStore.edit { it[KEY_DESIGN_PHILOSOPHY] = name }
+    suspend fun saveLearnerProfile(trackFocus: String, experience: Int) {
+        context.progressDataStore.edit { prefs ->
+            prefs[KEY_ONBOARDED] = true
+            prefs[KEY_TRACK_FOCUS] = trackFocus
+            prefs[KEY_EXPERIENCE] = experience.coerceIn(0, 2)
+        }
     }
 
     // ---- XP ----
@@ -204,6 +228,8 @@ class ProgressStore(private val context: Context) {
                 TopicMastery.serializer(),
                 TopicMastery(score = updated, updatedAtMillis = now),
             )
+            prefs[KEY_QUIZ_TOTAL] = (prefs[KEY_QUIZ_TOTAL] ?: 0) + 1
+            if (gotIt) prefs[KEY_QUIZ_CORRECT] = (prefs[KEY_QUIZ_CORRECT] ?: 0) + 1
             recordActivityLocked(prefs, dayXp = 0, now = now)
         }
     }
@@ -228,7 +254,7 @@ class ProgressStore(private val context: Context) {
         return stored.copy(score = decayedMastery(stored.score, stored.updatedAtMillis, now))
     }
 
-    private fun masteryKey(topic: String) = "mastery_" + topic.lowercase().replace("[^a-z0-9]+".toRegex(), "_")
+    private fun masteryKey(topic: String) = "mastery_" + Curriculum.sanitize(topic)
 
     // ---- Scroll position (resume-where-left-off) ----
 
@@ -285,4 +311,20 @@ data class TopicMastery(
 data class ScrollPosition(
     val reelId: String?,
     val index: Int,
+)
+
+/** First-run choices. [trackFocus] is a track id or [FOCUS_BOTH]; [experience] 0 new, 1 some, 2 experienced. */
+data class LearnerProfile(
+    val onboarded: Boolean = false,
+    val trackFocus: String = FOCUS_BOTH,
+    val experience: Int = 0,
+) {
+    companion object {
+        const val FOCUS_BOTH = "both"
+    }
+}
+
+data class QuizTally(
+    val total: Int = 0,
+    val correct: Int = 0,
 )
