@@ -6,11 +6,8 @@ import android.content.Context
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -24,17 +21,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,8 +41,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -70,13 +69,13 @@ private val SysDesignKeywords = setOf(
 )
 
 /**
- * Code editor palette (TODO 23c + P6 34g).
- *
- * The code card keeps a fixed GitHub-dark editor surface in BOTH themes:
- * holds >= 7:1 for every span at 13sp mono.
+ * Code editor palette. The editor keeps a fixed dark surface in BOTH themes
+ * (code reads as code, and every span holds >= 7:1 at 13sp mono).
  */
 object CodeCardTokens {
     val Container = Color(0xFF0D1117)
+    val Header = Color(0xFF161B22)
+    val Divider = Color(0xFF21262D)
     val Muted = Color(0xFF8B949E)
     val Body = Color(0xFFC9D1D9)
     val Output = Color(0xFFA5D6FF)
@@ -85,17 +84,19 @@ object CodeCardTokens {
     val Macro = Color(0xFFD2A8FF)
     val TypeColor = Color(0xFFFFA657)
     val FnColor = Color(0xFFD2A8FF)
-    val LineNumber = Color(0xFF6B7280)
+    val LineNumber = Color(0xFF6E7681)
+    val Success = Color(0xFF7EE787)
 }
 
+private val CodeShape = RoundedCornerShape(14.dp)
+private val CodeText = TextStyle(fontFamily = CodeFontFamily, fontSize = 13.sp, lineHeight = 20.sp)
+
 /**
- * Redesigned code snippet well (P6 34f):
- * - Shape: 20dp rounded surface.
- * - Top bar: 3 macOS dots (8dp, #FF5F57 #FEBC2E #28C840), language name, segmented
- *   "Code | Output" toggle pill, and copy icon chip with "Copied" feedback.
- * - Line numbers in left gutter (20dp, Muted @ 60% alpha).
- * - Code↔output swap with AnimatedContent and slide transition.
- * - Font size: 13sp / 20sp lineHeight.
+ * Code well (v3). One quiet header: language on the left, then two text
+ * actions on the right: "Output" flips to the expected program output (hidden
+ * when the reel has none) and "Copy". Line numbers sit in their own column so
+ * copying yields clean code. Long lines scroll horizontally inside the well;
+ * nothing ever wraps mid-token.
  */
 @Composable
 fun CodeBlock(
@@ -106,195 +107,117 @@ fun CodeBlock(
 ) {
     val context = LocalContext.current
     var copied by remember(code) { mutableStateOf(false) }
-    var flipped by remember(code) { mutableStateOf(false) }
-
+    var showOutput by remember(code) { mutableStateOf(false) }
     LaunchedEffect(copied) {
         if (copied) {
-            delay(1200)
+            delay(1400)
             copied = false
         }
     }
+    val highlighted = remember(code, language) { highlightCode(code.trimEnd(), language) }
+    val lineCount = remember(code) { code.trimEnd().lines().size }
 
-    val highlighted = remember(code, language) { highlightCode(code, language) }
-
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = CodeCardTokens.Container,
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(CodeShape)
+            .background(CodeCardTokens.Container, CodeShape),
     ) {
-        Column(modifier = Modifier.padding(bottom = 12.dp)) {
-            // Top bar: macOS dots + language + actions
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-            ) {
-                // 3 macOS-style dots: red, yellow, green (6dp gap)
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(Modifier.size(8.dp).background(Color(0xFFFF5F57), CircleShape))
-                    Box(Modifier.size(8.dp).background(Color(0xFFFEBC2E), CircleShape))
-                    Box(Modifier.size(8.dp).background(Color(0xFF28C840), CircleShape))
-                }
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = language.lowercase(),
-                    style = MaterialTheme.typography.labelSmall.copy(fontFamily = CodeFontFamily),
-                    color = CodeCardTokens.Muted,
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CodeCardTokens.Header)
+                .padding(start = 14.dp, end = 4.dp)
+                .height(40.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = if (showOutput) "output" else language.lowercase(),
+                style = CodeText.copy(fontSize = 12.sp),
+                color = CodeCardTokens.Muted,
+            )
+            Spacer(Modifier.weight(1f))
+            if (output != null) {
+                CodeAction(
+                    label = if (showOutput) "Code" else "Output",
+                    icon = if (showOutput) Icons.Filled.Code else Icons.Filled.PlayArrow,
+                    tint = if (showOutput) CodeCardTokens.Muted else CodeCardTokens.Success,
+                    description = if (showOutput) "Show code" else "Show program output",
+                    onClick = { showOutput = !showOutput },
                 )
-                Spacer(Modifier.weight(1f))
-
-                // Flip chip: segmented pill "Code | Output"
-                if (output != null) {
-                    Row(
-                        modifier = Modifier
-                            .height(28.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.35f))
-                            .border(0.5.dp, CodeCardTokens.Muted.copy(alpha = 0.25f), CircleShape)
-                            .padding(2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(if (!flipped) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else Color.Transparent)
-                                .clickable { flipped = false }
-                                .padding(horizontal = 8.dp, vertical = 3.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "Code",
-                                style = MaterialTheme.typography.labelSmall.copy(fontFamily = CodeFontFamily, fontSize = 10.sp),
-                                color = if (!flipped) MaterialTheme.colorScheme.primary else CodeCardTokens.Muted,
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(if (flipped) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else Color.Transparent)
-                                .clickable { flipped = true }
-                                .padding(horizontal = 8.dp, vertical = 3.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "Output",
-                                style = MaterialTheme.typography.labelSmall.copy(fontFamily = CodeFontFamily, fontSize = 10.sp),
-                                color = if (flipped) MaterialTheme.colorScheme.primary else CodeCardTokens.Muted,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.width(8.dp))
-                }
-
-                // Copy chip: 36dp circular icon chip with minimumInteractiveComponentSize()
-                Box(
-                    modifier = Modifier
-                        .minimumInteractiveComponentSize()
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .clickable {
-                            context.getSystemService(Context.CLIPBOARD_SERVICE)
-                                ?.let { it as? ClipboardManager }
-                                ?.setPrimaryClip(ClipData.newPlainText("code", code))
-                            copied = true
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AnimatedContent(
-                        targetState = copied,
-                        label = "copy-feedback",
-                    ) { isCopied ->
-                        if (isCopied) {
-                            Icon(
-                                imageVector = Icons.Filled.Check,
-                                contentDescription = "Copied",
-                                tint = FerrisColors.MintCorrect,
-                                modifier = Modifier.size(16.dp),
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Filled.ContentCopy,
-                                contentDescription = "Copy code",
-                                tint = CodeCardTokens.Body,
-                                modifier = Modifier.size(16.dp),
-                            )
-                        }
-                    }
-                }
             }
-
-            // Code / Output Content with AnimatedContent
-            AnimatedContent(
-                targetState = flipped,
-                transitionSpec = {
-                    (fadeIn(FerrisMotion.Quick) + slideInVertically(FerrisMotion.QuickOffset) { it / 8 }) togetherWith
-                        (fadeOut(FerrisMotion.Quick) + slideOutVertically(FerrisMotion.QuickOffset) { -it / 8 })
+            CodeAction(
+                label = if (copied) "Copied" else "Copy",
+                icon = if (copied) Icons.Filled.Check else Icons.Filled.ContentCopy,
+                tint = if (copied) CodeCardTokens.Success else CodeCardTokens.Muted,
+                description = "Copy code",
+                onClick = {
+                    (context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
+                        ?.setPrimaryClip(ClipData.newPlainText("code", code))
+                    copied = true
                 },
-                label = "code-content-flip",
-            ) { isOutput ->
-                if (isOutput && output != null) {
-                    Row(
+            )
+        }
+        AnimatedContent(
+            targetState = showOutput,
+            transitionSpec = { fadeIn(FerrisMotion.Quick) togetherWith fadeOut(FerrisMotion.Quick) },
+            label = "code-output",
+        ) { outputMode ->
+            if (outputMode && output != null) {
+                Text(
+                    text = output.trimEnd().ifBlank { "(no output)" },
+                    style = CodeText,
+                    color = CodeCardTokens.Output,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                )
+            } else {
+                Row(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                    Text(
+                        text = (1..lineCount).joinToString("\n"),
+                        style = CodeText,
+                        color = CodeCardTokens.LineNumber,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.padding(start = 10.dp, end = 12.dp).width(if (lineCount >= 10) 18.dp else 10.dp),
+                    )
+                    Text(
+                        text = highlighted,
+                        style = CodeText,
+                        color = CodeCardTokens.Body,
+                        softWrap = false,
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .weight(1f)
                             .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 14.dp, vertical = 6.dp),
-                    ) {
-                        Text(
-                            text = "▸ ",
-                            fontFamily = CodeFontFamily,
-                            fontSize = 13.sp,
-                            lineHeight = 20.sp,
-                            color = CodeCardTokens.Muted,
-                        )
-                        Text(
-                            text = output,
-                            fontFamily = CodeFontFamily,
-                            fontSize = 13.sp,
-                            lineHeight = 20.sp,
-                            color = CodeCardTokens.Output,
-                        )
-                    }
-                } else {
-                    val linesCount = remember(code) { code.lines().size.coerceAtLeast(1) }
-                    val lineNumbersText = remember(linesCount) {
-                        (1..linesCount).joinToString("\n")
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 6.dp),
-                    ) {
-                        // Line numbers gutter: 20dp wide, right-aligned, Muted @ 60%
-                        Text(
-                            text = lineNumbersText,
-                            fontFamily = CodeFontFamily,
-                            fontSize = 13.sp,
-                            lineHeight = 20.sp,
-                            color = CodeCardTokens.Muted.copy(alpha = 0.6f),
-                            textAlign = TextAlign.End,
-                            modifier = Modifier.width(20.dp),
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        // Horizontally scrollable code text
-                        Text(
-                            text = highlighted,
-                            fontFamily = CodeFontFamily,
-                            fontSize = 13.sp,
-                            lineHeight = 20.sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                        )
-                    }
+                            .padding(end = 14.dp),
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CodeAction(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color,
+    description: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .height(40.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = description }
+            .padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(15.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp), color = tint)
     }
 }
 
@@ -407,12 +330,12 @@ fun highlightCode(code: String, language: String = "rust"): AnnotatedString {
     }
 }
 
-@Preview(name = "CodeBlock dark", showBackground = true, backgroundColor = 0xFF0B0E14)
+@Preview(name = "CodeBlock", showBackground = true, backgroundColor = 0xFF0B0E14, widthDp = 360)
 @Composable
 private fun CodeBlockPreview() {
     FerrisFeedTheme(darkTheme = true) {
         CodeBlock(
-            code = "fn main() {\n    let mut s = String::from(\"hi\");\n    takes(&s); // borrow, no move\n    println!(\"{s}\");\n}\n",
+            code = "fn main() {\n    let s = String::from(\"hi\");\n    takes(&s); // borrow, no move\n    println!(\"{s}\");\n}\n",
             language = "rust",
             output = "hi\n",
             modifier = Modifier.padding(16.dp),

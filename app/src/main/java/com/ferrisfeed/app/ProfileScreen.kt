@@ -1,368 +1,213 @@
 package com.ferrisfeed.app
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.Whatshot
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.ferrisfeed.coreui.AnimatedCounter
-import com.ferrisfeed.coreui.DesignPhilosophy
-import com.ferrisfeed.coreui.DisplayFont
-import com.ferrisfeed.coreui.FerrisButton
-import com.ferrisfeed.coreui.FerrisButtonStyle
-import com.ferrisfeed.coreui.FerrisColors
+import com.ferrisfeed.coreui.FerrisFeedTheme
+import com.ferrisfeed.coreui.FerrisIconButton
 import com.ferrisfeed.coreui.FerrisMark
+import com.ferrisfeed.coreui.FerrisSurface
+import com.ferrisfeed.coreui.FerrisTheme
+import com.ferrisfeed.coreui.LinearMeter
 import com.ferrisfeed.coreui.LocalBottomBarInset
-import com.ferrisfeed.coreui.LocalDesignPhilosophy
-import com.ferrisfeed.coreui.StreakFlame
-import com.ferrisfeed.coreui.glass
-import com.ferrisfeed.coreui.glassStroke
-import com.ferrisfeed.coreui.pressScale
-import com.ferrisfeed.coreui.tactileClickable
-import com.ferrisfeed.coreui.tactileDepth
+import com.ferrisfeed.coreui.NumberStyle
+import com.ferrisfeed.coreui.Overline
+import com.ferrisfeed.coreui.SegmentedControl
+import com.ferrisfeed.coreui.StatCell
+import com.ferrisfeed.coreui.TrackTag
+import com.ferrisfeed.coreui.Tracks
 import com.ferrisfeed.coreui.trackColor
-import com.ferrisfeed.feed.Reel
+import com.ferrisfeed.data.LearnerProfile
+import com.ferrisfeed.feed.FeedViewModel
+import com.ferrisfeed.path.FerrisStage
 
+private val FocusOptions = listOf(Tracks.RUST, LearnerProfile.FOCUS_BOTH, Tracks.SYSTEM_DESIGN)
+private val DayLetters = listOf("M", "T", "W", "T", "F", "S", "S")
+
+/**
+ * You tab (v3). Replaces the old profile hub, whose headline feature was a
+ * switch between two competing visual "philosophies". Now it answers the
+ * learner's questions: how am I doing, what am I good at, what should I
+ * practise, where are my saved lessons, and what am I learning.
+ */
 @Composable
 fun ProfileScreen(
     state: ProfileUiState,
-    onSelectPhilosophy: (DesignPhilosophy) -> Unit,
-    onOpenReel: (String) -> Unit,
-    onTopicClick: (String) -> Unit,
+    onOpenLesson: (String) -> Unit,
+    onOpenTopic: (String) -> Unit,
     onRemoveSaved: (String) -> Unit,
+    onChangeFocus: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val haptic = LocalHapticFeedback.current
-    val currentPhilosophy = LocalDesignPhilosophy.current
-
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            top = 56.dp,
-            end = 16.dp,
-            bottom = LocalBottomBarInset.current + 24.dp,
-        ),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .windowInsetsPadding(WindowInsets.statusBars),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = LocalBottomBarInset.current + 32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // 1. Header Profile Banner
-        item(key = "profile-header") {
-            ProfileHeaderCard(
-                xp = state.xp,
-                streak = state.streakDays,
+        item(key = "title") {
+            Text(
+                "You",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(top = 14.dp).semantics { heading() },
             )
         }
-
-        // 2. Design Philosophy Switcher (Studio Glass vs Neo-Brutalist HUD)
-        item(key = "philosophy-switcher") {
-            DesignPhilosophySwitcher(
-                current = state.designPhilosophy,
-                onSelect = { philosophy ->
-                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                    onSelectPhilosophy(philosophy)
-                },
-            )
-        }
-
-        // 3. Real Working Streak Card with 7-Day Week Indicator
-        item(key = "streak-card") {
-            WorkingStreakCard(
-                streakDays = state.streakDays,
-                activeDays = state.activeDaysThisWeek,
-            )
-        }
-
-        // 4. User Stats Grid
-        item(key = "stats-grid") {
-            StatsGrid(
-                xp = state.xp,
-                streakDays = state.streakDays,
-                masteredCount = state.completedReelsCount,
-                savedCount = state.savedReels.size,
-            )
-        }
-
-        // 5. Topic Mastery Breakdown: Topics I'm Good At
-        item(key = "topics-good-at") {
-            TopicMasterySection(
-                title = "Topics I'm Good At",
-                subtitle = "Mastery ≥ 70% · Strong foundation",
-                items = state.topicsGoodAt,
-                accentColor = FerrisColors.MintCorrect,
-                icon = Icons.Filled.Star,
-                emptyMessage = "Complete quizzes with high accuracy to build topic mastery!",
-                onTopicClick = onTopicClick,
-            )
-        }
-
-        // 6. Topic Mastery Breakdown: Topics to Practice
-        item(key = "topics-to-practice") {
-            TopicMasterySection(
-                title = "Topics to Practice",
-                subtitle = "Needs review · Tap to sharpen",
-                items = state.topicsToPractice,
-                accentColor = FerrisColors.FerrisOrange,
-                icon = Icons.Filled.Warning,
-                emptyMessage = "No weak topics detected. Keep learning!",
-                onTopicClick = onTopicClick,
-            )
-        }
-
-        // 7. Saved Reels (Bookmarks)
-        item(key = "saved-reels-header") {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = "Saved Reels (${state.savedReels.size})",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontFamily = DisplayFont,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+        item(key = "rank") { RankCard(state) }
+        item(key = "week") { WeekCard(state) }
+        item(key = "stats") {
+            FerrisSurface(Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(20.dp)) {
+                    StatCell(value = "${state.lessonsDone}", label = "lessons done")
+                    StatCell(value = state.accuracy?.let { "$it%" } ?: "–", label = "accuracy")
+                    StatCell(value = "${state.quiz.total}", label = "checks taken")
+                }
             }
         }
 
-        if (state.savedReels.isEmpty()) {
-            item(key = "empty-saved-reels") {
-                EmptySavedCard()
+        if (state.strengths.isNotEmpty() || state.practice.isNotEmpty()) {
+            item(key = "topics") {
+                FerrisSurface(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (state.strengths.isNotEmpty()) {
+                            Overline("Strongest topics")
+                            state.strengths.forEach { MasteryRow(it, onClick = { onOpenTopic(it.key) }) }
+                        }
+                        if (state.practice.isNotEmpty()) {
+                            if (state.strengths.isNotEmpty()) Spacer(Modifier.height(4.dp))
+                            Overline("Worth practising")
+                            state.practice.forEach { MasteryRow(it, onClick = { onOpenTopic(it.key) }) }
+                        }
+                    }
+                }
+            }
+        }
+
+        item(key = "saved-title") {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                Text(
+                    "Saved lessons",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.weight(1f).semantics { heading() },
+                )
+                if (state.saved.isNotEmpty()) {
+                    Text("${state.saved.size}", style = MaterialTheme.typography.labelLarge.merge(NumberStyle), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        if (state.saved.isEmpty()) {
+            item(key = "saved-empty") {
+                Text(
+                    "Tap the bookmark on any lesson, or double-tap the lesson, to keep it here.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         } else {
-            items(state.savedReels, key = { "saved-${it.id}" }) { reel ->
-                SavedReelCard(
-                    reel = reel,
-                    onOpen = { onOpenReel(reel.id) },
-                    onRemove = { onRemoveSaved(reel.id) },
-                )
+            items(state.saved, key = { "saved-${it.id}" }) { lesson ->
+                FerrisSurface(Modifier.fillMaxWidth(), onClick = { onOpenLesson(lesson.id) }) {
+                    Row(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            TrackTag(lesson.track, lesson.topicTitle)
+                            Text(
+                                lesson.hook,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        FerrisIconButton(
+                            icon = Icons.Filled.Bookmark,
+                            contentDescription = "Remove from saved",
+                            onClick = { onRemoveSaved(lesson.id) },
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
             }
         }
-    }
-}
 
-@Composable
-private fun ProfileHeaderCard(
-    xp: Int,
-    streak: Int,
-) {
-    val level = (xp / 100) + 1
-    val rankTitle = when {
-        level >= 10 -> "Rust Core Contributor"
-        level >= 5 -> "Systems Architect"
-        level >= 3 -> "Memory Wrangler"
-        else -> "Ferris Explorer"
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .tactileDepth(MaterialTheme.shapes.large, 6.dp)
-            .clip(MaterialTheme.shapes.large)
-            .glass(MaterialTheme.shapes.large)
-            .padding(18.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            FerrisMark(size = 56.dp, animated = true)
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = "Level $level",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontFamily = DisplayFont,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
+        item(key = "focus") {
+            Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Learning focus", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
                 Text(
-                    text = rankTitle,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontFamily = DisplayFont,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = "$xp Total Experience",
+                    "Shapes the order of new lessons in Learn. Everything stays available in Path.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DesignPhilosophySwitcher(
-    current: DesignPhilosophy,
-    onSelect: (DesignPhilosophy) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .tactileDepth(MaterialTheme.shapes.medium, 4.dp)
-            .clip(MaterialTheme.shapes.medium)
-            .glass(MaterialTheme.shapes.medium)
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = "DESIGN PHILOSOPHY",
-                style = MaterialTheme.typography.labelSmall,
-                fontFamily = DisplayFont,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = if (current == DesignPhilosophy.StudioGlass) "Studio Glass" else "Neo-Brutalism",
-                style = MaterialTheme.typography.labelSmall,
-                fontFamily = DisplayFont,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            PhilosophyOptionChip(
-                label = "Studio Glass",
-                subtitle = "Specular Glow & Depth",
-                isSelected = current == DesignPhilosophy.StudioGlass,
-                onClick = { onSelect(DesignPhilosophy.StudioGlass) },
-                modifier = Modifier.weight(1f),
-            )
-            PhilosophyOptionChip(
-                label = "Neo-Brutalism",
-                subtitle = "Solid 3D & Contrast",
-                isSelected = current == DesignPhilosophy.NeoBrutalism,
-                onClick = { onSelect(DesignPhilosophy.NeoBrutalism) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
-}
-
-@Composable
-private fun PhilosophyOptionChip(
-    label: String,
-    subtitle: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val shape = RoundedCornerShape(12.dp)
-    val bg = if (isSelected) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-    }
-    val borderStroke = if (isSelected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-    }
-
-    val interactionSource = remember { MutableInteractionSource() }
-
-    Box(
-        modifier = modifier
-            .tactileClickable(interactionSource)
-            .clip(shape)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .background(bg)
-            .border(if (isSelected) 1.5.dp else 0.5.dp, borderStroke, shape)
-            .padding(vertical = 10.dp, horizontal = 12.dp),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(14.dp),
-                    )
-                }
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontFamily = DisplayFont,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                SegmentedControl(
+                    options = listOf("Rust", "Both", "System Design"),
+                    selectedIndex = FocusOptions.indexOf(state.focus).coerceAtLeast(0),
+                    onSelect = { onChangeFocus(FocusOptions[it]) },
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun RankCard(state: ProfileUiState) {
+    val palette = FerrisTheme.palette
+    val next = FerrisStage.entries.firstOrNull { it.minXp > state.xp }
+    FerrisSurface(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FerrisMark(size = 52.dp, animated = false)
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Overline("Rank")
+                    Text(state.stage.label, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("${state.xp}", style = MaterialTheme.typography.headlineSmall.merge(NumberStyle), color = palette.xp)
+                    Text("XP", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            LinearMeter(progress = state.stageProgress, color = palette.xp, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
             Text(
-                text = subtitle,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                text = if (next != null && state.xpToNext != null) "${state.xpToNext} XP to ${next.label}" else "Top rank reached",
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -370,455 +215,111 @@ private fun PhilosophyOptionChip(
 }
 
 @Composable
-private fun WorkingStreakCard(
-    streakDays: Int,
-    activeDays: List<Boolean>, // 7 booleans for Mon..Sun
-) {
-    val daysLabels = listOf("M", "T", "W", "T", "F", "S", "S")
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .tactileDepth(MaterialTheme.shapes.large, 6.dp)
-            .clip(MaterialTheme.shapes.large)
-            .glass(MaterialTheme.shapes.large)
-            .padding(18.dp),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+private fun WeekCard(state: ProfileUiState) {
+    val palette = FerrisTheme.palette
+    val goal = FeedViewModel.DAILY_GOAL_XP
+    FerrisSurface(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Overline("Streak")
                     Text(
-                        text = "DAILY STREAK",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontFamily = DisplayFont,
-                        fontWeight = FontWeight.Bold,
-                        color = FerrisColors.FerrisOrange,
-                    )
-                    Text(
-                        text = if (streakDays > 0) "$streakDays Days Strong!" else "Start Your Streak!",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontFamily = DisplayFont,
-                        fontWeight = FontWeight.Bold,
+                        text = when (state.streakDays) {
+                            0 -> "Start a streak today"
+                            1 -> "1 day"
+                            else -> "${state.streakDays} days"
+                        },
+                        style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-
-                StreakFlame(
-                    streakDays = streakDays,
-                    celebrate = streakDays >= 3,
-                )
-            }
-
-            Text(
-                text = "Keep your flame blazing by answering at least 1 quiz every calendar day.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            // 7-day indicators
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                daysLabels.forEachIndexed { index, dayLetter ->
-                    val isActive = activeDays.getOrNull(index) ?: false
-                    DayIndicatorPill(
-                        day = dayLetter,
-                        isActive = isActive,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DayIndicatorPill(
-    day: String,
-    isActive: Boolean,
-) {
-    val shape = CircleShape
-    val bg = if (isActive) FerrisColors.FerrisOrange else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-    val textCol = if (isActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(34.dp)
-                .clip(shape)
-                .background(bg)
-                .border(
-                    width = 1.dp,
-                    color = if (isActive) FerrisColors.FerrisOrange else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                    shape = shape,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (isActive) {
-                Icon(
-                    imageVector = Icons.Filled.Whatshot,
-                    contentDescription = "Active day",
-                    tint = Color.White,
-                    modifier = Modifier.size(16.dp),
-                )
-            } else {
-                Text(
-                    text = day,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = textCol,
-                )
-            }
-        }
-        Text(
-            text = day,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun StatsGrid(
-    xp: Int,
-    streakDays: Int,
-    masteredCount: Int,
-    savedCount: Int,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            StatMetricCard(
-                label = "Total XP",
-                value = "$xp",
-                icon = Icons.Filled.Bolt,
-                tint = FerrisColors.GoldXp,
-                modifier = Modifier.weight(1f),
-            )
-            StatMetricCard(
-                label = "Active Streak",
-                value = "$streakDays Days",
-                icon = Icons.Filled.LocalFireDepartment,
-                tint = FerrisColors.FerrisOrange,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            StatMetricCard(
-                label = "Mastered",
-                value = "$masteredCount Reels",
-                icon = Icons.Filled.Check,
-                tint = FerrisColors.MintCorrect,
-                modifier = Modifier.weight(1f),
-            )
-            StatMetricCard(
-                label = "Saved",
-                value = "$savedCount Reels",
-                icon = Icons.Filled.Bookmark,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
-}
-
-@Composable
-private fun StatMetricCard(
-    label: String,
-    value: String,
-    icon: ImageVector,
-    tint: Color,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .tactileDepth(MaterialTheme.shapes.medium, 4.dp)
-            .clip(MaterialTheme.shapes.medium)
-            .glass(MaterialTheme.shapes.medium)
-            .padding(14.dp),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = tint,
-                    modifier = Modifier.size(18.dp),
-                )
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontFamily = DisplayFont,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-    }
-}
-
-@Composable
-private fun TopicMasterySection(
-    title: String,
-    subtitle: String,
-    items: List<TopicMasteryItem>,
-    accentColor: Color,
-    icon: ImageVector,
-    emptyMessage: String,
-    onTopicClick: (String) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .tactileDepth(MaterialTheme.shapes.large, 4.dp)
-            .clip(MaterialTheme.shapes.large)
-            .glass(MaterialTheme.shapes.large)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = accentColor,
-                        modifier = Modifier.size(16.dp),
-                    )
+                Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontFamily = DisplayFont,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        text = "${state.todayXp.coerceAtMost(999)}/$goal",
+                        style = MaterialTheme.typography.titleMedium.merge(NumberStyle),
+                        color = if (state.todayXp >= goal) palette.successInk else MaterialTheme.colorScheme.onSurface,
                     )
-                }
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        if (items.isEmpty()) {
-            Text(
-                text = emptyMessage,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                modifier = Modifier.padding(vertical = 4.dp),
-            )
-        } else {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items.take(5).forEach { topicItem ->
-                    TopicMasteryRow(
-                        item = topicItem,
-                        accentColor = accentColor,
-                        onClick = { onTopicClick(topicItem.id) },
-                    )
+                    Text("today's XP", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun TopicMasteryRow(
-    item: TopicMasteryItem,
-    accentColor: Color,
-    onClick: () -> Unit,
-) {
-    val pct = (item.score * 100).toInt()
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 6.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontFamily = DisplayFont,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(Modifier.height(4.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .height(4.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(fraction = item.score.coerceIn(0f, 1f))
-                        .clip(CircleShape)
-                        .background(accentColor),
-                )
-            }
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = "$pct%",
-                style = MaterialTheme.typography.labelMedium,
-                fontFamily = DisplayFont,
-                fontWeight = FontWeight.Bold,
-                color = accentColor,
-            )
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = "Practice topic",
-                tint = accentColor,
-                modifier = Modifier.size(16.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun EmptySavedCard() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .tactileDepth(MaterialTheme.shapes.medium, 4.dp)
-            .clip(MaterialTheme.shapes.medium)
-            .glass(MaterialTheme.shapes.medium)
-            .padding(20.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.BookmarkBorder,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(32.dp),
-            )
-            Text(
-                text = "No saved reels yet",
-                style = MaterialTheme.typography.bodyMedium,
-                fontFamily = DisplayFont,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = "Double-tap any lesson card to bookmark it for quick access here.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SavedReelCard(
-    reel: Reel,
-    onOpen: () -> Unit,
-    onRemove: () -> Unit,
-) {
-    val trackCol = trackColor(reel.track.id)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .tactileDepth(MaterialTheme.shapes.medium, 4.dp)
-            .clip(MaterialTheme.shapes.medium)
-            .glass(MaterialTheme.shapes.medium)
-            .clickable(onClick = onOpen)
-            .padding(14.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(trackCol.copy(alpha = 0.2f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                    ) {
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                DayLetters.forEachIndexed { i, letter ->
+                    val active = state.weekActive.getOrElse(i) { false }
+                    val isToday = i == state.todayIndex
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(if (active) palette.rust else palette.raised)
+                                .border(if (isToday) 2.dp else 0.dp, if (isToday) MaterialTheme.colorScheme.onSurface else palette.raised, CircleShape)
+                                .semantics { contentDescription = if (active) "Active" else "No activity" },
+                        )
+                        Spacer(Modifier.height(6.dp))
                         Text(
-                            text = reel.track.name.uppercase(),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                            fontFamily = DisplayFont,
-                            fontWeight = FontWeight.Bold,
-                            color = trackCol,
+                            letter,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isToday) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Text(
-                        text = "Level ${reel.level}",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = reel.hook,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = DisplayFont,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
             }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Filled.Bookmark,
-                    contentDescription = "Remove bookmark",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = onRemove)
-                        .padding(4.dp),
-                )
-            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Answer one quick check a day to keep the streak alive.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
+    }
+}
+
+@Composable
+private fun MasteryRow(item: TopicMasteryItem, onClick: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(vertical = 6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(trackColor(item.track)))
+            Spacer(Modifier.width(10.dp))
+            Text(item.title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+            Text(
+                "${(item.score * 100).toInt()}%",
+                style = MaterialTheme.typography.labelMedium.merge(NumberStyle),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        LinearMeter(progress = item.score, color = trackColor(item.track), height = 4.dp, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Preview(name = "You · dark", showBackground = true, backgroundColor = 0xFF0B0E14, widthDp = 360, heightDp = 1200)
+@Composable
+private fun ProfilePreviewDark() {
+    FerrisFeedTheme(darkTheme = true) {
+        ProfileScreen(
+            state = ProfileUiState(
+                xp = 640,
+                streakDays = 4,
+                todayXp = 35,
+                weekActive = listOf(true, true, false, true, true, false, false),
+                todayIndex = 4,
+                lessonsDone = 42,
+                strengths = listOf(TopicMasteryItem("ownership", "Ownership & moves", Tracks.RUST, 0.82f)),
+                practice = listOf(TopicMasteryItem("caching", "Caching", Tracks.SYSTEM_DESIGN, 0.21f)),
+                saved = listOf(SavedLesson("1", Tracks.RUST, "Lifetimes", "Three elision rules explain most lifetime errors.")),
+                isLoading = false,
+            ),
+            onOpenLesson = {},
+            onOpenTopic = {},
+            onRemoveSaved = {},
+            onChangeFocus = {},
+        )
     }
 }

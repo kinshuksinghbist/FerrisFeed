@@ -1,28 +1,20 @@
 package com.ferrisfeed.feed
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,37 +22,29 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,326 +54,373 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.ferrisfeed.coreui.ConfettiBurst
-import com.ferrisfeed.coreui.DisplayFont
 import com.ferrisfeed.coreui.FerrisButton
 import com.ferrisfeed.coreui.FerrisButtonStyle
-import com.ferrisfeed.coreui.FerrisColors
 import com.ferrisfeed.coreui.FerrisFeedTheme
 import com.ferrisfeed.coreui.FerrisIconButton
 import com.ferrisfeed.coreui.FerrisMark
 import com.ferrisfeed.coreui.FerrisMotion
+import com.ferrisfeed.coreui.FerrisTheme
+import com.ferrisfeed.coreui.FerrisType
+import com.ferrisfeed.coreui.LessonContent
+import com.ferrisfeed.coreui.LinearMeter
 import com.ferrisfeed.coreui.LocalBottomBarInset
 import com.ferrisfeed.coreui.LocalReduceMotion
-import com.ferrisfeed.coreui.QuizCard
+import com.ferrisfeed.coreui.NumberStyle
+import com.ferrisfeed.coreui.Overline
+import com.ferrisfeed.coreui.ProgressRing
+import com.ferrisfeed.coreui.QuizContent
+import com.ferrisfeed.coreui.QuizResult
 import com.ferrisfeed.coreui.QuizUiModel
-import com.ferrisfeed.coreui.ReelCard
-import com.ferrisfeed.coreui.ReelSkeleton
-import com.ferrisfeed.coreui.SwipeCue
-import com.ferrisfeed.coreui.glass
-import com.ferrisfeed.coreui.staggeredEntrance
-import com.ferrisfeed.coreui.trackColor
-import androidx.compose.ui.tooling.preview.Preview
-import kotlinx.coroutines.delay
+import com.ferrisfeed.coreui.SkeletonBlock
+import com.ferrisfeed.coreui.StreakPill
+import com.ferrisfeed.coreui.TrackTag
+import com.ferrisfeed.coreui.XpPill
+import com.ferrisfeed.coreui.trackTextColor
+import com.ferrisfeed.data.Curriculum
+import com.ferrisfeed.feed.FeedPaging.Page
 import kotlinx.coroutines.launch
 
 /**
- * Doomscroll feed (Spec v2 + P7 pure visual & interactive overhaul).
+ * The Learn feed (v3).
  *
- * - Full-screen [VerticalPager], one reel per page. No inner vertical scroll
- *   anywhere: the pager owns all vertical motion, and a low snap threshold
- *   means even a small swipe commits to the next page.
- * - Two pages per reel: the lesson ([ReelCard] with the code well contained
- *   inside it, flip-to-output included) and then the quiz on its own page
- *   ([QuizCard] with the hook as the cue). Quiz answers are the sole SRS
- *   signal via [FeedViewModel.onGrade].
- * - Like/save float below the card on [ReelActionRow]; double-tap anywhere toggles save.
+ * A full-screen vertical pager played in sets of five: lesson → quiz for each
+ * reel, then a recap page that closes the set (score, XP, streak, daily goal,
+ * what's next). Pages scroll internally only when their content is taller
+ * than the screen; otherwise every swipe goes straight to the pager, so short
+ * lessons still advance with the smallest flick and long ones never clip.
+ *
+ * The top bar is owned here (not by the app shell) so there is exactly one:
+ * streak · set progress · XP on Learn, and back · topic · progress when the
+ * feed is scoped to a topic or a single lesson.
  */
 @Composable
 fun FeedScreen(
     viewModel: FeedViewModel,
     modifier: Modifier = Modifier,
-    /** Deep-link / search entry: jump to this reel once the queue loads. */
-    focusedReelId: String? = null,
     onBack: (() -> Unit)? = null,
     title: String? = null,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val stats by viewModel.stats.collectAsState()
     val swipeHintSeen by viewModel.swipeHintSeen.collectAsState()
 
-    if (state.isLoading && state.reels.isEmpty()) {
-        FeedLoading(modifier = modifier)
-        return
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .windowInsetsPadding(WindowInsets.statusBars),
+    ) {
+        when {
+            state.isLoading && state.reels.isEmpty() -> {
+                FeedTopBar(onBack = onBack, title = title, stats = stats, progress = null)
+                FeedLoading()
+            }
+            state.reels.isEmpty() -> {
+                FeedTopBar(onBack = onBack, title = title, stats = stats, progress = null)
+                EmptyFeed(onRetry = viewModel::retryLoad)
+            }
+            else -> key(state.queueVersion) {
+                FeedPager(
+                    state = state,
+                    stats = stats,
+                    swipeHintSeen = swipeHintSeen,
+                    viewModel = viewModel,
+                    onBack = onBack,
+                    title = title,
+                )
+            }
+        }
     }
+}
 
-    // Loaded but the database yielded nothing (seeding failed or was wiped).
-    if (state.reels.isEmpty()) {
-        EmptyFeed(onRetry = { viewModel.retryLoad() }, modifier = modifier)
-        return
-    }
-
-    // Two pages per reel: even = lesson (info + contained code), odd = quiz.
-    // The ViewModel still thinks in reels; this screen maps page <-> reel.
-    val pageCount = state.reels.size * 2
+@Composable
+private fun FeedPager(
+    state: FeedUiState,
+    stats: FeedStats,
+    swipeHintSeen: Boolean,
+    viewModel: FeedViewModel,
+    onBack: (() -> Unit)?,
+    title: String?,
+) {
+    val reels = state.reels
+    val reelCount = reels.size
+    val pageCount = FeedPaging.pageCount(reelCount)
     val pagerState = rememberPagerState(
-        initialPage = (state.currentIndex * 2).coerceIn(0, maxOf(0, pageCount - 1)),
+        initialPage = FeedPaging.lessonPageOf(state.currentIndex).coerceIn(0, maxOf(0, pageCount - 1)),
         pageCount = { pageCount },
     )
-
-    // ViewModel <- pager position, deduped per reel so lesson -> quiz on the
-    // same reel reports once instead of logging a phantom skip on its lesson.
-    var lastReportedReel by remember { mutableStateOf(-1) }
-    LaunchedEffect(pagerState) {
+    LaunchedEffect(pagerState, reelCount) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
-            val reelIndex = page / 2
-            if (reelIndex != lastReportedReel) {
-                lastReportedReel = reelIndex
-                viewModel.onPageChanged(reelIndex)
+            viewModel.onPageChanged(FeedPaging.reelOf(FeedPaging.pageAt(page, reelCount), reelCount))
+        }
+    }
+
+    val currentPage = FeedPaging.pageAt(pagerState.currentPage.coerceIn(0, maxOf(0, pageCount - 1)), reelCount)
+    val scoped = onBack != null
+    val heading = title ?: Curriculum.titleOf(reels.first().topic)
+    FeedTopBar(
+        onBack = onBack,
+        title = heading,
+        stats = stats,
+        progress = {
+            if (scoped) {
+                val reel = FeedPaging.reelOf(currentPage, reelCount)
+                LinearMeter(
+                    progress = (reel + 1f) / reelCount,
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 4.dp,
+                )
+            } else {
+                SetProgress(page = currentPage, reels = reels, answers = state.answers)
             }
-        }
-    }
-    // Pager <- ViewModel restores (e.g. process recreation keeps DataStore index).
-    LaunchedEffect(state.currentIndex) {
-        val target = state.currentIndex * 2
-        if (pagerState.currentPage != target) {
-            pagerState.scrollToPage(target)
-        }
-    }
-    // Deep-link / search entry point: jump once the queue is loaded.
-    LaunchedEffect(focusedReelId) {
-        if (focusedReelId != null) viewModel.focusReel(focusedReelId)
-    }
+        },
+        subtitle = if (scoped) {
+            "Lesson ${FeedPaging.reelOf(currentPage, reelCount) + 1} of $reelCount"
+        } else {
+            null
+        },
+    )
 
-    var confettiTrigger by remember { mutableIntStateOf(0) }
-    LaunchedEffect(viewModel) {
-        viewModel.mastered.collect {
-            confettiTrigger++
-        }
-    }
-
-    // Double-tap save burst feedback (P6 33i)
-    val haptic = LocalHapticFeedback.current
-    val coroutineScope = rememberCoroutineScope()
-    var bookmarkBurstOffset by remember { mutableStateOf<Offset?>(null) }
-    val bookmarkBurstScale = remember { Animatable(0.4f) }
-    val bookmarkBurstAlpha = remember { Animatable(1f) }
-
-    fun handleDoubleTapSave(reelId: String, isSaved: Boolean, tapOffset: Offset) {
-        val willSave = !isSaved
-        viewModel.onToggleSave(reelId)
-        if (willSave) {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            bookmarkBurstOffset = tapOffset
-            coroutineScope.launch {
-                bookmarkBurstScale.snapTo(0.4f)
-                bookmarkBurstAlpha.snapTo(1f)
-                launch {
-                    bookmarkBurstScale.animateTo(1.2f, FerrisMotion.Bouncy)
-                    bookmarkBurstScale.animateTo(1f, FerrisMotion.Snappy)
-                }
-                launch {
-                    delay(200)
-                    bookmarkBurstAlpha.animateTo(0f, tween(400, easing = LinearOutSlowInEasing))
-                    bookmarkBurstOffset = null
-                }
+    val haptics = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+    var burstAt by remember { mutableStateOf<Offset?>(null) }
+    val burst = remember { Animatable(0f) }
+    fun doubleTapSave(reelId: String, at: Offset) {
+        val nowSaved = viewModel.onToggleSave(reelId)
+        if (nowSaved) {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            burstAt = at
+            scope.launch {
+                burst.snapTo(0f)
+                burst.animateTo(1f, tween(650))
+                burstAt = null
             }
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize()) {
         VerticalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
-            beyondViewportPageCount = 5, // prefetch next 5 compositions
-            // Low positional threshold: small drags still commit to next page.
-            flingBehavior = PagerDefaults.flingBehavior(
-                state = pagerState,
-                snapPositionalThreshold = 0.25f,
-            ),
-        ) { page ->
-            val reel = state.reels.getOrNull(page / 2) ?: return@VerticalPager
-            val isSaved = state.savedIds.contains(reel.id)
-            val isLiked = state.likedIds.contains(reel.id)
-
-            // Per-page 3D transform (P6 33b)
-            val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction).coerceIn(-1f, 1f)
-            val absOffset = kotlin.math.abs(pageOffset)
-            val density = LocalDensity.current.density
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        scaleX = 1f - 0.06f * absOffset
-                        scaleY = 1f - 0.06f * absOffset
-                        alpha = 1f - 0.5f * absOffset
-                        rotationX = -6f * pageOffset
-                        cameraDistance = 12f * density
-                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
-                    },
-            ) {
-                if (page % 2 == 0) {
-                    InfoPage(
+            beyondViewportPageCount = 2,
+            key = { page -> pageKey(FeedPaging.pageAt(page, reelCount), reels) },
+            flingBehavior = PagerDefaults.flingBehavior(state = pagerState, snapPositionalThreshold = 0.2f),
+        ) { pageIndex ->
+            when (val page = FeedPaging.pageAt(pageIndex, reelCount)) {
+                is Page.Lesson -> {
+                    val reel = reels[page.reel]
+                    LessonPage(
                         reel = reel,
-                        isSaved = isSaved,
-                        isLiked = isLiked,
-                        onLike = { viewModel.onLike(reel.id, !isLiked) },
-                        onSave = { viewModel.onSave(reel.id, !isSaved) },
-                        onDoubleTapSave = { offset -> handleDoubleTapSave(reel.id, isSaved, offset) },
-                        onInteract = { viewModel.onInteract() },
-                        settled = pagerState.settledPage == page,
+                        saved = reel.id in state.savedIds,
+                        emphasizeHint = !swipeHintSeen && pageIndex == 0,
+                        onToggleSave = { viewModel.onToggleSave(reel.id) },
+                        onDoubleTap = { at -> doubleTapSave(reel.id, at) },
                     )
-                } else {
+                }
+                is Page.Quiz -> {
+                    val reel = reels[page.reel]
                     QuizPage(
                         reel = reel,
-                        isSaved = isSaved,
-                        isLiked = isLiked,
-                        settled = pagerState.settledPage == page,
-                        answeredState = state.answeredQuizzes[reel.id],
-                        onLike = { viewModel.onLike(reel.id, !isLiked) },
-                        onSave = { viewModel.onSave(reel.id, !isSaved) },
-                        onDoubleTapSave = { offset -> handleDoubleTapSave(reel.id, isSaved, offset) },
-                        onGrade = { correct, label -> viewModel.onGrade(reel.id, correct, label) },
-                        onInteract = { viewModel.onInteract() },
+                        number = page.reel % FeedPaging.SET_SIZE + 1,
+                        ofCount = FeedPaging.reelsInSet(FeedPaging.setOf(page.reel), reelCount),
+                        record = state.answers[reel.id],
+                        isLastInSet = page.reel == FeedPaging.reelRange(FeedPaging.setOf(page.reel), reelCount).last,
+                        onAnswer = { r -> viewModel.onGrade(reel.id, r.correct, r.choice) },
+                    )
+                }
+                is Page.Recap -> {
+                    val range = FeedPaging.reelRange(page.set, reelCount)
+                    RecapPage(
+                        setReels = range.map { reels[it] },
+                        answers = state.answers,
+                        stats = stats,
+                        nextReel = reels.getOrNull(range.last + 1),
+                        isFinal = page.set == FeedPaging.setCount(reelCount) - 1,
+                        scopedTitle = if (scoped) heading else null,
+                        settled = pagerState.settledPage == pageIndex,
+                        onBack = onBack,
                     )
                 }
             }
         }
 
-        // Smooth continuous session queue progress indicator under stat bar
-        SessionProgressBar(
-            currentPage = pagerState.currentPage,
-            totalPages = pageCount,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 48.dp),
-        )
-
-        // Top-left back chip when route provides onBack (P6 33d)
-        if (onBack != null && title != null) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(start = 16.dp, top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FerrisIconButton(
-                    icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    onClick = onBack,
-                    size = 44.dp,
-                )
-                Box(
-                    modifier = Modifier
-                        .height(36.dp)
-                        .glass(CircleShape)
-                        .clip(CircleShape)
-                        .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontFamily = DisplayFont,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-            }
-        }
-
-        // First-run swipe cue on lesson page (P6 33e)
-        AnimatedVisibility(
-            visible = !swipeHintSeen && pagerState.currentPage == 0,
-            enter = fadeIn(animationSpec = FerrisMotion.Quick),
-            exit = fadeOut(animationSpec = FerrisMotion.Quick),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = LocalBottomBarInset.current + 12.dp),
-        ) {
-            SwipeCue(text = "Swipe up")
-        }
-
-        // Double-tap bookmark burst (P6 33i)
-        if (bookmarkBurstOffset != null) {
-            val offset = bookmarkBurstOffset!!
+        val at = burstAt
+        if (at != null) {
             val density = LocalDensity.current
+            val half = with(density) { 36.dp.toPx() }
+            val t = burst.value
             Icon(
                 imageVector = Icons.Filled.Bookmark,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
-                    .offset {
-                        IntOffset(
-                            x = (offset.x - with(density) { 48.dp.toPx() }).toInt(),
-                            y = (offset.y - with(density) { 48.dp.toPx() }).toInt(),
-                        )
-                    }
-                    .size(96.dp)
-                    .scale(bookmarkBurstScale.value)
-                    .alpha(bookmarkBurstAlpha.value),
+                    .offset { IntOffset((at.x - half).toInt(), (at.y - half).toInt()) }
+                    .size(72.dp)
+                    .graphicsLayer {
+                        val s = if (t < 0.35f) 0.5f + t / 0.35f * 0.7f else 1.2f - (t - 0.35f) * 0.3f
+                        scaleX = s
+                        scaleY = s
+                        alpha = if (t < 0.6f) 1f else (1f - (t - 0.6f) / 0.4f)
+                    },
             )
         }
-
-        ConfettiBurst(trigger = confettiTrigger, modifier = Modifier.fillMaxSize())
     }
 }
 
-/**
- * Lesson page: info card ([ReelCard]) with the code well contained inside it.
- * No quiz here — it lives on [QuizPage].
- */
+private fun pageKey(page: Page, reels: List<Reel>): String = when (page) {
+    is Page.Lesson -> "L-" + reels[page.reel].id
+    is Page.Quiz -> "Q-" + reels[page.reel].id
+    is Page.Recap -> "R-" + page.set
+}
+
+// ---------------------------------------------------------------------------
+// Top bar
+// ---------------------------------------------------------------------------
+
 @Composable
-private fun InfoPage(
-    reel: Reel,
-    isSaved: Boolean,
-    isLiked: Boolean,
-    onLike: () -> Unit,
-    onSave: () -> Unit,
-    onDoubleTapSave: (Offset) -> Unit,
-    onInteract: () -> Unit,
-    settled: Boolean = true,
+private fun FeedTopBar(
+    onBack: (() -> Unit)?,
+    title: String?,
+    stats: FeedStats,
+    progress: (@Composable () -> Unit)?,
+    subtitle: String? = null,
 ) {
-    val trackColor = trackColor(reel.track.id)
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .drawBehind {
-                // Full-bleed track gradient behind lesson card (P6 33c)
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            trackColor.copy(alpha = 0.22f),
-                            trackColor.copy(alpha = 0.06f),
-                            Color.Transparent,
-                        ),
-                    ),
-                )
-            }
-            .pointerInput(reel.id) {
-                detectTapGestures(onDoubleTap = { offset -> onDoubleTapSave(offset) })
-            },
-    ) {
-        // Content column: info with the code well contained.
-        // No scroll: everything must fit, the pager handles all motion.
-        Column(
+    Column(Modifier.fillMaxWidth()) {
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 12.dp, end = 12.dp, top = 56.dp, bottom = LocalBottomBarInset.current + 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = if (onBack != null) 4.dp else 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            ReelCard(
+            if (onBack != null) {
+                FerrisIconButton(
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    onClick = onBack,
+                )
+                Column(Modifier.weight(1f).padding(start = 4.dp)) {
+                    Text(
+                        text = title.orEmpty(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                XpPill(stats.xp, Modifier.padding(end = 12.dp))
+            } else {
+                StreakPill(stats.streakDays)
+                Box(Modifier.weight(1f).padding(horizontal = 14.dp)) {
+                    progress?.invoke()
+                }
+                XpPill(stats.xp)
+            }
+        }
+        if (onBack != null && progress != null) {
+            Box(Modifier.padding(horizontal = 16.dp)) { progress() }
+            Spacer(Modifier.height(4.dp))
+        }
+    }
+}
+
+/** Five segments for the current set, coloured by each quiz result. */
+@Composable
+private fun SetProgress(
+    page: Page,
+    reels: List<Reel>,
+    answers: Map<String, AnswerRecord>,
+) {
+    val palette = FerrisTheme.palette
+    val reelCount = reels.size
+    val set = when (page) {
+        is Page.Recap -> page.set
+        else -> FeedPaging.setOf(FeedPaging.reelOf(page, reelCount))
+    }
+    val range = FeedPaging.reelRange(set, reelCount)
+    val currentReel = FeedPaging.reelOf(page, reelCount)
+    val position = currentReel - range.first + 1
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                contentDescription = if (page is Page.Recap) "Set complete" else "Lesson $position of ${range.count()} in this set"
+            },
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        range.forEach { i ->
+            val record = answers[reels[i].id]
+            val color = when {
+                record?.correct == true -> palette.success
+                record?.correct == false -> palette.danger
+                i == currentReel && page !is Page.Recap -> MaterialTheme.colorScheme.onBackground
+                i < currentReel || page is Page.Recap -> MaterialTheme.colorScheme.onSurfaceVariant
+                else -> palette.hairline
+            }
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(6.dp)
+                    .clip(CircleShape)
+                    .background(color),
+            )
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Pages
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun LessonPage(
+    reel: Reel,
+    saved: Boolean,
+    emphasizeHint: Boolean,
+    onToggleSave: () -> Unit,
+    onDoubleTap: (Offset) -> Unit,
+) {
+    val haptics = LocalHapticFeedback.current
+    Box(
+        Modifier
+            .fillMaxSize()
+            .pointerInput(reel.id) { detectTapGestures(onDoubleTap = onDoubleTap) },
+    ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = LocalBottomBarInset.current + 20.dp),
+        ) {
+            LessonContent(
                 track = reel.track.id,
+                topicTitle = Curriculum.titleOf(reel.topic),
                 level = reel.level,
                 hook = reel.hook,
                 body = reel.bodyMd,
@@ -397,180 +428,330 @@ private fun InfoPage(
                 code = reel.code,
                 language = reel.language,
                 output = reel.output,
-                animateDifficulty = settled,
-                settled = settled,
             )
-            ReelActionRow(
-                topic = reel.topic,
-                isSaved = isSaved,
-                isLiked = isLiked,
-                onLike = { onInteract(); onLike() },
-                onSave = { onInteract(); onSave() },
-            )
+            Spacer(Modifier.height(20.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                NextHint(text = "Swipe up for the quick check", emphasize = emphasizeHint, modifier = Modifier.weight(1f))
+                FerrisIconButton(
+                    icon = if (saved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                    contentDescription = if (saved) "Remove from saved" else "Save lesson",
+                    tint = if (saved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                        onToggleSave()
+                    },
+                )
+            }
         }
     }
 }
 
-/**
- * Quiz reel: the question gets its own page (user review 2026-10-07), with
- * the hook as the retrieval cue. Same action row + double-tap-save as
- * the lesson page so gestures never change meaning mid-reel.
- */
 @Composable
 private fun QuizPage(
     reel: Reel,
-    isSaved: Boolean,
-    isLiked: Boolean,
-    settled: Boolean,
-    answeredState: Boolean?,
-    onLike: () -> Unit,
-    onSave: () -> Unit,
-    onDoubleTapSave: (Offset) -> Unit,
-    onGrade: (Boolean, String) -> Unit,
-    onInteract: () -> Unit,
+    number: Int,
+    ofCount: Int,
+    record: AnswerRecord?,
+    isLastInSet: Boolean,
+    onAnswer: (QuizResult) -> Unit,
 ) {
-    val trackColor = trackColor(reel.track.id)
-    val quizUi = remember(reel.id) { reel.toQuizUi() }
-
-    Box(
-        modifier = Modifier
+    val quiz = remember(reel.id) { reel.toQuizUi() }
+    Column(
+        Modifier
             .fillMaxSize()
-            .pointerInput(reel.id) {
-                detectTapGestures(onDoubleTap = { offset -> onDoubleTapSave(offset) })
-            }
-            .drawBehind {
-                // Faint radial glow behind question (P6 33c)
-                val radius = size.width * 0.70f
-                val center = Offset(size.width / 2f, size.height * 0.30f)
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(trackColor.copy(alpha = 0.18f), Color.Transparent),
-                        center = center,
-                        radius = radius,
-                    ),
-                    radius = radius,
-                    center = center,
-                )
-            },
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = LocalBottomBarInset.current + 20.dp),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .imePadding()
-                .padding(
-                    start = 20.dp,
-                    end = 20.dp,
-                    top = 56.dp,
-                    bottom = LocalBottomBarInset.current + 16.dp,
-                ),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            // PROVE IT overline (P6 38a)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Overline("Quick check", color = trackTextColor(reel.track.id), modifier = Modifier.weight(1f))
             Text(
-                text = "PROVE IT",
-                style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 2.sp),
-                fontFamily = DisplayFont,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            // Hook as quiet retrieval cue (P6 38a)
-            Text(
-                text = reel.hook,
-                style = MaterialTheme.typography.headlineSmall,
-                fontFamily = DisplayFont,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-            )
-            // Quiz options & variants
-            QuizCard(
-                quiz = quizUi,
-                settled = settled,
-                initialAnswered = answeredState != null,
-                initialWasCorrect = answeredState ?: false,
-                onResult = { correct, label -> onInteract(); onGrade(correct, label) },
-                modifier = Modifier.weight(1f, fill = false),
-            )
-            // Action row below card (P6 36a)
-            ReelActionRow(
-                topic = reel.topic,
-                isSaved = isSaved,
-                isLiked = isLiked,
-                onLike = { onInteract(); onLike() },
-                onSave = { onInteract(); onSave() },
-            )
-        }
-    }
-}
-
-/**
- * Horizontal action row placed below the card (P6 34i, 36a, 36b):
- * Left group = like FerrisIconButton + save FerrisIconButton with Confirm haptic;
- * Right group = glass topic capsule chip.
- */
-@Composable
-private fun ReelActionRow(
-    topic: String,
-    isSaved: Boolean,
-    isLiked: Boolean,
-    onLike: () -> Unit,
-    onSave: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val haptic = LocalHapticFeedback.current
-    val topicLabel = remember(topic) {
-        topic.replace('_', ' ').replace('-', ' ').replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-    }
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            FerrisIconButton(
-                icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                contentDescription = if (isLiked) "Unlike" else "Like",
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                    onLike()
-                },
-                size = 44.dp,
-                active = isLiked,
-                activeTint = MaterialTheme.colorScheme.error,
-            )
-            FerrisIconButton(
-                icon = if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                contentDescription = if (isSaved) "Unsave" else "Save",
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                    onSave()
-                },
-                size = 44.dp,
-                active = isSaved,
-                activeTint = MaterialTheme.colorScheme.primary,
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .height(32.dp)
-                .glass(CircleShape)
-                .clip(CircleShape)
-                .padding(horizontal = 12.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = topicLabel,
-                style = MaterialTheme.typography.labelMedium,
-                fontFamily = DisplayFont,
+                text = "$number / $ofCount",
+                style = MaterialTheme.typography.labelMedium.merge(NumberStyle),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = reel.hook,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(18.dp))
+        QuizContent(
+            quiz = quiz,
+            seed = reel.id.hashCode(),
+            result = record?.let { QuizResult(it.correct, it.choice) },
+            onAnswer = onAnswer,
+            trap = reel.trap.ifBlank { null },
+            xpCorrect = FeedViewModel.XP_CORRECT,
+            xpWrong = FeedViewModel.XP_WRONG,
+        )
+        if (record != null) {
+            Spacer(Modifier.height(20.dp))
+            NextHint(text = if (isLastInSet) "Swipe up to see how you did" else "Swipe up for the next lesson", emphasize = false)
+        }
     }
 }
+
+@Composable
+private fun RecapPage(
+    setReels: List<Reel>,
+    answers: Map<String, AnswerRecord>,
+    stats: FeedStats,
+    nextReel: Reel?,
+    isFinal: Boolean,
+    scopedTitle: String?,
+    settled: Boolean,
+    onBack: (() -> Unit)?,
+) {
+    val palette = FerrisTheme.palette
+    val answered = setReels.mapNotNull { answers[it.id] }
+    val correct = answered.count { it.correct }
+    val xpEarned = answered.sumOf { if (it.correct) FeedViewModel.XP_CORRECT else FeedViewModel.XP_WRONG }
+    val topics = setReels.map { Curriculum.titleOf(it.topic) }.distinct()
+    val headline = when {
+        answered.isEmpty() -> "Set finished"
+        correct == setReels.size -> "Flawless set"
+        correct * 5 >= setReels.size * 4 -> "Strong set"
+        correct * 2 >= setReels.size -> "Good progress"
+        else -> "Worth another look"
+    }
+    var confetti by remember { mutableIntStateOf(0) }
+    LaunchedEffect(settled) {
+        if (settled && answered.isNotEmpty() && correct * 5 >= setReels.size * 4) confetti++
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = LocalBottomBarInset.current + 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            ProgressRing(
+                progress = if (setReels.isEmpty()) 0f else correct.toFloat() / setReels.size,
+                size = 112.dp,
+                strokeWidth = 10.dp,
+                color = palette.success,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$correct/${setReels.size}",
+                        style = MaterialTheme.typography.headlineMedium.merge(NumberStyle),
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Text("correct", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+            Text(
+                text = headline,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { heading() },
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = if (answered.size < setReels.size) {
+                    "You answered ${answered.size} of ${setReels.size} checks. Skipped ones come back later."
+                } else {
+                    "Missed questions return sooner so they stick."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(24.dp))
+
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(vertical = 16.dp),
+            ) {
+                RecapStat(value = "+$xpEarned", label = "XP earned", color = palette.xp, modifier = Modifier.weight(1f))
+                RecapStat(value = "${stats.streakDays}", label = "day streak", color = palette.rust, modifier = Modifier.weight(1f))
+                RecapStat(value = "${stats.xp}", label = "total XP", color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(16.dp))
+
+            val goal = FeedViewModel.DAILY_GOAL_XP
+            Column(Modifier.fillMaxWidth()) {
+                Row {
+                    Text("Daily goal", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                    Text(
+                        text = if (stats.todayXp >= goal) "Done · ${stats.todayXp} XP" else "${stats.todayXp} / $goal XP",
+                        style = MaterialTheme.typography.labelMedium.merge(NumberStyle),
+                        color = if (stats.todayXp >= goal) palette.successInk else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                LinearMeter(
+                    progress = stats.todayXp.toFloat() / goal,
+                    color = if (stats.todayXp >= goal) palette.success else palette.xp,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            Spacer(Modifier.height(24.dp))
+            Overline("Covered", modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+            FlowRow(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                topics.forEach { t ->
+                    Text(
+                        text = t,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(palette.raised)
+                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(28.dp))
+            if (isFinal || nextReel == null) {
+                Text(
+                    text = if (scopedTitle != null) "That's every lesson in $scopedTitle." else "You've reached the end of your queue.",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center,
+                )
+                if (onBack != null) {
+                    Spacer(Modifier.height(16.dp))
+                    FerrisButton(text = "Back", onClick = onBack, style = FerrisButtonStyle.Secondary, modifier = Modifier.fillMaxWidth())
+                }
+            } else {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(16.dp),
+                ) {
+                    Overline("Up next")
+                    Spacer(Modifier.height(8.dp))
+                    TrackTag(track = nextReel.track.id, topicTitle = Curriculum.titleOf(nextReel.topic))
+                    Spacer(Modifier.height(6.dp))
+                    Text(nextReel.hook, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                }
+                Spacer(Modifier.height(20.dp))
+                NextHint(text = "Swipe up for the next set", emphasize = true)
+            }
+        }
+        ConfettiBurst(trigger = confetti, modifier = Modifier.fillMaxSize())
+    }
+}
+
+@Composable
+private fun RecapStat(value: String, label: String, color: Color, modifier: Modifier = Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, style = MaterialTheme.typography.titleLarge.merge(NumberStyle), color = color, maxLines = 1)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+    }
+}
+
+/** "↑ Swipe up …" cue. Bounces gently when [emphasize] (first run, recap). */
+@Composable
+private fun NextHint(text: String, emphasize: Boolean, modifier: Modifier = Modifier) {
+    val reduceMotion = LocalReduceMotion.current
+    val lift by if (emphasize && !reduceMotion) {
+        rememberInfiniteTransition(label = "hint").animateFloat(
+            initialValue = 0f,
+            targetValue = -5f,
+            animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+            label = "hint-lift",
+        )
+    } else {
+        remember { mutableFloatStateOf(0f) }
+    }
+    Row(
+        modifier = modifier.graphicsLayer { translationY = lift * density },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            Icons.Filled.KeyboardArrowUp,
+            contentDescription = null,
+            tint = if (emphasize) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (emphasize) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Loading / empty
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun FeedLoading() {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .semantics { contentDescription = "Loading lessons" },
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        SkeletonBlock(Modifier.width(160.dp).height(14.dp))
+        SkeletonBlock(Modifier.fillMaxWidth().height(30.dp))
+        SkeletonBlock(Modifier.fillMaxWidth(0.7f).height(30.dp))
+        Spacer(Modifier.height(4.dp))
+        repeat(3) { SkeletonBlock(Modifier.fillMaxWidth().height(16.dp)) }
+        SkeletonBlock(Modifier.fillMaxWidth(0.5f).height(16.dp))
+        Spacer(Modifier.height(6.dp))
+        SkeletonBlock(Modifier.fillMaxWidth().height(140.dp), RoundedCornerShape(14.dp))
+    }
+}
+
+@Composable
+private fun EmptyFeed(onRetry: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        FerrisMark(size = 72.dp, animated = false)
+        Spacer(Modifier.height(20.dp))
+        Text(
+            "No lessons yet",
+            style = FerrisType.Hook,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Lessons are still being unpacked on this device. Give it a moment, then try again.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(24.dp))
+        FerrisButton(text = "Try again", onClick = onRetry)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Mapping
+// ---------------------------------------------------------------------------
 
 private fun Reel.toQuizUi(): QuizUiModel = when (quiz.type) {
     QuizType.MCQ -> QuizUiModel.Mcq(
@@ -602,205 +783,18 @@ private fun Reel.toQuizUi(): QuizUiModel = when (quiz.type) {
     )
 }
 
-/**
- * Smooth continuous session queue progress indicator under stat bar.
- * Replaces the jarring modulo 5 reset with smooth, uninterrupted queue progress.
- */
+@Preview(name = "Empty feed", showBackground = true, backgroundColor = 0xFF0B0E14, widthDp = 360, heightDp = 640)
 @Composable
-private fun SessionProgressBar(
-    currentPage: Int,
-    totalPages: Int,
-    modifier: Modifier = Modifier,
-) {
-    val progress = if (totalPages <= 1) 1f else (currentPage.toFloat() / (totalPages - 1).coerceAtLeast(1)).coerceIn(0f, 1f)
-    val currentFill by animateFloatAsState(
-        targetValue = progress,
-        animationSpec = FerrisMotion.Smooth,
-        label = "feedQueueProgress",
-    )
-    val currentLesson = (currentPage / 2) + 1
-    val totalLessons = (totalPages / 2).coerceAtLeast(1)
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(3.5.dp)
-            .padding(horizontal = 16.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
-            .semantics(mergeDescendants = true) {
-                contentDescription = "Lesson $currentLesson of $totalLessons"
-            },
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(fraction = currentFill)
-                .clip(CircleShape)
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.tertiary,
-                        )
-                    )
-                ),
-        )
-    }
-}
-
-/**
- * Centered pulsing FerrisMark loading state with ReelSkeleton (P6 33f).
- * One indicator only — spinner removed.
- */
-@Composable
-private fun FeedLoading(modifier: Modifier = Modifier) {
-    val reduceMotion = LocalReduceMotion.current
-    val infiniteTransition = rememberInfiniteTransition(label = "feedLoadingPulse")
-    val pulseScale by if (reduceMotion) {
-        remember { mutableFloatStateOf(1f) }
-    } else {
-        infiniteTransition.animateFloat(
-            initialValue = 0.94f,
-            targetValue = 1.0f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "pulseScale",
-        )
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.graphicsLayer {
-                    scaleX = pulseScale
-                    scaleY = pulseScale
-                },
-            ) {
-                FerrisMark(size = 56.dp)
-                Text(
-                    text = "Warming up your feed\u2026",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontFamily = DisplayFont,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            ReelSkeleton()
-        }
-    }
-}
-
-/**
- * Redesigned empty state (P6 33g):
- * 96dp Canvas crab claw illustration, headline, body, filled pill FerrisButton.
- */
-@Composable
-private fun EmptyFeed(onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        // 96dp illustration drawn with Canvas: stylized crab claw composition
-        Box(
-            modifier = Modifier
-                .size(96.dp)
-                .staggeredEntrance(0),
-            contentAlignment = Alignment.Center,
-        ) {
-            Canvas(modifier = Modifier.size(96.dp)) {
-                val center = Offset(size.width / 2f, size.height / 2f)
-                drawCircle(
-                    color = primaryColor.copy(alpha = 0.12f),
-                    radius = size.width * 0.46f,
-                    center = center,
-                )
-                drawArc(
-                    color = primaryColor,
-                    startAngle = 140f,
-                    sweepAngle = 170f,
-                    useCenter = false,
-                    topLeft = Offset(size.width * 0.22f, size.height * 0.22f),
-                    size = androidx.compose.ui.geometry.Size(size.width * 0.56f, size.height * 0.56f),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(
-                        width = 6.dp.toPx(),
-                        cap = androidx.compose.ui.graphics.StrokeCap.Round,
-                    ),
-                )
-                drawCircle(
-                    color = secondaryColor,
-                    radius = 5.dp.toPx(),
-                    center = Offset(size.width * 0.28f, size.height * 0.38f),
-                )
-                drawCircle(
-                    color = primaryColor,
-                    radius = 5.dp.toPx(),
-                    center = Offset(size.width * 0.72f, size.height * 0.38f),
-                )
-            }
-        }
-
-        Spacer(Modifier.height(20.dp))
-
-        Text(
-            text = "Nothing here yet",
-            style = MaterialTheme.typography.headlineSmall,
-            fontFamily = DisplayFont,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.staggeredEntrance(1),
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            text = "The curriculum is still seeding into the local database, " +
-                "or seeding failed. Wait a moment and retry.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.staggeredEntrance(2),
-        )
-
-        Spacer(Modifier.height(24.dp))
-
-        FerrisButton(
-            text = "Try again",
-            style = FerrisButtonStyle.Filled,
-            onClick = onRetry,
-            modifier = Modifier.staggeredEntrance(3),
-        )
-    }
-}
-
-@Preview(name = "Feed explainer", showBackground = true, backgroundColor = 0xFF0B0E14)
-@Composable
-private fun FeedScreenPreviewLite() {
+private fun EmptyFeedPreview() {
     FerrisFeedTheme(darkTheme = true) {
-        ReelCard(
-            track = "rust",
-            level = 1,
-            hook = "Why does this simple function not compile?",
-            body = "Ownership moves values. Pass a String by value and the caller loses it.",
-            takeaway = "Move by default; borrow with & to keep ownership.",
-            modifier = Modifier.padding(16.dp),
-        )
+        EmptyFeed(onRetry = {})
+    }
+}
+
+@Preview(name = "Loading feed", showBackground = true, backgroundColor = 0xFFFAF8F4, widthDp = 360, heightDp = 640)
+@Composable
+private fun LoadingFeedPreview() {
+    FerrisFeedTheme(darkTheme = false) {
+        FeedLoading()
     }
 }

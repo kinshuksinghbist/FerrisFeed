@@ -2,51 +2,85 @@ package com.ferrisfeed.path
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ferrisfeed.data.Curriculum
+import com.ferrisfeed.data.CurriculumTopic
+import com.ferrisfeed.data.CurriculumUnit
 import com.ferrisfeed.data.ProgressStore
 import com.ferrisfeed.data.ReelDao
 import com.ferrisfeed.data.ReelEntity
 import com.ferrisfeed.data.SearchFilters as DataSearchFilters
 import com.ferrisfeed.data.SearchRepository
-import com.ferrisfeed.data.TopicCount
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * State for the Path tab (Spec v2, S7): the live roadmap plus the search
- * section that now lives at the top of the same screen.
- */
+/** One topic row on the Path. */
+data class TopicUi(
+    val key: String,
+    val title: String,
+    val blurb: String,
+    val track: String,
+    val reelCount: Int,
+    val seenCount: Int,
+    val mastery: Float,
+) {
+    val status: TopicStatus
+        get() = when {
+            mastery >= MASTERED || (seenCount >= reelCount && reelCount > 0 && mastery >= 0.5f) -> TopicStatus.Mastered
+            seenCount > 0 -> TopicStatus.InProgress
+            else -> TopicStatus.New
+        }
+
+    companion object {
+        const val MASTERED = 0.85f
+    }
+}
+
+enum class TopicStatus { New, InProgress, Mastered }
+
+/** One unit section on the Path. */
+data class UnitUi(
+    val id: String,
+    val number: Int,
+    val title: String,
+    val blurb: String,
+    val topics: List<TopicUi>,
+) {
+    val reelCount: Int get() = topics.sumOf { it.reelCount }
+    val seenCount: Int get() = topics.sumOf { it.seenCount }
+    val progress: Float get() = if (reelCount == 0) 0f else seenCount.toFloat() / reelCount
+}
+
 data class PathUiState(
-    val nodes: List<PathNode> = emptyList(),
+    val track: String = Curriculum.RUST,
+    val units: List<UnitUi> = emptyList(),
+    val upNext: TopicUi? = null,
+    val upNextUnit: UnitUi? = null,
     val isLoading: Boolean = true,
+    val searchOpen: Boolean = false,
     val query: String = "",
     val filters: SearchFilters = SearchFilters(),
     val results: List<SearchResult> = emptyList(),
     val isSearching: Boolean = false,
-    val exploringTopic: PathNode? = null,
-    val exploringReels: List<SearchResult> = emptyList(),
-)
+) {
+    val topicCount: Int get() = units.sumOf { it.topics.size }
+    val startedCount: Int get() = units.sumOf { u -> u.topics.count { it.status != TopicStatus.New } }
+    val masteredCount: Int get() = units.sumOf { u -> u.topics.count { it.status == TopicStatus.Mastered } }
+}
 
 /**
- * Path tab ViewModel.
- *
- * Roadmap nodes are REAL data: one node per topic that actually has reels in
- * Room ([ReelDao.countByTopic] for the reel count + lowest level), with mastery
- * from [ProgressStore.getAllMastery] (which applies the 2%-per-idle-day decay).
- * The old `defaultPathNodes()` demo values are preview-only now — production
- * shows 0% everywhere on a fresh install and fills in as quizzes are answered.
- *
- * Search is the same Room FTS path the old Search tab used; it moved here so
- * the bottom nav only has Feed + Path. TODO 22 makes Browse topic-first:
- * a blank query with a topic filter browses that topic's reels (the same
- * stored topic string the roadmap nodes and Route.TopicFeed key on), so the
- * three entries into a topic — roadmap node, browse chip, tooling feed —
- * share one id and one mental model.
+ * Path tab (v3): the curriculum as units → topics for one track at a time,
+ * a single "Up next" recommendation, and lesson search behind a search
+ * button. Counts come from Room (query-only projections), mastery from
+ * [ProgressStore] with its time decay. [refresh] runs every time the tab is
+ * shown so progress made in the feed is visible immediately.
  */
 @HiltViewModel
 class PathViewModel @Inject constructor(
@@ -55,63 +89,101 @@ class PathViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val searchRepository = SearchRepository(dao)
-
     private val _state = MutableStateFlow(PathUiState())
     val state: StateFlow<PathUiState> = _state.asStateFlow()
 
     private var searchJob: Job? = null
+    private var trackChosen = false
 
-    init {
-        refresh()
-    }
-
-    /** Loads all reels for a specific topic to allow exploring and reviewing previous reels. */
-    fun exploreTopic(node: PathNode?) {
-        if (node == null) {
-            _state.update { it.copy(exploringTopic = null, exploringReels = emptyList()) }
-            return
-        }
-        viewModelScope.launch {
-            val reels = dao.getByTopic(node.id).map { it.toSearchResult() }
-            _state.update { it.copy(exploringTopic = node, exploringReels = reels) }
-        }
-    }
-
-    /** Rebuilds the roadmap from Room + persisted mastery. */
     fun refresh() {
         viewModelScope.launch {
-            val rust = dao.countByTopic(ReelEntity.TRACK_RUST)
-            val systemDesign = dao.countByTopic(ReelEntity.TRACK_SYSTEM_DESIGN)
-            val topics = rust.map { it.topic } + systemDesign.map { it.topic }
-            val mastery = progressStore.getAllMastery(topics)
-            val nodes = buildList {
-                rust.forEach { add(it.toPathNode(ReelEntity.TRACK_RUST, mastery[it.topic] ?: 0f)) }
-                systemDesign.forEach {
-                    add(it.toPathNode(ReelEntity.TRACK_SYSTEM_DESIGN, mastery[it.topic] ?: 0f))
-                }
+            if (!trackChosen) {
+                val focus = progressStore.learnerProfile.first().trackFocus
+                _state.update { it.copy(track = trackForFocus(focus)) }
+                trackChosen = true
             }
-            _state.update { it.copy(nodes = nodes, isLoading = false) }
+            load(_state.value.track)
         }
     }
 
-    /**
-     * Runs a Room FTS query for the embedded search section. Empty queries
-     * fall back to pure filter browsing (see [SearchRepository]), which the UI
-     * only renders once the user has typed something.
-     */
+    fun selectTrack(track: String) {
+        if (track == _state.value.track) return
+        trackChosen = true
+        _state.update { it.copy(track = track) }
+        viewModelScope.launch { load(track) }
+    }
+
+    private suspend fun load(track: String) {
+        val counts = dao.countByTopic(track).associateBy { it.topic }
+        val seen = dao.countSeenByTopic(track).associate { it.topic to it.reelCount }
+        val mastery = progressStore.getAllMastery(counts.keys.toList())
+
+        fun ui(topic: CurriculumTopic) = TopicUi(
+            key = topic.key,
+            title = topic.title,
+            blurb = topic.blurb,
+            track = track,
+            reelCount = counts[topic.key]?.reelCount ?: 0,
+            seenCount = seen[topic.key] ?: 0,
+            mastery = mastery[topic.key] ?: 0f,
+        )
+
+        val units = Curriculum.unitsFor(track).map { unit: CurriculumUnit ->
+            UnitUi(
+                id = unit.id,
+                number = unit.number,
+                title = unit.title,
+                blurb = unit.blurb,
+                topics = unit.topics.map(::ui).filter { it.reelCount > 0 },
+            )
+        }.filter { it.topics.isNotEmpty() }.toMutableList()
+
+        // Topics a future content pack adds before the map knows them.
+        val known = Curriculum.unitsFor(track).flatMap { u -> u.topics.map { it.key } }.toSet()
+        val extras = counts.keys.filter { it !in known }.sorted().map { key ->
+            ui(CurriculumTopic(key, Curriculum.titleOf(key), "New lessons"))
+        }
+        if (extras.isNotEmpty()) {
+            units += UnitUi("$track-extra", units.size + 1, "More lessons", "Fresh topics from content updates.", extras)
+        }
+
+        val flat = units.flatMap { u -> u.topics.map { u to it } }
+        val next = flat.firstOrNull { (_, t) -> t.status == TopicStatus.InProgress }
+            ?: flat.firstOrNull { (_, t) -> t.status == TopicStatus.New }
+        _state.update {
+            it.copy(
+                units = units,
+                upNext = next?.second,
+                upNextUnit = next?.first,
+                isLoading = false,
+            )
+        }
+    }
+
+    fun setSearchOpen(open: Boolean) {
+        _state.update { it.copy(searchOpen = open) }
+        if (!open) {
+            searchJob?.cancel()
+            _state.update { it.copy(query = "", filters = SearchFilters(), results = emptyList(), isSearching = false) }
+        }
+    }
+
+    /** Room FTS search; a blank query with any filter browses instead. */
     fun onQueryChanged(query: String, filters: SearchFilters) {
         _state.update { it.copy(query = query, filters = filters) }
         searchJob?.cancel()
+        if (!hasActiveBrowse(query, filters)) {
+            _state.update { it.copy(results = emptyList(), isSearching = false) }
+            return
+        }
         searchJob = viewModelScope.launch {
             _state.update { it.copy(isSearching = true) }
+            delay(150) // debounce keystrokes
             val hits = runCatching {
-                searchRepository.search(
-                    query = query,
-                    filters = filters.toDataFilters(),
-                )
+                searchRepository.search(query = query, filters = filters.toDataFilters())
             }.getOrDefault(emptyList())
-            _state.update {
-                it.copy(results = hits.map { entity -> entity.toSearchResult() }, isSearching = false)
+            _state.update { s ->
+                s.copy(results = hits.map { entity -> entity.toSearchResult() }, isSearching = false)
             }
         }
     }
@@ -120,14 +192,16 @@ class PathViewModel @Inject constructor(
         /** Level bounds for the Room filter query (1..4 per content schema). */
         const val MIN_LEVEL = 1
         const val MAX_LEVEL = 4
+
+        /** Track for a learner focus value; "both" shows Rust first. */
+        fun trackForFocus(focus: String): String =
+            if (focus == Curriculum.SYSTEM_DESIGN) Curriculum.SYSTEM_DESIGN else Curriculum.RUST
     }
 }
 
 /**
- * UI filter -> Room filter. Kept pure and unit-testable: a topic must survive
- * this mapping verbatim (it is an exact-match column value per TODO 21), and
- * an unset level spans the whole 1..4 range so “browse” with no level chip
- * sees every reel of the topic.
+ * UI filter -> Room filter. Pure and unit-tested: a topic survives verbatim
+ * (exact-match column value) and an unset level spans the whole 1..4 range.
  */
 internal fun SearchFilters.toDataFilters(): DataSearchFilters = DataSearchFilters(
     track = track,
@@ -142,41 +216,10 @@ internal fun SearchFilters.toDataFilters(): DataSearchFilters = DataSearchFilter
 internal fun hasActiveBrowse(query: String, filters: SearchFilters): Boolean =
     query.isNotBlank() || filters.isScoped()
 
-/**
- * Prerequisite edges come from the canonical DAG so the roadmap keeps locking
- * semantics; topics the DAG does not know about are roots (never locked).
- */
-private fun prerequisitesOf(topic: String): List<String> =
-    LearningPathEngine.TOPIC_GRAPH.firstOrNull { it.id == topic }?.prerequisites.orEmpty()
-
-private fun TopicCount.toPathNode(track: String, mastery: Float): PathNode = PathNode(
-    id = topic,
-    title = prettyTopic(topic),
-    track = track,
-    level = minLevel.coerceIn(1, 4),
-    mastery = mastery,
-    reelCount = reelCount,
-    requires = prerequisitesOf(topic),
-)
-
-/**
- * Node title from the stored topic. Since TODO 21 the stored topic is a
- * human label ("ownership", "data systems"); each word is title-cased for
- * display ("Ownership", "Data Systems"), which also keeps legacy file-derived
- * keys (`rust_cases`) readable. The stored value itself is untouched.
- */
-private fun prettyTopic(topic: String): String = topic
-    .split('_', '-')
-    .filter { it.isNotBlank() }
-    .joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }
-    .ifBlank { topic }
-
 private fun ReelEntity.toSearchResult(): SearchResult = SearchResult(
     id = id,
     track = track,
     level = level,
-    // TODO 22: every hit names its topic so the card says where it lives in
-    // the curriculum; the string is the exact roadmap id (TODO 21).
     topic = topic,
     hook = hook,
     takeaway = takeaway,

@@ -11,15 +11,15 @@
       "answer": 2,
       "explain": "Assignment moves heap ownership so s1 is invalid after.",
       "options": [
-        "Both s1 and s2 own it",
-        "s1 still owns it",
-        "s2 owns it and s1 is invalid",
-        "Ownership is shared automatically"
+        "Both s1 and s2, as shared owners",
+        "Still s1; s2 is just an alias",
+        "s2, and s1 can no longer be used",
+        "Neither; it's dropped at the move"
       ],
       "q": "After let s2 = s1 for a String, who owns it?"
     },
     "takeaway": "Moves transfer ownership so the source binding becomes unusable afterward.",
-    "topic_label": "drills",
+    "topic_label": "ownership",
     "track": "rust",
     "trap": "Using the moved-from name again fails even though it looks alive."
   },
@@ -47,7 +47,7 @@
       "q": "Assemble the exclusive mutable borrow:"
     },
     "takeaway": "End mutable borrows before creating shared borrows of the same value.",
-    "topic_label": "drills",
+    "topic_label": "borrowing",
     "track": "rust",
     "trap": "Holding a mut borrow across a later shared use trips the checker."
   },
@@ -63,15 +63,15 @@
       "answer": 3,
       "explain": "match requires exhaustive arms so missing cases fail to compile.",
       "options": [
-        "Missing arms warn only",
-        "Missing arms panic at runtime",
-        "Missing arms are inferred",
-        "Missing arms fail compilation"
+        "It compiles with a warning only",
+        "It panics at runtime on a missed case",
+        "Missing arms default to doing nothing",
+        "It fails to compile, naming the gap"
       ],
       "q": "What happens with a non-exhaustive match?"
     },
     "takeaway": "Write exhaustive matches with explicit arms for every possible case.",
-    "topic_label": "drills",
+    "topic_label": "enums-matching",
     "track": "rust",
     "trap": "A catch-all too early hides specific arms below it silently."
   },
@@ -99,7 +99,7 @@
       "q": "Assemble the Option transform method:"
     },
     "takeaway": "Transform optional values with map instead of manual matching everywhere.",
-    "topic_label": "drills",
+    "topic_label": "option-result",
     "track": "rust",
     "trap": "Using map for side effects hides intent; use if-let instead."
   },
@@ -115,15 +115,15 @@
       "answer": 2,
       "explain": "and_then flattens while map would nest another Option layer.",
       "options": [
-        "They behave identically",
-        "map flattens and and_then nests",
-        "and_then flattens functions returning Option",
-        "Neither works on None"
+        "They behave the same on Some values",
+        "map flattens; and_then nests Options",
+        "and_then flattens; map would nest",
+        "Only map is allowed to run on None"
       ],
       "q": "How do map and and_then differ on Option?"
     },
     "takeaway": "Chain fallible Option steps with and_then to keep results flat.",
-    "topic_label": "drills",
+    "topic_label": "option-result",
     "track": "rust",
     "trap": "Using map with a function returning Option nests two layers deep."
   },
@@ -139,15 +139,15 @@
       "answer": 1,
       "explain": "unwrap_or evaluates eagerly while unwrap_or_else is lazy on None.",
       "options": [
-        "They are identical helpers",
-        "unwrap_or is eager while unwrap_or_else is lazy",
-        "unwrap_or_else always panics",
-        "unwrap_or takes a closure"
+        "They're the same; one is just an alias",
+        "unwrap_or is eager; unwrap_or_else is lazy",
+        "unwrap_or_else panics if the value is None",
+        "unwrap_or takes a closure; the other a value"
       ],
       "q": "How do unwrap_or and unwrap_or_else differ?"
     },
     "takeaway": "Prefer unwrap_or_else for expensive defaults so work stays lazy.",
-    "topic_label": "borrow-drills",
+    "topic_label": "option-result",
     "track": "rust",
     "trap": "Costly defaults inside unwrap_or run even when unneeded."
   },
@@ -163,15 +163,15 @@
       "answer": 0,
       "explain": "map touches Ok values while map_err touches Err values.",
       "options": [
-        "map touches Ok and map_err touches Err",
-        "Both touch Ok only",
-        "Both touch Err only",
-        "They swap Ok and Err"
+        "map changes Ok; map_err changes Err",
+        "Both change only the Ok value",
+        "Both change only the Err value",
+        "They swap Ok and Err variants"
       ],
       "q": "What do Result map and map_err transform?"
     },
     "takeaway": "Translate Result halves separately with map for values and map_err for errors.",
-    "topic_label": "borrow-drills",
+    "topic_label": "option-result",
     "track": "rust",
     "trap": "Mapping the wrong half silently skips the transform you intended."
   },
@@ -187,15 +187,15 @@
       "answer": 3,
       "explain": "? unwraps Ok or returns Err early with From conversion.",
       "options": [
-        "? panics on Err always",
-        "? only works on Option",
-        "? ignores error types",
-        "? returns Err early from the function"
+        "Panics with the Err's message",
+        "It only works on Option, not on Result",
+        "Drops the error and keeps going",
+        "Returns early, converting via From"
       ],
       "q": "What does ? do on Err?"
     },
     "takeaway": "Propagate chained failures with question mark for early error return.",
-    "topic_label": "borrow-drills",
+    "topic_label": "option-result",
     "track": "rust",
     "trap": "Using ? across mismatched error types fails without a From conversion."
   },
@@ -211,15 +211,15 @@
       "answer": 2,
       "explain": "Indexing panics out of bounds while get returns None safely.",
       "options": [
-        "Both panic identically",
-        "Both return Option",
-        "Indexing panics while get returns Option",
-        "get panics while indexing is safe"
+        "Both panic when i is out of bounds",
+        "Both return an Option you must handle",
+        "v[i] panics; v.get(i) returns None",
+        "v.get(i) panics; v[i] returns None"
       ],
       "q": "How do v[i] and v.get(i) differ?"
     },
     "takeaway": "Access vectors with get when indices come from uncertain input.",
-    "topic_label": "borrow-drills",
+    "topic_label": "collections",
     "track": "rust",
     "trap": "Indexing with user input panics the whole program on bad values."
   },
@@ -235,15 +235,15 @@
       "answer": 1,
       "explain": "entry performs one lookup for insert-or-update logic.",
       "options": [
-        "entry does two lookups",
-        "entry does one lookup for insert or update",
-        "entry clones the map",
-        "entry only reads values"
+        "It does two lookups to stay thread-safe",
+        "One lookup covers insert or update",
+        "It clones the map before writing",
+        "It can only read existing values"
       ],
       "q": "Why use the entry API?"
     },
     "takeaway": "Update maps with entry to combine lookup and insert in one step.",
-    "topic_label": "borrow-drills",
+    "topic_label": "collections",
     "track": "rust",
     "trap": "Contains-then-insert double lookups race and waste work under contention."
   },
@@ -256,18 +256,18 @@
     "level": 2,
     "output": "error[E0505]: cannot move out of `v` because it is borrowed\n// fix: call read() (or drop it) before the move closure takes v",
     "quiz": {
-      "answer": 0,
+      "answer": 2,
       "explain": "Closures auto-pick shared, mutable, or owned captures by usage.",
       "options": [
-        "Closures auto-pick the weakest capture that works",
-        "Closures always move captures",
-        "Closures always copy captures",
-        "Closures never capture environment"
+        "Always by move, taking ownership",
+        "Always by copying each value",
+        "By the weakest mode the body needs",
+        "Always by &mut, so they can edit"
       ],
       "q": "How do closures capture variables?"
     },
     "takeaway": "Inspect closure captures when ownership or thread bounds complain loudly.",
-    "topic_label": "type-drills",
+    "topic_label": "closures-iterators",
     "track": "rust",
     "trap": "Assuming closures copy values leads to borrow errors on later use."
   },
@@ -280,18 +280,18 @@
     "level": 2,
     "output": "3\n",
     "quiz": {
-      "answer": 2,
+      "answer": 1,
       "explain": "Spawned threads need owned data because borrows might outlive the parent.",
       "options": [
-        "move makes threads faster",
-        "move shares borrows freely",
-        "spawn needs owned data that outlives the parent",
-        "move disables Send checks"
+        "move makes the spawned thread run faster",
+        "The thread may outlive borrowed data",
+        "move lets threads share &mut freely",
+        "move switches off the Send check"
       ],
       "q": "Why does thread spawn need move closures?"
     },
     "takeaway": "Move owned data into spawned threads because borrows may outlive parents.",
-    "topic_label": "type-drills",
+    "topic_label": "closures-iterators",
     "track": "rust",
     "trap": "Forgetting move borrows locals that may vanish before the thread ends."
   },
@@ -307,15 +307,15 @@
       "answer": 1,
       "explain": "Adapters stay lazy until a consumer like collect runs them.",
       "options": [
-        "Adapters run immediately",
-        "Adapters run only when consumed",
-        "collect skips all adapters",
-        "for loops skip adapters"
+        "Immediately, when map is called",
+        "Only when a consumer pulls items",
+        "Never; collect skips adapters",
+        "At compile time, as a const fn"
       ],
       "q": "When does iterator map execute?"
     },
     "takeaway": "Terminate lazy iterator chains with a consumer so work actually runs.",
-    "topic_label": "type-drills",
+    "topic_label": "closures-iterators",
     "track": "rust",
     "trap": "Relying on side effects inside map means they vanish without a consumer."
   },
@@ -331,15 +331,15 @@
       "answer": 0,
       "explain": "Weak does not bump the strong count so cycles can deallocate.",
       "options": [
-        "Weak back-links avoid leaking reference cycles",
-        "Rc alone handles all cycles",
-        "Weak always upgrades successfully",
-        "Cycles free automatically"
+        "Make the back-links Weak, not Rc",
+        "Nothing; Rc detects cycles itself",
+        "Call drop on one Rc to free both",
+        "Wrap each Rc in a RefCell to free it"
       ],
       "q": "How do you break Rc cycles?"
     },
     "takeaway": "Point back-edges with Weak so reference cycles can deallocate cleanly.",
-    "topic_label": "type-drills",
+    "topic_label": "smart-pointers",
     "track": "rust",
     "trap": "Linking both directions with Rc leaks the whole graph silently."
   },
@@ -353,17 +353,17 @@
     "output": "// compiles: Arc moves into the thread; handle unjoined, result discarded",
     "quiz": {
       "answer": 3,
-      "explain": "Threads require static owned data so borrows cannot dangle.",
+      "explain": "spawn requires 'static + Send, so pass owned data or Arc clones; borrows could dangle.",
       "options": [
-        "Threads accept any borrow",
-        "Threads skip Send checks",
-        "Threads share stack freely",
-        "Threads need owned static data"
+        "Any borrow, since threads share a stack",
+        "Anything; spawn skips the Send check",
+        "Only Copy types like i32 and bool",
+        "Owned 'static data that is Send"
       ],
       "q": "What data can cross into a spawned thread?"
     },
     "takeaway": "Give spawned threads owned static data and join handles for results.",
-    "topic_label": "type-drills",
+    "topic_label": "threads",
     "track": "rust",
     "trap": "Sharing stack borrows with detached threads risks use-after-return."
   },
@@ -376,18 +376,18 @@
     "level": 3,
     "output": "// inside async: inner.await; block_on only from sync main",
     "quiz": {
-      "answer": 1,
+      "answer": 0,
       "explain": "Nested block_on parks the executor thread that must drive the inner future.",
       "options": [
-        "It speeds up polling",
-        "It deadlocks by parking the driving thread",
-        "It spawns extra workers",
-        "It cancels the future"
+        "It blocks the thread the future needs",
+        "It speeds up polling of other tasks",
+        "It spawns extra worker threads",
+        "It cancels the future it is given"
       ],
       "q": "Why is block_on inside async dangerous?"
     },
     "takeaway": "Await inside async code and reserve blocking waits for sync boundaries.",
-    "topic_label": "type-drills",
+    "topic_label": "async-basics",
     "track": "rust",
     "trap": "Nesting blocking waits inside async tasks stalls the whole executor."
   },
@@ -400,18 +400,18 @@
     "level": 3,
     "output": "// passes: double!(21) == 42 (hygienic temp, no clash)",
     "quiz": {
-      "answer": 2,
+      "answer": 0,
       "explain": "Hygiene scopes macro locals so they cannot capture caller bindings.",
       "options": [
-        "Macros share all locals",
-        "Macros cannot take arguments",
-        "Macro locals stay scoped to the expansion",
-        "Macros ignore all scopes"
+        "Macro locals can't clash with yours",
+        "Macros see and share every caller local",
+        "Macros can only take literal arguments",
+        "Macro bodies ignore all scoping rules"
       ],
       "q": "What does macro hygiene guarantee?"
     },
     "takeaway": "Trust macro hygiene for locals and qualify paths with crate anchors.",
-    "topic_label": "pattern-drills",
+    "topic_label": "macros",
     "track": "rust",
     "trap": "Assuming macro temps overwrite caller variables misreads expansion scope."
   },
@@ -425,17 +425,17 @@
     "output": "pos 5\n",
     "quiz": {
       "answer": 0,
-      "explain": "Guards test values without changing move semantics so borrow explicitly.",
+      "explain": "A guard doesn't change binding mode: Some(x) still moves x out on match, so match on &opt to borrow.",
       "options": [
-        "Guards do not borrow so match on references to avoid moves",
-        "Guards always borrow values",
-        "Guards skip arm ordering",
-        "Guards prevent all moves"
+        "A by-value pattern still moves; match on &opt",
+        "The guard borrows, so nothing is ever moved",
+        "Guards make every binding a ref automatically",
+        "Moves only happen when the guard is false"
       ],
       "q": "How do match guards interact with moves?"
     },
     "takeaway": "Match on references when guards inspect values you must keep afterward.",
-    "topic_label": "pattern-drills",
+    "topic_label": "enums-matching",
     "track": "rust",
     "trap": "Matching by value with guards moves data you still need later."
   },
@@ -451,15 +451,15 @@
       "answer": 1,
       "explain": "collect is generic over containers so the target must be known.",
       "options": [
-        "collect always makes vectors",
-        "collect needs a known target container type",
-        "turbofish slows compilation",
-        "annotations are forbidden"
+        "The iterator forgets its item type",
+        "Its target container is ambiguous",
+        "Turbofish is required on every call",
+        "Iterators can't infer element types"
       ],
       "q": "Why does bare collect often fail inference?"
     },
     "takeaway": "Annotate collect targets with turbofish or bindings so inference can finish.",
-    "topic_label": "pattern-drills",
+    "topic_label": "closures-iterators",
     "track": "rust",
     "trap": "Leaving collect target ambiguous produces confusing inference errors."
   },
@@ -475,15 +475,15 @@
       "answer": 0,
       "explain": "entry reuses one lookup for get-or-insert plus mutation.",
       "options": [
-        "entry reuses one lookup for update logic",
-        "entry requires two lookups",
-        "entry cannot mutate values",
-        "entry only works on empty maps"
+        "It does a single lookup, not two",
+        "It caches the map in memory",
+        "It skips hashing string keys",
+        "It locks the map for writers"
       ],
       "q": "Why is entry faster than contains plus insert?"
     },
     "takeaway": "Count with entry and in-place mutation to avoid redundant map lookups.",
-    "topic_label": "pattern-drills",
+    "topic_label": "collections",
     "track": "rust",
     "trap": "Cloning keys for a pre-check lookup doubles hashing cost per word."
   },
@@ -496,18 +496,18 @@
     "level": 2,
     "output": "// compiles: unbounded send succeeds; recv must still run to observe 1",
     "quiz": {
-      "answer": 2,
-      "explain": "Symmetric blocking sends can wait on each other forever.",
+      "answer": 0,
+      "explain": "If each thread blocks on recv, or on a full bounded send, waiting for the other, neither can proceed.",
       "options": [
-        "Channels never block",
-        "Deadlock needs three threads",
-        "Symmetric blocking sends can wait forever",
-        "recv always times out"
+        "Each thread blocks waiting on the other",
+        "Unbounded send blocks on a slow receiver",
+        "It needs at least three threads to occur",
+        "recv times out and drops the channel"
       ],
       "q": "How does a channel deadlock happen?"
     },
     "takeaway": "Order channel operations consistently to avoid cyclic blocking waits.",
-    "topic_label": "pattern-drills",
+    "topic_label": "threads",
     "track": "rust",
     "trap": "Blocking send and receive in mirrored order stalls both threads."
   },
@@ -523,15 +523,15 @@
       "answer": 1,
       "explain": "Rc lacks atomic counts so only Arc may cross threads.",
       "options": [
-        "Rc is Send and Sync",
-        "Rc cannot cross threads but Arc can",
-        "Arc cannot cross threads",
-        "Both always cross freely"
+        "Yes, Rc is both Send and Sync",
+        "No; use Arc, whose counts are atomic",
+        "No, and Arc can't cross either",
+        "Yes, if it's cloned before spawning"
       ],
       "q": "Can Rc move into a thread?"
     },
     "takeaway": "Swap reference-counted pointers to Arc before sharing across threads.",
-    "topic_label": "pattern-drills",
+    "topic_label": "threads",
     "track": "rust",
     "trap": "Wrapping non-thread-safe types in Arc still fails the Send check."
   }

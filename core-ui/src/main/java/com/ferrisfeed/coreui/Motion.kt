@@ -13,8 +13,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Row
@@ -23,10 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,25 +30,20 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * Shared motion tokens (P6 31a).
- * Do not inline ad-hoc tween numbers in screens.
+ * Shared motion tokens. Do not inline ad-hoc tween numbers in screens.
+ * Motion is functional in v3: feedback, progress and reveals only.
  */
 object FerrisMotion {
     val Snappy = spring<Float>(dampingRatio = 0.8f, stiffness = 500f)
@@ -98,37 +88,6 @@ fun Modifier.pressScale(
     this.graphicsLayer {
         scaleX = scale
         scaleY = scale
-    }
-}
-
-/** Translucent container with a 0.5dp hairline border (P6 31d). */
-fun Modifier.glass(shape: Shape): Modifier = composed {
-    this.background(glassColor(), shape)
-        .border(0.5.dp, glassStroke(), shape)
-}
-
-/** Staggered fade and slide entrance for list items (P6 31e). */
-fun Modifier.staggeredEntrance(index: Int): Modifier = composed {
-    val reduceMotion = LocalReduceMotion.current
-    if (reduceMotion) return@composed this
-
-    var hasEntered by rememberSaveable { mutableStateOf(false) }
-    val alpha = remember { Animatable(if (hasEntered) 1f else 0f) }
-    val offsetY = remember { Animatable(if (hasEntered) 0f else 24f) }
-
-    LaunchedEffect(Unit) {
-        if (!hasEntered) {
-            val delayMs = (index.coerceAtMost(8) * FerrisMotion.StaggerMs).toLong()
-            delay(delayMs)
-            launch { alpha.animateTo(1f, FerrisMotion.Smooth) }
-            launch { offsetY.animateTo(0f, FerrisMotion.Smooth) }
-            hasEntered = true
-        }
-    }
-
-    this.graphicsLayer {
-        this.alpha = alpha.value
-        this.translationY = offsetY.value * density
     }
 }
 
@@ -247,29 +206,5 @@ fun ConfettiBurst(
                 }
             }
         }
-    }
-}
-
-@Preview(name = "AnimatedCounter Preview", showBackground = true, backgroundColor = 0xFF0B0E14)
-@Composable
-private fun AnimatedCounterPreviewDark() {
-    FerrisFeedTheme(darkTheme = true) {
-        AnimatedCounter(
-            value = 42,
-            style = NumberStyle,
-            color = FerrisColors.FerrisOrange,
-        )
-    }
-}
-
-@Preview(name = "AnimatedCounter Preview Light", showBackground = true, backgroundColor = 0xFFFFFBF2)
-@Composable
-private fun AnimatedCounterPreviewLight() {
-    FerrisFeedTheme(darkTheme = false) {
-        AnimatedCounter(
-            value = 100,
-            style = NumberStyle,
-            color = FerrisColors.FerrisOrange,
-        )
     }
 }

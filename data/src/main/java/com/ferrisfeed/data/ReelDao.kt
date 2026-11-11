@@ -50,6 +50,20 @@ interface ReelDao {
     )
     suspend fun countByTopic(track: String): List<TopicCount>
 
+    /**
+     * Per-topic count of lessons the learner has answered at least once
+     * (reps > 0). Same query-only projection as [countByTopic]: no migration.
+     */
+    @Query(
+        "SELECT topic, COUNT(*) AS reelCount, MIN(level) AS minLevel FROM reels " +
+            "WHERE track = :track AND reps > 0 GROUP BY topic ORDER BY topic ASC",
+    )
+    suspend fun countSeenByTopic(track: String): List<TopicCount>
+
+    /** Lessons answered at least once, across both tracks (Profile stat). */
+    @Query("SELECT COUNT(*) FROM reels WHERE reps > 0")
+    fun observeSeenCount(): Flow<Int>
+
     @Query("SELECT COUNT(*) FROM reels")
     suspend fun countAll(): Int
 

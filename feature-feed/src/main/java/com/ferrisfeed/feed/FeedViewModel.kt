@@ -2,8 +2,8 @@ package com.ferrisfeed.feed
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -14,12 +14,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -27,43 +24,65 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.max
-import kotlin.random.Random
 
 private val KEY_LAST_INDEX = intPreferencesKey("feed_last_index")
 private val KEY_LAST_ID = longPreferencesKey("feed_last_id_hash")
 private val KEY_LAST_REEL_ID = stringPreferencesKey("feed_last_reel_id")
 private val KEY_SWIPE_HINT_SEEN = booleanPreferencesKey("swipe_hint_seen")
 
+/** What the feed is currently playing. */
+sealed interface FeedScope {
+    /** The personal mixed queue (Learn tab). */
+    data object Main : FeedScope
+
+    /** One curriculum topic, in lesson order (from Path). */
+    data class Topic(val key: String) : FeedScope
+
+    /** A single lesson opened from search or saved; plays its topic from that lesson. */
+    data class Lesson(val reelId: String) : FeedScope
+}
+
+/** A graded quiz answer kept for this session so swiping back shows it. */
+data class AnswerRecord(
+    val correct: Boolean,
+    val choice: String,
+)
+
 data class FeedUiState(
     val reels: List<Reel> = emptyList(),
     val currentIndex: Int = 0,
     val isLoading: Boolean = true,
     val savedIds: Set<String> = emptySet(),
-    val likedIds: Set<String> = emptySet(),
-    val answeredQuizzes: Map<String, Boolean> = emptyMap(),
+    val answers: Map<String, AnswerRecord> = emptyMap(),
+    val scope: FeedScope = FeedScope.Main,
+    /** Bumped whenever the queue is rebuilt so the pager re-seats on [currentIndex]. */
+    val queueVersion: Int = 0,
 )
 
-data class ImpressionEvent(
-    val reelId: String,
-    val dwellMs: Long,
-    val skipped: Boolean,
+data class FeedStats(
+    val xp: Int = 0,
+    val streakDays: Int = 0,
+    val todayXp: Int = 0,
 )
 
-/** Split of [FeedUiState] carried by the inner combine (4-arity). */
-private data class FeedPartialMain(
+/** Inner 4-arity combine holder (learnings §7: never combine more than 4 flows). */
+private data class FeedCore(
     val reels: List<Reel>,
-    val currentIndex: Int,
-    val isLoading: Boolean,
-    val savedIds: Set<String>,
-    val likedIds: Set<String>,
+    val index: Int,
+    val loading: Boolean,
+    val saved: Set<String>,
 )
 
 /**
- * Feed view model.
+ * Feed view model (v3).
  *
- * Shuffle: 70% due SRS + 20% new in path order + 10% random review (see docs/feed-ux.md).
- * Tracking: impression (first paint), dwell (ms on page), skip (dwell < 1500ms and no interaction).
- * Position: persists current index + reel id hash to DataStore, restores on launch.
+ * One instance can be shared by every feed route (Navigation3 does not give
+ * each entry its own ViewModelStore here, learnings §22), so the active
+ * [FeedScope] is explicit: Learn, a topic, or a single lesson. Leaving a topic
+ * and returning to Learn restores the Learn position from the persisted reel
+ * id instead of resetting to the top.
+ *
+ * Quiz answers are the only grading signal (SRS, mastery, XP, streak).
  */
 @HiltViewModel
 class FeedViewModel @Inject constructor(
@@ -75,150 +94,137 @@ class FeedViewModel @Inject constructor(
     /** Overridable clock for tests. */
     var clock: () -> Long = System::currentTimeMillis
 
-    /** Overridable RNG for tests. */
-    var random: Random = Random.Default
-
     private val savedIds = MutableStateFlow<Set<String>>(emptySet())
-    private val likedIds = MutableStateFlow<Set<String>>(emptySet())
-    private val answeredQuizzes = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+    private val answers = MutableStateFlow<Map<String, AnswerRecord>>(emptyMap())
     private val index = MutableStateFlow(0)
     private val loading = MutableStateFlow(true)
+    private val scope = MutableStateFlow<FeedScope>(FeedScope.Main)
+    private val queueVersion = MutableStateFlow(0)
 
-    private val swipeHintSeenInternal = MutableStateFlow(false)
-    /** True once the user performs the first vertical swipe; persisted across launches. */
+    private val swipeHintSeenInternal = MutableStateFlow(true)
     val swipeHintSeen: StateFlow<Boolean> = swipeHintSeenInternal
 
-    /** Topic-only feed filter (Route.TopicFeed); null = the full mixed queue. */
-    private val topicFilter = MutableStateFlow<String?>(null)
-
-    private val _xpGains = MutableSharedFlow<Int>(extraBufferCapacity = 8)
-    /** Emits XP delta on each graded quiz (15 correct, 5 incorrect). */
-    val xpGains: SharedFlow<Int> = _xpGains.asSharedFlow()
-
-    private val _mastered = MutableSharedFlow<String>(extraBufferCapacity = 8)
-    /** Emits topic name whenever mastery crosses >= 0.85 from below (P6 36c). */
-    val mastered: SharedFlow<String> = _mastered.asSharedFlow()
-
-    /** Last full (unfiltered) reel list, so a topic filter can be applied and reverted. */
     private var allReels: List<Reel> = emptyList()
+    private var mainReelId: String? = null
+    private var appliedScope: FeedScope? = null
 
     private val queue: StateFlow<List<Reel>> = repository.observeQueue()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    // NB: nested 4+1 combines instead of one 5-flow combine. Heterogeneous
-    // overloads above 4-arity do not resolve on our coroutines version, so
-    // keep every combine at an arity that has existed forever.
     val uiState: StateFlow<FeedUiState> = combine(
-        combine(queue, index, loading, savedIds) { q, i, load, s ->
-            FeedPartialMain(
-                reels = q,
-                currentIndex = i.coerceIn(0, max(0, q.size - 1)),
-                isLoading = load,
-                savedIds = s,
-                likedIds = likedIds.value,
-            )
+        combine(queue, index, loading, savedIds) { q, i, l, s ->
+            FeedCore(q, i.coerceIn(0, max(0, q.size - 1)), l, s)
         },
-        likedIds,
-        answeredQuizzes,
-    ) { main, liked, answered ->
+        answers,
+        scope,
+        queueVersion,
+    ) { core, a, sc, v ->
         FeedUiState(
-            reels = main.reels,
-            currentIndex = main.currentIndex,
-            isLoading = main.isLoading,
-            savedIds = main.savedIds,
-            likedIds = liked,
-            answeredQuizzes = answered,
+            reels = core.reels,
+            currentIndex = core.index,
+            isLoading = core.loading,
+            savedIds = core.saved,
+            answers = a,
+            scope = sc,
+            queueVersion = v,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, FeedUiState())
 
+    val stats: StateFlow<FeedStats> = combine(
+        progressStore.xp,
+        progressStore.streakDays,
+        progressStore.todayXp,
+    ) { xp, streak, today -> FeedStats(xp, streak, today) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, FeedStats())
+
     private var dwellJob: Job? = null
+    private var scopeJob: Job? = null
     private var pageStartMs: Long = clock()
     private var interactedWithCurrent = false
 
     init {
         viewModelScope.launch {
-            loading.value = true
             savedIds.value = repository.savedIds()
-            likedIds.value = repository.likedIds()
             val prefs = dataStore.data.first()
             swipeHintSeenInternal.value = prefs[KEY_SWIPE_HINT_SEEN] ?: false
-            // First run: Room is still seeding from bundled JSON, so wait for
-            // the first non-empty snapshot instead of reading once and
-            // concluding the feed is empty. 30s cap, then show empty state.
-            val all = withTimeoutOrNull(30_000) {
-                repository.observeAllReels().first { it.isNotEmpty() }
-            }.orEmpty()
-            allReels = all
-            if (all.isNotEmpty()) {
-                repository.refreshQueue(buildQueue(queueSource(all), clock()))
+            mainReelId = prefs[KEY_LAST_REEL_ID]
+        }
+    }
+
+    /**
+     * Points the feed at [target]. Idempotent: routes call it on every entry.
+     * Returns the rebuild job so callers can await it.
+     */
+    fun setScope(target: FeedScope): Job? {
+        if (appliedScope == target && queue.value.isNotEmpty()) return null
+        appliedScope = target
+        scopeJob?.cancel()
+        scopeJob = viewModelScope.launch {
+            loading.value = true
+            scope.value = target
+            val source = loadAll()
+            if (source.isEmpty()) {
+                repository.refreshQueue(emptyList())
+                loading.value = false
+                return@launch
             }
-            val restored = dataStore.data.first()
-            val restoredReelId = restored[KEY_LAST_REEL_ID]
-            val restoredIndex = restored[KEY_LAST_INDEX] ?: 0
-            val queueList = queue.value
-            if (restoredReelId != null && queueList.isNotEmpty()) {
-                val foundIndex = queueList.indexOfFirst { it.id == restoredReelId }
-                index.value = if (foundIndex >= 0) foundIndex else restoredIndex.coerceIn(0, max(0, queueList.size - 1))
-            } else {
-                index.value = restoredIndex.coerceIn(0, max(0, queueList.size - 1))
+            val (built, start) = when (target) {
+                FeedScope.Main -> {
+                    val profile = progressStore.learnerProfile.first()
+                    val q = QueueBuilder.build(source, clock(), profile)
+                    val restoreId = mainReelId ?: dataStore.data.first()[KEY_LAST_REEL_ID]
+                    q to q.indexOfFirst { it.id == restoreId }.coerceAtLeast(0)
+                }
+                is FeedScope.Topic -> {
+                    val q = QueueBuilder.topicOrder(source.filter { it.topic == target.key })
+                    q to q.indexOfFirst { it.isNew }.coerceAtLeast(0)
+                }
+                is FeedScope.Lesson -> {
+                    val topic = source.firstOrNull { it.id == target.reelId }?.topic
+                    val q = if (topic == null) {
+                        source.filter { it.id == target.reelId }
+                    } else {
+                        QueueBuilder.topicOrder(source.filter { it.topic == topic })
+                    }
+                    q to q.indexOfFirst { it.id == target.reelId }.coerceAtLeast(0)
+                }
             }
+            repository.refreshQueue(built)
+            index.value = start
+            queueVersion.update { it + 1 }
             loading.value = false
             pageStartMs = clock()
+            interactedWithCurrent = false
         }
+        return scopeJob
     }
 
-    /** Build the 70/20/10 queue from [all] reels. Pure function for testability. */
-    fun buildQueue(all: List<Reel>, nowMs: Long, rng: Random = random): List<Reel> {
-        if (all.isEmpty()) return emptyList()
-        val due = all.filter { !it.isNew && it.dueAtEpochMs <= nowMs }
-            .sortedBy { it.dueAtEpochMs }
-        val fresh = all.filter { it.isNew }.sortedBy { it.pathOrder }
-        val reviewPool = all.filter { !it.isNew && it.dueAtEpochMs > nowMs }
-
-        // Target sizes; always keep at least 1 fresh when available for forward progress.
-        val total = all.size
-        val dueCount = (total * 0.7).toInt().coerceAtLeast(1).coerceAtMost(due.size)
-        val freshCount = (total * 0.2).toInt().coerceAtMost(fresh.size)
-        val reviewCount = (total * 0.1).toInt().coerceAtLeast(
-            if (reviewPool.isNotEmpty()) 1 else 0,
-        ).coerceAtMost(reviewPool.size)
-
-        val pickedDue = due.take(dueCount)
-        val pickedFresh = fresh.take(if (fresh.isNotEmpty() && freshCount == 0) 1 else freshCount)
-        val pickedReview = reviewPool.shuffled(rng).take(reviewCount)
-
-        val merged = (pickedDue + pickedFresh + pickedReview).toMutableList()
-        // Fill remainder with whatever is left, preserving due-first priority.
-        if (merged.size < total) {
-            val remaining = (all - merged.toSet()).shuffled(rng)
-            merged += remaining.take(total - merged.size)
+    private suspend fun loadAll(): List<Reel> {
+        if (allReels.isNotEmpty()) {
+            // Refresh SRS fields (due dates, isNew) without waiting on a seed.
+            allReels = repository.allReels().ifEmpty { allReels }
+            return allReels
         }
-        // Interleave so two due cards rarely sit back-to-back: due, fresh/review, due...
-        return interleave(pickedDue, (pickedFresh + pickedReview).shuffled(rng), merged - (pickedDue + pickedFresh + pickedReview).toSet())
+        // First run: Room is still seeding from bundled JSON, so wait for the
+        // first non-empty snapshot. 30s cap, then the empty state shows retry.
+        allReels = withTimeoutOrNull(30_000) {
+            repository.observeAllReels().first { it.isNotEmpty() }
+        }.orEmpty()
+        return allReels
     }
 
-    private fun interleave(due: List<Reel>, other: List<Reel>, tail: List<Reel>): List<Reel> {
-        val out = ArrayList<Reel>(due.size + other.size + tail.size)
-        val di = due.iterator()
-        val oi = other.iterator()
-        while (di.hasNext() || oi.hasNext()) {
-            if (di.hasNext()) out += di.next()
-            if (oi.hasNext()) out += oi.next()
-        }
-        out += tail
-        return out
+    /** Re-attempt a load after an empty feed. */
+    fun retryLoad() {
+        val target = scope.value
+        appliedScope = null
+        allReels = emptyList()
+        setScope(target)
     }
 
-    fun reshuffle(nowMs: Long = clock(), all: List<Reel>? = null) {
-        viewModelScope.launch {
-            val source = all ?: queue.value
-            if (source.isEmpty()) return@launch
-            repository.refreshQueue(buildQueue(source, nowMs))
-        }
-    }
-
+    /** Called with the reel index under the current page. */
     fun onPageChanged(newIndex: Int) {
         val state = uiState.value
+        if (newIndex == state.currentIndex && state.reels.isNotEmpty()) return
         val prevId = state.reels.getOrNull(state.currentIndex)?.id
         if (prevId != null) {
             val dwell = clock() - pageStartMs
@@ -226,139 +232,38 @@ class FeedViewModel @Inject constructor(
             viewModelScope.launch { repository.trackImpression(prevId, dwell, skipped) }
         }
         index.value = newIndex
-        if (newIndex > 0) {
-            dismissSwipeHint()
-        }
+        if (newIndex > 0) dismissSwipeHint()
         pageStartMs = clock()
         interactedWithCurrent = false
-        persistPosition(newIndex, state.reels.getOrNull(newIndex)?.id)
-        // Prefetch trigger: repository / data layer warms next 5 (Room is in-memory here;
-        // image/code LRU lives in the UI layer via Coil + highlight cache).
-        prefetchAhead(newIndex)
-    }
-
-    private fun prefetchAhead(fromIndex: Int) {
-        viewModelScope.launch {
-            val reels = uiState.value.reels
-            val end = (fromIndex + 5).coerceAtMost(reels.size - 1)
-            for (i in (fromIndex + 1)..end) {
-                repository.getReel(reels[i].id)
-            }
+        if (state.scope == FeedScope.Main) {
+            val id = state.reels.getOrNull(newIndex)?.id
+            mainReelId = id
+            persistPosition(newIndex, id)
         }
     }
 
-    fun onLike(reelId: String, liked: Boolean) {
+    fun onToggleSave(reelId: String): Boolean {
         interactedWithCurrent = true
-        likedIds.value = if (liked) likedIds.value + reelId else likedIds.value - reelId
-        viewModelScope.launch { repository.setLiked(reelId, liked) }
-    }
-
-    fun onSave(reelId: String, saved: Boolean) {
-        interactedWithCurrent = true
-        savedIds.value = if (saved) savedIds.value + reelId else savedIds.value - reelId
-        viewModelScope.launch { repository.setSaved(reelId, saved) }
-    }
-
-    fun onToggleSave(reelId: String) {
-        onSave(reelId, !savedIds.value.contains(reelId))
-    }
-
-    /** Re-attempt a load after an empty feed (see EmptyFeed retry). */
-    fun retryLoad() {
-        viewModelScope.launch {
-            loading.value = true
-            val all = withTimeoutOrNull(30_000) {
-                repository.observeAllReels().first { it.isNotEmpty() }
-            }.orEmpty()
-            allReels = all
-            if (all.isNotEmpty()) {
-                repository.refreshQueue(buildQueue(queueSource(all), clock()))
-            }
-            loading.value = false
-        }
+        val nowSaved = !savedIds.value.contains(reelId)
+        savedIds.value = if (nowSaved) savedIds.value + reelId else savedIds.value - reelId
+        viewModelScope.launch { repository.setSaved(reelId, nowSaved) }
+        return nowSaved
     }
 
     /**
-     * Narrows the feed to one roadmap topic (Spec v2, S7), or back to the full
-     * mix with null. Idempotent so the route can call it on every composition.
-     * Returns the rebuild job (null when nothing changed) so a caller that
-     * also wants to focus a specific reel can await the new queue first.
+     * Quiz answers are the SOLE grading signal: SRS step, topic mastery, XP
+     * (15 right / 5 for trying) and today's activity for the streak.
      */
-    fun setTopicFilter(topic: String?): Job? {
-        if (topicFilter.value == topic) return null
-        topicFilter.value = topic
-        return viewModelScope.launch {
-            val source = if (allReels.isNotEmpty()) allReels else {
-                withTimeoutOrNull(15_000) {
-                    repository.observeAllReels().first { it.isNotEmpty() }
-                }.orEmpty().also { if (it.isNotEmpty()) allReels = it }
-            }
-            if (source.isEmpty()) return@launch
-            index.value = 0
-            repository.refreshQueue(buildQueue(queueSource(source), clock()))
-        }
-    }
-
-    /** Applies the active topic filter to a full reel list. */
-    private fun queueSource(all: List<Reel>): List<Reel> {
-        val topic = topicFilter.value ?: return all
-        return all.filter { it.topic == topic }
-    }
-
-    /** Jump to a reel by id (deep links, search results). No-op if unknown. */
-    fun focusReel(id: String) {
-        viewModelScope.launch {
-            var current = queue.value
-            if (current.isEmpty()) {
-                val all = withTimeoutOrNull(15_000) {
-                    repository.observeAllReels().first { it.isNotEmpty() }
-                }.orEmpty()
-                if (all.isEmpty()) return@launch
-                allReels = all
-                current = all
-                repository.refreshQueue(buildQueue(queueSource(all), clock()))
-            }
-            var idx = current.indexOfFirst { it.id == id }
-            if (idx < 0) {
-                // Not in the current (possibly topic-filtered) queue: fall back
-                // to the whole table, rebuild, and look again.
-                val all = allReels.ifEmpty { repository.allReels() }
-                if (all.isNotEmpty()) {
-                    allReels = all
-                    current = all
-                    repository.refreshQueue(buildQueue(queueSource(all), clock()))
-                    idx = current.indexOfFirst { it.id == id }
-                }
-            }
-            if (idx >= 0) {
-                index.value = idx
-                persistPosition(idx, id)
-            }
-        }
-    }
-
-    /**
-     * Quiz answers are the SOLE grading signal (Spec v2: no Got-it buttons).
-     * Persists SRS grade, per-topic mastery, XP, and the active day so
-     * streaks accrue from real quiz activity.
-     */
-    fun onGrade(reelId: String, correct: Boolean, label: String) {
+    fun onGrade(reelId: String, correct: Boolean, choice: String) {
+        if (answers.value.containsKey(reelId)) return
         interactedWithCurrent = true
-        answeredQuizzes.update { it + (reelId to correct) }
+        answers.update { it + (reelId to AnswerRecord(correct, choice)) }
         viewModelScope.launch {
-            repository.recordGrade(reelId, correct, label)
+            repository.recordGrade(reelId, correct, choice)
             val topic = repository.getReel(reelId)?.topic?.ifBlank { null }
-                ?: return@launch
-            val prevMastery = progressStore.getMastery(topic)
-            progressStore.recordQuizResult(topic, correct)
-            val newMastery = progressStore.getMastery(topic)
-            val xpGain = if (correct) 15 else 5
-            progressStore.addXp(xpGain)
+            if (topic != null) progressStore.recordQuizResult(topic, correct)
+            progressStore.addXp(if (correct) XP_CORRECT else XP_WRONG)
             progressStore.recordDailyActivity()
-            _xpGains.emit(xpGain)
-            if (correct && prevMastery < 0.85f && newMastery >= 0.85f) {
-                _mastered.emit(topic)
-            }
         }
     }
 
@@ -366,20 +271,12 @@ class FeedViewModel @Inject constructor(
         interactedWithCurrent = true
     }
 
-
-    /** Marks the initial swipe gesture cue seen and remembers it across launches. */
     fun dismissSwipeHint() {
         if (!swipeHintSeenInternal.value) {
             swipeHintSeenInternal.value = true
-            viewModelScope.launch {
-                dataStore.edit { prefs ->
-                    prefs[KEY_SWIPE_HINT_SEEN] = true
-                }
-            }
+            viewModelScope.launch { dataStore.edit { it[KEY_SWIPE_HINT_SEEN] = true } }
         }
     }
-
-    fun restoreIndex(): StateFlow<Int> = index
 
     private fun persistPosition(index: Int, reelId: String?) {
         dwellJob?.cancel()
@@ -395,5 +292,11 @@ class FeedViewModel @Inject constructor(
             }
             progressStore.saveScrollPosition(reelId, index)
         }
+    }
+
+    companion object {
+        const val XP_CORRECT = 15
+        const val XP_WRONG = 5
+        const val DAILY_GOAL_XP = 50
     }
 }

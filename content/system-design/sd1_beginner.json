@@ -2,358 +2,358 @@
   {
     "body_md": "HTTP is stateless request-response over TCP. Client sends method, path, headers; server returns status plus body. HTTPS adds TLS. Keep requests idempotent where possible and cache GETs.",
     "code": "GET /feed?page=2 HTTP/1.1\nHost: api.ferrisfeed.dev\n\nHTTP/1.1 200 OK\nContent-Type: application/json",
-    "hook": "The one protocol every design builds on.",
+    "hook": "HTTP is stateless: the protocol every design builds on.",
     "id": "sd-beg-001",
     "language": "rust",
     "level": 1,
     "output": "HTTP/1.1 200 OK\nContent-Type: application/json\n\n{\"posts\": [...page 2...]}\n// GET is cacheable + idempotent; safe to retry",
     "quiz": {
       "answer": 1,
-      "explain": "Because servers don't store client conversation state between requests, you can freely place a load balancer in front of hundreds of identical stateless worker nodes.",
+      "explain": "Each request carries its full context, so a load balancer can send it to any identical instance; add servers without sharing session state.",
       "options": [
-        "HTTP holds open dedicated TCP sockets tied to specific server session caches",
-        "Because each request carries complete context, any backend instance can handle any incoming request",
-        "HTTP requires continuous WebSocket connections to preserve client identity",
-        "Statelessness restricts HTTP exclusively to static file downloads"
+        "Sticky sessions keep each user on one server",
+        "Any instance can serve any request",
+        "It keeps one TCP socket per client open",
+        "It limits HTTP to cacheable static files"
       ],
-      "q": "Why is the stateless nature of HTTP considered a fundamental advantage when scaling web architectures?"
+      "q": "Why does HTTP's statelessness help you scale?"
     },
     "takeaway": "Design stateless handlers that scale horizontally.",
     "trap": "Storing session in server memory breaks scaling.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "apis-protocols"
   },
   {
     "body_md": "REST uses resources plus verbs: GET reads, POST creates, PUT replaces, PATCH merges, DELETE removes. Return 201 with Location on create, 404 for missing, 409 for conflicts. Version via /v1.",
     "code": "POST /v1/posts\n{\"title\":\"hi\"}\n=> 201 Created\nLocation: /v1/posts/42",
-    "hook": "Resources, verbs, status codes — done right.",
+    "hook": "REST done right: resources, verbs, status codes.",
     "id": "sd-beg-002",
     "language": "rust",
     "level": 1,
     "output": "HTTP/1.1 201 Created\nLocation: /v1/posts/42\n\n{\"id\": 42, \"title\": \"hi\"}",
     "quiz": {
       "answer": 0,
-      "explain": "REST treats system entities as nouns in URLs and leverages standard HTTP method semantics to express the action being performed.",
+      "explain": "REST names entities as nouns (/users/42) and lets GET, POST, PUT, PATCH, and DELETE express the action, with real status codes.",
       "options": [
-        "It uses standard HTTP verbs (GET, POST, PUT, DELETE) on clean noun-based resource URIs",
-        "It encodes action names directly into URLs like /getUser or /deleteItem using GET",
-        "It bundles all operations into a single POST endpoint with custom action codes",
-        "It ignores standard HTTP status codes in favor of custom JSON status flags"
+        "HTTP verbs acting on noun resource URLs",
+        "Verb URLs like /getUser called with GET",
+        "One POST endpoint with an action field",
+        "Custom JSON status flags, always 200 OK"
       ],
-      "q": "How does idiomatic REST architecture map client interactions onto system entities?"
+      "q": "How does idiomatic REST model operations?"
     },
     "takeaway": "Name resources as nouns, act with verbs.",
     "trap": "RPC-style /getPostById inside REST APIs.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "apis-protocols"
   },
   {
     "body_md": "gRPC uses Protobuf over HTTP/2 with streaming. Define service in .proto, generate stubs, get typed clients in any language. Great for internal microservices needing speed and contracts.",
     "code": "service Feed {\n  rpc ListPosts (ListReq) returns (ListRes);\n  rpc StreamPosts (ListReq) returns (stream Post);\n}",
-    "hook": "Typed contracts at 10x speed.",
+    "hook": "gRPC: typed Protobuf contracts at binary speed.",
     "id": "sd-beg-003",
     "language": "rust",
     "level": 1,
     "output": "protoc emits typed Feed client + server stubs (any language)\nListPosts: unary RPC; StreamPosts: server-streaming RPC",
     "quiz": {
       "answer": 2,
-      "explain": "gRPC combines Protocol Buffers serialization with HTTP/2 multiplexing, producing strongly-typed, low-latency binary streams ideal for service-to-service calls.",
+      "explain": "gRPC generates typed stubs from .proto files and sends compact binary Protobuf over multiplexed HTTP/2, with streaming built in.",
       "options": [
-        "It sends uncompressed JSON payloads over HTTP/1.1 connections",
-        "It transfers verbose XML envelopes over an FTP transport channel",
-        "It leverages Protocol Buffers over HTTP/2 for strict schema contracts and compact binary streaming",
-        "It passes untyped text strings over raw operating system sockets"
+        "It sends JSON over HTTP/1.1 for easy debugging",
+        "It wraps calls in XML envelopes like SOAP",
+        "Typed Protobuf contracts over HTTP/2 streams",
+        "It sends untyped strings over raw sockets"
       ],
-      "q": "What architectural characteristics make gRPC the preferred communication protocol for internal microservices?"
+      "q": "Why is gRPC popular for internal microservices?"
     },
     "takeaway": "Use gRPC for fast internal service calls.",
     "trap": "Exposing gRPC directly to browsers without gateway.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "apis-protocols"
   },
   {
     "body_md": "GraphQL lets clients request exactly fields they need in one query. Server defines schema and resolvers. Solves over-fetching but needs query cost limits and persisted queries to avoid abuse.",
     "code": "query { post(id: 42) {\n  title author { name }\n}}",
-    "hook": "One query, exactly the fields you want.",
+    "hook": "GraphQL: one query, exactly the fields you want.",
     "id": "sd-beg-004",
     "language": "rust",
     "level": 1,
     "output": "{\"data\": {\"post\": {\"title\": \"...\", \"author\": {\"name\": \"...\"}}}}\n// exactly the requested fields, one round trip",
     "quiz": {
-      "answer": 3,
-      "explain": "Clients dictate their exact data requirements in a single query, preventing over-fetching of unused fields and under-fetching that requires cascading round-trips.",
+      "answer": 2,
+      "explain": "Clients describe the exact shape they need in one query, avoiding over-fetching and chained round trips. The schema still constrains queries.",
       "options": [
-        "It enforces rigid, monolithic server-side responses that cannot change",
-        "It forces every device to download full database rows regardless of screen layout",
-        "It wraps payloads in SOAP envelopes for legacy enterprise compliance",
-        "It allows the client to request precisely the fields it needs in a single round trip"
+        "Receive full table rows on every request",
+        "Send raw SQL straight to the backing database",
+        "Request exactly the fields it needs in one go",
+        "Skip the schema and send any query shape"
       ],
-      "q": "What core problem does GraphQL solve that traditional REST endpoints often struggle with in client applications?"
+      "q": "What does GraphQL let a client do?"
     },
     "takeaway": "Choose GraphQL for flexible client-driven reads.",
     "trap": "Unbounded nested queries enabling DoS.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "apis-protocols"
   },
   {
     "body_md": "WebSocket upgrades HTTP to full-duplex frames. Handshake once, then both sides push. Ideal for chat and presence. Add heartbeats, resume tokens, and horizontal sticky or pub/sub fan-out.",
     "code": "const ws = new WebSocket(\"wss://api/x\");\nws.onmessage = (e) => render(e.data);\nws.send(JSON.stringify({t:\"hi\"}));",
-    "hook": "One handshake, endless push both ways.",
+    "hook": "WebSockets: one handshake, endless push both ways.",
     "id": "sd-beg-005",
     "language": "javascript",
     "level": 1,
     "output": "101 Switching Protocols -> socket open\nsend({\"t\":\"hi\"}); each inbound frame -> render(data)",
     "quiz": {
       "answer": 1,
-      "explain": "After an initial handshake, WebSockets keep a lightweight TCP socket open where both client and server can push messages instantly without the overhead of HTTP headers.",
+      "explain": "After one HTTP upgrade handshake the socket stays open and either side can push frames instantly, without per-message headers or polling.",
       "options": [
-        "They repeatedly trigger HTTP GET requests every second to check for updates",
-        "They upgrade the initial HTTP connection into a persistent, full-duplex TCP channel for instant bidirectional push",
-        "They use legacy FTP connections to sync chat transcripts in background intervals",
-        "They run over SMTP email queues to guarantee message persistence"
+        "Each message gets its own fresh HTTP request",
+        "Both sides push over one open connection",
+        "They guarantee delivery even when offline",
+        "They work without any server-side state"
       ],
-      "q": "Why are WebSockets preferred over standard HTTP polling for live collaborative applications like chat or real-time feeds?"
+      "q": "Why use WebSockets over HTTP polling for chat?"
     },
     "takeaway": "Use WebSockets for low-latency bidirectional push.",
     "trap": "No heartbeat so dead peers linger.",
     "track": "system-design",
-    "topic_label": "fundamentals"
+    "topic_label": "apis-protocols"
   },
   {
     "body_md": "SQL gives ACID, joins, and schema; NoSQL gives flexible scale-out for keys, docs, or wide rows. Choose Postgres for relations and transactions, Dynamo-style KV for massive simple lookups.",
     "code": "CREATE TABLE posts (\n  id BIGSERIAL PRIMARY KEY,\n  author_id BIGINT NOT NULL,\n  body TEXT NOT NULL\n);",
-    "hook": "Relations vs scale — pick by query pattern.",
+    "hook": "SQL vs NoSQL: pick by query pattern, not by hype.",
     "id": "sd-beg-006",
     "language": "sql",
     "level": 1,
     "output": "CREATE TABLE\n// posts(id, author_id, body) ready; writes ACID, PK-indexed",
     "quiz": {
       "answer": 0,
-      "explain": "Relational engines shine when complex data integrity and multi-table joins matter most, while NoSQL stores trade ad-hoc joins for horizontal scale and high-throughput point lookups.",
+      "explain": "Model queries first: relational joins and multi-row transactions favor SQL; huge volumes of simple key or document lookups favor NoSQL.",
       "options": [
-        "Use SQL when you need relational joins and strict ACID transactions; use NoSQL for massive key-value or document scale",
-        "NoSQL should always replace SQL for all modern applications without exception",
-        "SQL databases cannot scale horizontally under any circumstances",
-        "SQL and NoSQL have identical consistency, schema flexibility, and scaling characteristics"
+        "Your query patterns: joins vs key lookups",
+        "NoSQL is the modern default for every app",
+        "SQL databases can never scale horizontally",
+        "Both offer identical consistency and scaling"
       ],
-      "q": "What primary architectural trade-off should guide your decision between a relational SQL database and a NoSQL store?"
+      "q": "What should guide the choice of SQL vs NoSQL?"
     },
     "takeaway": "Model queries first, then pick the store.",
     "trap": "Storing graphs in relational joins at depth 5.",
     "track": "system-design",
-    "topic_label": "http-caching"
+    "topic_label": "databases"
   },
   {
     "body_md": "Redis is in-memory with strings, hashes, lists, sets, sorted sets, and streams. Use for cache, counters, leaderboards, and rate limits. Persist with AOF+RDB and cluster when memory exceeds one node.",
     "code": "SET post:42 1 EX 3600\nZADD leaderboard 950 user:7\nGET post:42",
-    "hook": "Memory as a data structure server.",
+    "hook": "Redis is a data-structure server living in RAM.",
     "id": "sd-beg-007",
     "language": "rust",
     "level": 1,
     "output": "OK (post:42 cached 3600s)\n(integer) 1 (leaderboard member added)\n\"1\" (GET hit)",
     "quiz": {
       "answer": 2,
-      "explain": "Keeping data structures directly in RAM allows Redis to handle cache lookups, rate limiting, and real-time counters at tens of thousands of operations per second.",
+      "explain": "Redis keeps hashes, sets, sorted sets, and counters in RAM, so caching, rate limits, and leaderboards run in well under a millisecond.",
       "options": [
-        "It is an immutable disk-bound archive designed for cold document storage",
-        "It directly replaces relational SQL databases for all transactional bookkeeping",
-        "It serves in-memory data structures like sorted sets and hashes with sub-millisecond latency for caching and real-time state",
-        "It is primarily an operating system utility for managing backup tape drives"
+        "It is cheap cold storage for archived documents",
+        "It replaces SQL for all transactional writes",
+        "In-memory data structures with sub-ms access",
+        "It guarantees durability stronger than Postgres"
       ],
-      "q": "Why is Redis widely used as an auxiliary layer in high-throughput architectures?"
+      "q": "Why do architectures add Redis next to the main DB?"
     },
     "takeaway": "Put hot, ephemeral, or ranked data in Redis.",
     "trap": "Treating cache as source of truth without TTL.",
     "track": "system-design",
-    "topic_label": "http-caching"
+    "topic_label": "databases"
   },
   {
     "body_md": "Load balancers spread traffic: L4 by connection, L7 by URL/header. Algorithms include round-robin, least-conn, and consistent hash. Health-check backends and drain before deploy.",
     "code": null,
-    "hook": "No single server should feel famous.",
+    "hook": "Load balancers make sure no single server feels famous.",
     "id": "sd-beg-008",
     "language": null,
     "level": 1,
     "quiz": {
       "answer": 1,
-      "explain": "Load balancers continuously ping health-check endpoints, routing incoming requests only to responsive servers using algorithms like least-connections or round-robin.",
+      "explain": "Health checks remove failing nodes from rotation, and algorithms like least-connections or round-robin spread requests across the rest.",
       "options": [
-        "It routes all traffic to a single designated primary server until it crashes",
-        "It distributes incoming requests across healthy worker pools and drains nodes that fail health checks",
-        "It relies solely on public DNS lookups without monitoring backend server status",
-        "It caches all database mutations locally to bypass backend application code"
+        "All traffic goes to one primary until it fails",
+        "Spreads requests across healthy servers only",
+        "Relies on DNS alone, without checking servers",
+        "Caches writes locally so backends do less"
       ],
-      "q": "How does an intelligent load balancer protect backend systems during traffic surges?"
+      "q": "How does a load balancer protect backends in a surge?"
     },
     "takeaway": "Balance plus health-check for resilient tiers.",
     "trap": "Sticky sessions hiding uneven load.",
     "track": "system-design",
-    "topic_label": "http-caching"
+    "topic_label": "load-balancing"
   },
   {
     "body_md": "CDNs cache static assets at edge PoPs near users. Origin sets Cache-Control, CDN serves hits in ms. Use versioned URLs for immutable assets and purge on deploy for HTML.",
     "code": "Cache-Control: public, max-age=31536000, immutable\n# app.abc123.js cached at edge",
-    "hook": "Milliseconds, worldwide, for free-ish.",
+    "hook": "CDNs serve your static assets in milliseconds, worldwide.",
     "id": "sd-beg-009",
     "language": "rust",
     "level": 1,
     "output": "Edge HIT: app.abc123.js served from PoP in ms\nimmutable -> no revalidation for 1 year",
     "quiz": {
       "answer": 3,
-      "explain": "By serving pre-cached static assets directly from an edge server in the user's local region, round-trip times drop from hundreds of milliseconds to single digits.",
+      "explain": "Edge servers in many regions hold cached copies, so users fetch from nearby instead of a distant origin, cutting round-trip time.",
       "options": [
-        "It hosts primary database replicas directly inside user browser caches",
-        "It executes long-running financial database transactions at edge endpoints",
-        "It is restricted solely to video streaming and cannot serve scripts or images",
-        "It caches static assets at edge Points of Presence geographically close to the end user"
+        "It compresses each asset once at the origin",
+        "It routes users to the least busy origin",
+        "It serves video only, not scripts or images",
+        "It caches assets at edge PoPs near users"
       ],
-      "q": "What role does a Content Delivery Network (CDN) play in reducing global latency for static web assets?"
+      "q": "How does a CDN cut latency for static assets?"
     },
     "takeaway": "Cache immutable assets at the edge.",
     "trap": "Caching personalized HTML at edge leaks data.",
     "track": "system-design",
-    "topic_label": "http-caching"
+    "topic_label": "caching"
   },
   {
     "body_md": "Latency vs throughput: latency is time per request, throughput is requests per second. CDN and caching cut latency; horizontal scale and batching raise throughput. Measure p95, not averages.",
     "code": null,
-    "hook": "Fast once vs fast often — different fixes.",
+    "hook": "Latency vs throughput: fast once vs fast often.",
     "id": "sd-beg-010",
     "language": null,
     "level": 1,
     "quiz": {
       "answer": 0,
-      "explain": "A speedy average can mask the fact that 5% of your users are enduring 10-second stalls or gateway timeouts due to queue buildup or garbage collection pauses.",
+      "explain": "A fast average can hide 5% of requests stalling for seconds from queueing or GC pauses; p95 and p99 expose that tail.",
       "options": [
-        "Because averages hide tail-end spikes where high-intent users experience severe freezes and timeouts",
-        "Average latency and tail latency always remain mathematically identical",
-        "Averages reflect the absolute worst-case scenario experienced by mobile devices",
-        "Throughput increases automatically whenever average latency rises"
+        "Averages hide slow tails that users feel",
+        "Tail and average latency are always equal",
+        "Averages already reflect the worst case",
+        "Throughput rises whenever averages rise"
       ],
-      "q": "Why is monitoring p95 or p99 tail latency more crucial for user experience than tracking average latency?"
+      "q": "Why track p95/p99 latency, not just the average?"
     },
     "takeaway": "Track p95 latency and max throughput separately.",
     "trap": "Averaging hides tail-latency outages.",
     "track": "system-design",
-    "topic_label": "http-caching"
+    "topic_label": "core-concepts"
   },
   {
     "body_md": "Polling vs push: short-poll wastes requests, long-poll holds open, SSE streams one-way, WebSocket is bidirectional. Choose SSE for feeds, WebSocket for chat.",
     "code": "const es = new EventSource(\"/events\");\nes.onmessage = (e) => console.log(e.data);",
-    "hook": "Stop polling, start streaming.",
+    "hook": "Polling vs push: stop polling, start streaming.",
     "id": "sd-beg-011",
     "language": "javascript",
     "level": 1,
     "output": "HTTP 200 text/event-stream held open\n// each server event -> console.log(data); one-way push, no polling",
     "quiz": {
       "answer": 2,
-      "explain": "SSE operates over standard HTTP and is lightweight for unidirectional feeds and live ticker updates, while WebSockets excel when continuous two-way communication is needed.",
+      "explain": "SSE streams server-to-client over plain HTTP and suits feeds and tickers; pick WebSockets when the client must stream upstream too.",
       "options": [
-        "Always use short-polling because persistent connections overload modern operating systems",
-        "WebSockets should always be chosen because SSE has been deprecated in modern browsers",
-        "Use SSE when you only need one-way server-to-client streaming; use WebSockets when the client must also stream upstream",
-        "Never use HTTP-based protocols for any real-time data streaming"
+        "SSE is deprecated, so always use WebSockets",
+        "Short polling is lighter than either one",
+        "Whether the client must also push data",
+        "WebSockets cannot pass through proxies"
       ],
-      "q": "When choosing between Server-Sent Events (SSE) and WebSockets for real-time updates, which criterion is decisive?"
+      "q": "SSE or WebSockets: what decides the choice?"
     },
     "takeaway": "Match push primitive to directionality.",
     "trap": "Polling a feed every second from a million clients.",
     "track": "system-design",
-    "topic_label": "load-balancing"
+    "topic_label": "apis-protocols"
   },
   {
     "body_md": "API pagination: cursor-based with `after_id` scales, offset breaks on inserts. Return `next_cursor` and limit. Order by indexed (created_at, id) for stable pages.",
     "code": "SELECT * FROM posts\nWHERE id < $1 ORDER BY id DESC LIMIT 20;",
-    "hook": "Pages that survive new inserts.",
+    "hook": "Cursor pagination: pages that survive new inserts.",
     "id": "sd-beg-012",
     "language": "sql",
     "level": 1,
     "output": "| id | ... |\n| newest 20 with id < $1, DESC |\n// stable under inserts; no skipped rows",
     "quiz": {
       "answer": 1,
-      "explain": "When new items are inserted at the top of a feed, an OFFSET query shifts rows across page boundaries causing duplicate or missed items. A cursor like WHERE id < :last_seen stays rock solid.",
+      "explain": "OFFSET counts rows, so inserts at the top shift items across pages. WHERE id < :last_seen anchors to a row, and an index keeps it fast.",
       "options": [
-        "OFFSET pagination is immune to newly inserted rows shifting items between pages",
-        "Cursor pagination queries against an indexed identifier, preventing skipped or duplicated items when new posts arrive",
-        "OFFSET pagination requires loading the entire database table into memory on every request",
-        "Cursor pagination removes the need to index database columns entirely"
+        "OFFSET is immune to rows shifting on insert",
+        "New posts can't shift items between pages",
+        "Cursors remove the need for any index",
+        "OFFSET results can't be cached by the CDN"
       ],
-      "q": "Why is cursor-based pagination preferred over classic OFFSET pagination for infinite feeds like FerrisFeed?"
+      "q": "Why is cursor pagination better than OFFSET for feeds?"
     },
     "takeaway": "Paginate by cursor on indexed columns.",
     "trap": "Deep OFFSET scans slowing page 1000.",
     "track": "system-design",
-    "topic_label": "load-balancing"
+    "topic_label": "apis-protocols"
   },
   {
     "body_md": "Caching levels: browser, CDN, LB, app, Redis, DB. Cache-aside reads Redis then DB on miss. Set TTLs, version keys, and invalidate on write. Stampede-protect with singleflight.",
     "code": "val = redis.get(k)\nif !val:\n  val = db.load(k)\n  redis.setex(k, 300, val)",
-    "hook": "Every layer can save your database.",
+    "hook": "Cache layers: each one can save your database.",
     "id": "sd-beg-013",
     "language": "python",
     "level": 1,
     "output": "1st call: miss -> db.load(k), SETEX k 300\nlater calls: Redis hit in ms, zero DB load",
     "quiz": {
       "answer": 0,
-      "explain": "The application remains in control: it queries the fast cache, fetches from the primary database on a miss, and writes the freshly loaded value into cache for future requests.",
+      "explain": "The app owns the logic: check cache, load from the DB on a miss, write it back with a TTL. A cache that loads itself is read-through.",
       "options": [
-        "The application checks the cache first, loads from the database on a miss, and populates the cache with a TTL before returning",
-        "The database continuously polls the cache to backfill missing entries",
-        "The cache automatically contacts the database in the background without application knowledge",
-        "Cache misses throw an unrecoverable exception and force the client to retry"
+        "The app reads the DB, then fills the cache",
+        "The database pushes the row into the cache",
+        "The cache fetches from the DB on its own",
+        "The miss errors and the client retries"
       ],
-      "q": "In a cache-aside (lazy loading) pattern, how does the application handle a cache miss?"
+      "q": "In cache-aside, what happens on a cache miss?"
     },
     "takeaway": "Read cache first, fill on miss with TTL.",
     "trap": "No TTL causing permanently stale reads.",
     "track": "system-design",
-    "topic_label": "load-balancing"
+    "topic_label": "caching"
   },
   {
     "body_md": "Status codes matter: 2xx success, 301/304 redirect/cache, 400 bad input, 401 unauth, 403 forbidden, 404 missing, 429 slow down, 5xx server fault. Retry only 429/5xx with backoff.",
     "code": "HTTP/1.1 429 Too Many Requests\nRetry-After: 2",
-    "hook": "Codes are contracts — honor them.",
+    "hook": "HTTP status codes are contracts, so honor them.",
     "id": "sd-beg-014",
     "language": "rust",
     "level": 1,
     "output": "Client waits 2s (Retry-After), retries with backoff\n// retry 429/5xx only; 400-class means fix the request",
     "quiz": {
       "answer": 3,
-      "explain": "HTTP 429 indicates that rate limits have been exceeded. Obeying the Retry-After interval prevents cascading stampedes on an already stressed server.",
+      "explain": "429 means you hit a rate limit. Waiting for Retry-After and backing off with jitter avoids hammering a server that is already overloaded.",
       "options": [
-        "Immediately spam the endpoint with concurrent requests to bypass the restriction",
-        "Treat 429 as a permanent 404 Not Found error and delete local user data",
-        "Assume the request succeeded and proceed as if an HTTP 200 OK was received",
-        "Respect the rate limit, wait for the specified duration, and retry with exponential backoff and jitter"
+        "Retry right away, since 429s clear quickly",
+        "Treat it like a 404 and stop for good",
+        "Switch API keys to get a fresh quota",
+        "Wait as told, then retry with backoff"
       ],
-      "q": "How should an API client respond when receiving an HTTP 429 status code with a 'Retry-After' header?"
+      "q": "How should a client handle 429 with Retry-After?"
     },
     "takeaway": "Signal precisely so retries behave correctly.",
     "trap": "Returning 200 with error JSON breaks tooling.",
     "track": "system-design",
-    "topic_label": "load-balancing"
+    "topic_label": "apis-protocols"
   },
   {
     "body_md": "Monolith vs microservices: start modular monolith, extract when teams or scale demand. Microservices add deploy freedom but need discovery, tracing, and versioned contracts.",
     "code": null,
-    "hook": "Modular first, distributed when it hurts.",
+    "hook": "Monolith first, microservices when it starts to hurt.",
     "id": "sd-beg-015",
     "language": null,
     "level": 1,
     "quiz": {
       "answer": 1,
-      "explain": "A modular monolith offers rapid iteration and frictionless refactoring. Distributing boundaries across network services is only justified when organizational scale or distinct scaling profiles require it.",
+      "explain": "A modular monolith is fast to change. Extract services when team boundaries or distinct scaling needs justify the network cost.",
       "options": [
-        "Immediately deploy microservices to maximize infrastructure complexity from day one",
-        "Start with a well-structured modular monolith, separating into distinct services only when team boundaries or scaling bottlenecks emerge",
-        "Monolithic architectures cannot scale beyond 100 concurrent users under any configuration",
-        "Network calls between microservices carry zero latency, zero failure risk, and require no monitoring"
+        "Microservices from day one, to scale early",
+        "A modular monolith; split when it hurts",
+        "A monolith forever; services never pay off",
+        "One service per database table from day one"
       ],
-      "q": "When architecting a new product, what guideline helps determine whether to start with a monolith or microservices?"
+      "q": "Monolith or microservices for a new product?"
     },
     "takeaway": "Split by team or scaling pressure, not hype.",
     "trap": "Distributed monolith with all the costs, none of the gains.",
     "track": "system-design",
-    "topic_label": "load-balancing"
+    "topic_label": "core-concepts"
   }
 ]
