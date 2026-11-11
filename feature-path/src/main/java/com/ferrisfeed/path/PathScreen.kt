@@ -123,6 +123,7 @@ private fun CurriculumMode(
             }
         }
         item(key = "tracks") {
+            Column {
             SegmentedControl(
                 options = tracks.map { Tracks.label(it) },
                 selectedIndex = tracks.indexOf(state.track).coerceAtLeast(0),
@@ -138,6 +139,7 @@ private fun CurriculumMode(
                 )
             }
             Spacer(Modifier.height(16.dp))
+            }
         }
 
         if (state.isLoading) {
@@ -146,13 +148,15 @@ private fun CurriculumMode(
         }
 
         item(key = "up-next") {
-            val next = state.upNext
-            if (next != null) {
-                UpNextCard(topic = next, unit = state.upNextUnit, onStart = { onOpenTopic(next) })
-            } else {
-                CaughtUpCard(track = state.track)
+            Column {
+                val next = state.upNext
+                if (next != null) {
+                    UpNextCard(topic = next, unit = state.upNextUnit, onStart = { onOpenTopic(next) })
+                } else {
+                    CaughtUpCard(track = state.track)
+                }
+                Spacer(Modifier.height(28.dp))
             }
-            Spacer(Modifier.height(28.dp))
         }
 
         state.units.forEach { unit ->

@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ferrisfeed.data.CurriculumSeeder
 import com.ferrisfeed.data.ProgressStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -210,6 +211,12 @@ class FeedViewModel @Inject constructor(
         allReels = withTimeoutOrNull(30_000) {
             repository.observeAllReels().first { it.isNotEmpty() }
         }.orEmpty()
+        // The first query opened the database, which starts the seed/refresh
+        // pass; wait for it so the queue is built from complete, current
+        // content (packs land one by one, and old installs get new labels).
+        if (withTimeoutOrNull(15_000) { CurriculumSeeder.ready.first { it } } != null) {
+            allReels = repository.allReels().ifEmpty { allReels }
+        }
         return allReels
     }
 

@@ -115,10 +115,13 @@ import kotlinx.coroutines.launch
 fun FeedScreen(
     viewModel: FeedViewModel,
     modifier: Modifier = Modifier,
+    /** The scope this route asked for; until the shared view model serves it, show loading. */
+    scope: FeedScope? = null,
     onBack: (() -> Unit)? = null,
     title: String? = null,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val stale = scope != null && state.scope != scope
     val stats by viewModel.stats.collectAsState()
     val swipeHintSeen by viewModel.swipeHintSeen.collectAsState()
 
@@ -129,7 +132,7 @@ fun FeedScreen(
             .windowInsetsPadding(WindowInsets.statusBars),
     ) {
         when {
-            state.isLoading && state.reels.isEmpty() -> {
+            state.isLoading || stale -> {
                 FeedTopBar(onBack = onBack, title = title, stats = stats, progress = null)
                 FeedLoading()
             }

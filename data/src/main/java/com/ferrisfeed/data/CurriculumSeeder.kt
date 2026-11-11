@@ -2,6 +2,9 @@ package com.ferrisfeed.data
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -115,6 +118,19 @@ class CurriculumSeeder(
 
     companion object {
         private const val TAG = "CurriculumSeeder"
+
+        private val readyState = MutableStateFlow(false)
+
+        /**
+         * True once this process's seed/refresh pass has finished (or failed).
+         * The feed waits on it so its first queue never sees a half-seeded
+         * table or pre-refresh topic labels.
+         */
+        val ready: StateFlow<Boolean> = readyState.asStateFlow()
+
+        fun markReady() {
+            readyState.value = true
+        }
 
         /** Bump whenever bundled lesson content changes in a way installs must pick up. */
         const val CONTENT_VERSION = 3

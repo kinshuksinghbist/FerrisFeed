@@ -146,10 +146,10 @@ fun QuizContent(
             color = MaterialTheme.colorScheme.onBackground,
         )
         when (quiz) {
-            is QuizUiModel.Mcq -> McqOptions(quiz, seed, result, onPick = ::submit)
-            is QuizUiModel.TapBug -> TapBugLines(quiz, result, onPick = ::submit)
-            is QuizUiModel.FillBlank -> FillBlankInput(quiz, result, onSubmit = ::submit)
-            is QuizUiModel.Blocks -> BlocksBuilder(quiz, seed, result, onDone = ::submit)
+            is QuizUiModel.Mcq -> McqOptions(quiz, seed, result, onPick = { submit(it) })
+            is QuizUiModel.TapBug -> TapBugLines(quiz, result, onPick = { submit(it) })
+            is QuizUiModel.FillBlank -> FillBlankInput(quiz, result, onSubmit = { submit(it) })
+            is QuizUiModel.Blocks -> BlocksBuilder(quiz, seed, result, onDone = { submit(it) })
         }
         AnimatedVisibility(
             visible = result != null,

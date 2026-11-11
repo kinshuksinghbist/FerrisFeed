@@ -67,6 +67,7 @@ abstract class FerrisDatabase : RoomDatabase() {
                                 CurriculumSeeder(context, getInstance(context).reelDao())
                                     .refreshIfStale()
                             }
+                            CurriculumSeeder.markReady()
                         }
                     }
                 })

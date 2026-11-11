@@ -11,7 +11,7 @@ renderers (`ReelCard`, `CodeCard`, `QuizCard`, `TrapCard`).
 |---|---|---|---|
 | `id` | string | yes | Kebab-case, unique. e.g. `rust-own-014`. |
 | `track` | string | yes | One of `rust`, `wasm`, `system-design`. |
-| `topic_label` | string | no | Human topic label, e.g. `ownership`, `data systems`. **≤ 48 chars**, single line, lowercase by convention (node titles title-case for display). Optional — reels in the same pack usually share one label; the pack's file-derived key is the fallback when omitted (TODO 21). |
+| `topic_label` | string | no | **Curriculum topic key** (v3), e.g. `ownership`, `option-result`, `caching`. Must be one of the keys in `data/src/main/java/com/ferrisfeed/data/Curriculum.kt` for the reel's own track, chosen by what the reel teaches (not by which pack it sits in). Pinned by `CurriculumMapTest`. ≤ 48 chars, single line. The pack's file-derived key is only a fallback for packs that omit it. |
 | `level` | int | yes | 1 (beginner) to 4 (advanced). |
 | `hook` | string | yes | **Exactly 1 line**, 10–140 chars. Curiosity gap, not a summary. |
 | `body_md` | string | yes | Markdown-lite explainer, **≤ 70 words**. Plain text + `code` spans only. |

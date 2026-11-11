@@ -427,3 +427,36 @@ per file before writing.
 - **Font Scale Safety Valve**:
   - Strict no-inner-vertical-scroll rule prevents nested scroll conflicts; however, when system `fontScale > 1.3f`, enabling `Modifier.verticalScroll(scrollState)` and scaling hook text to `headlineSmall` guarantees that large text is never clipped on low-height devices.
 
+
+## 28. Redesign v3 (Nov 2026): what the audit found and the rules it left
+
+- **Positional labels are worse than no labels.** The TODO 21 backfill gave
+  every reel in a pack one label, then the packs were split into chunks of
+  five, so "lifetimes" held extension-trait reels and "rate-limiter" held auth
+  reels. Topic keys now come from `Curriculum.kt` and are chosen per reel;
+  `CurriculumMapTest` fails on any unknown or cross-track key. Never assign
+  topics by position again — read the reel.
+- **Check MCQs for length bias.** 87% of correct options were the longest.
+  Rewrites must keep options within ~25% length; the UI also shuffles option
+  order per reel (`shuffledOrder`, seeded by reel id) because authored answers
+  clustered at A/B. Quick audit: correct option uniquely longest should be
+  well under 25%.
+- **Content changes need a version bump.** `CurriculumSeeder` only seeded an
+  empty table, so existing installs never saw content fixes. Bump
+  `CurriculumSeeder.CONTENT_VERSION` whenever bundled packs change; the
+  refresh rewrites content columns and keeps every SRS column.
+- **Fresh order must not be the file index.** `orderIndex` is the index inside
+  a pack file, so sorting by it interleaves every pack's first reel.
+  `QueueBuilder` orders by curriculum position first.
+- **One top bar per screen, owned by the screen.** A shell overlay plus a
+  screen-level back chip produced two stacked back buttons and content under
+  the status bar (`top = 56.dp` without the status inset).
+- **No-inner-scroll was the wrong rule.** It clipped quiz explanations on most
+  phones. Pages now `verticalScroll`; when content fits there is nothing to
+  scroll and the pager receives the drag, so flick-to-advance is unchanged.
+- **Shared FeedViewModel is explicit.** Every feed route resolves the same
+  instance (§22), so the VM carries a `FeedScope` and restores the Learn
+  position by reel id when a topic feed pops.
+- **Pure logic gets a JVM harness when there is no SDK.** Curriculum, paging
+  and queue code compile and test in a scratch `kotlin("jvm")` project against
+  the repo files (no Android types); Compose code still needs CI.

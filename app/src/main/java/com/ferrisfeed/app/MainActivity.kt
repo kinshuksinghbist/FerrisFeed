@@ -11,8 +11,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -85,8 +83,8 @@ class MainActivity : ComponentActivity() {
                 val learner by app.learner.collectAsState()
                 Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                     val profile = learner
+                    // DataStore not answered yet: keep the splash colour for a frame.
                     when {
-                        // DataStore not answered yet: keep the splash colour for a frame.
                         profile == null -> Unit
                         !profile.onboarded -> OnboardingScreen(onDone = app::completeOnboarding)
                         else -> FerrisFeedNavHost(initialReelId = deepLinkedReel)
@@ -125,18 +123,10 @@ fun FerrisFeedNavHost(initialReelId: String?) {
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 backStack = backStack,
                 onBack = { pop() },
-                transitionSpec = {
-                    val from = initialState as? Route
-                    val to = targetState as? Route
-                    if (from?.isTab() == true && to?.isTab() == true) {
-                        fadeIn(tween(180)) togetherWith fadeOut(tween(120))
-                    } else {
-                        (slideInHorizontally(tween(260)) { it / 5 } + fadeIn(tween(260))) togetherWith fadeOut(tween(160))
-                    }
-                },
-                popTransitionSpec = {
-                    fadeIn(tween(200)) togetherWith (slideOutHorizontally(tween(220)) { it / 5 } + fadeOut(tween(180)))
-                },
+                // Quiet crossfades everywhere: the transition scope's states
+                // are not our Route keys in alpha08, so no per-route specs.
+                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(140)) },
+                popTransitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(140)) },
                 entryProvider = { key ->
                     when (key) {
                         is Route.Feed -> NavEntry(key) {
@@ -205,5 +195,5 @@ fun FerrisFeedNavHost(initialReelId: String?) {
 private fun FeedEntry(scope: FeedScope, onBack: (() -> Unit)?, title: String?) {
     val viewModel: FeedViewModel = hiltViewModel()
     LaunchedEffect(scope) { viewModel.setScope(scope) }
-    FeedScreen(viewModel = viewModel, onBack = onBack, title = title)
+    FeedScreen(viewModel = viewModel, scope = scope, onBack = onBack, title = title)
 }
